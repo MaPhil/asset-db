@@ -1,0 +1,10 @@
+<div class="card">
+  {{#if title}}
+    {{#if headingTag}}
+      <{{headingTag}}>{{title}}</{{headingTag}}>
+    {{else}}
+      <h2>{{title}}</h2>
+    {{/if}}
+  {{/if}}
+  {{{@partial-block}}}
+</div>
