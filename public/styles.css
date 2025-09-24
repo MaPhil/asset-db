@@ -20,12 +20,13 @@ a {
   color: #0f5fff;
 }
 
-nav a {
+.site-nav a {
   margin-right: 1rem;
   text-decoration: none;
+  color: #fff;
 }
 
-nav a.active {
+.site-nav a.active {
   font-weight: bold;
 }
 
