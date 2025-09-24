@@ -1,0 +1,18 @@
+{{#> card title="Implementation"}}
+  <p>
+    Use the HTTP API to automate ingestion, configure mappings, and rebuild the unified asset pool.
+    The UI provides a read-only snapshot of the stored data to help validate your integrations.
+  </p>
+  <ul>
+    <li>POST new data sources to <code>/api/v1/sources</code>.</li>
+    <li>Manage schema mappings through <code>/api/v1/mappings</code>.</li>
+    <li>Trigger asset rebuilds via <code>/api/v1/assets/rebuild</code>.</li>
+  </ul>
+{{/card}}
+
+{{#> card title="Next steps" headingTag="h3"}}
+  <p>
+    Extend the API or swap out the storage layer to suit your environment. The modular architecture of the
+    application keeps the ingestion pipeline, normalization logic, and presentation concerns separated.
+  </p>
+{{/card}}
