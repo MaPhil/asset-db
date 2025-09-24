@@ -1,0 +1,38 @@
+{{#> card title="Key measurements"}}
+  <p>Keep track of how much data has been ingested into the platform.</p>
+  {{#if metrics.length}}
+    <ul>
+      {{#each metrics}}
+        <li><strong>{{value}}</strong> {{label}}</li>
+      {{/each}}
+    </ul>
+  {{else}}
+    <p>No measurements available.</p>
+  {{/if}}
+  {{#if latestUpdate}}
+    <p>Latest source update: {{latestUpdate}}</p>
+  {{/if}}
+{{/card}}
+
+{{#> card title="Rows by source" headingTag="h3"}}
+  {{#if sourceMetrics.length}}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Total rows</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each sourceMetrics}}
+          <tr>
+            <td><a href="/sources/{{id}}">{{name}}</a></td>
+            <td>{{totalRows}}</td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  {{else}}
+    <p>No source rows have been captured yet.</p>
+  {{/if}}
+{{/card}}

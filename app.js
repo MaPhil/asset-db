@@ -26,19 +26,71 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/v1', apiV1);
 
 // UI routes (read-only bootstrap)
-app.get('/', (req, res) => res.redirect('/assets'));
+app.get('/', (req, res) => res.redirect('/asset-pool'));
 
-app.get('/assets', (req, res) => {
-  const schema = store.get('schema').rows.map((row) => row.col_name);
+app.get('/asset-pool', (req, res) => {
   const assets = store.get('unified_assets').rows;
+  res.render('asset-pool', {
+    nav: 'assetPool',
+    assets
+  });
+});
+
+app.get('/asset-structure', (req, res) => {
+  const schema = store.get('schema').rows.map((row) => row.col_name);
   const sources = store.get('sources').rows;
-  res.render('assets/index', {
-    nav: 'assets',
+  res.render('asset-structure', {
+    nav: 'assetStructure',
     schema,
-    assets,
     sources
   });
 });
+
+app.get('/measurements', (req, res) => {
+  const assets = store.get('unified_assets').rows;
+  const schema = store.get('schema').rows.map((row) => row.col_name);
+  const sources = store.get('sources').rows;
+  const sourceRows = store.get('source_rows').rows;
+
+  const sourceRowCounts = sourceRows.reduce((acc, row) => {
+    acc[row.source_id] = (acc[row.source_id] || 0) + 1;
+    return acc;
+  }, {});
+
+  const metrics = [
+    { label: 'Total unified assets', value: assets.length },
+    { label: 'Schema columns', value: schema.length },
+    { label: 'Active sources', value: sources.length },
+    { label: 'Rows ingested', value: sourceRows.length }
+  ];
+
+  const latestUpdate = sources
+    .map((source) => source.updated_at)
+    .filter(Boolean)
+    .sort()
+    .pop();
+
+  const sourceMetrics = sources.map((source) => ({
+    id: source.id,
+    name: source.name,
+    totalRows: sourceRowCounts[source.id] || 0
+  }));
+
+  res.render('measurements', {
+    nav: 'measurements',
+    metrics,
+    sourceMetrics,
+    latestUpdate
+  });
+});
+
+app.get('/implementation', (req, res) => {
+  res.render('implementation', {
+    nav: 'implementation'
+  });
+});
+
+app.get('/assets', (req, res) => res.redirect('/asset-pool'));
 
 app.get('/sources/:id', (req, res) => {
   const id = Number(req.params.id);
@@ -55,7 +107,7 @@ app.get('/sources/:id', (req, res) => {
   const headers = rows[0] ? Object.keys(rows[0]) : [];
 
   res.render('assets/source', {
-    nav: 'assets',
+    nav: 'assetStructure',
     source,
     rows,
     headers

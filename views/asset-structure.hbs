@@ -1,0 +1,43 @@
+{{#> card title="Asset schema"}}
+  <p>
+    The unified asset schema defines which fields are available for every asset in the pool. Columns are
+    derived from the mappings you configure.
+  </p>
+  {{#if schema.length}}
+    <ul>
+      {{#each schema}}
+        <li>{{this}}</li>
+      {{/each}}
+    </ul>
+  {{else}}
+    <p>No schema columns defined yet.</p>
+  {{/if}}
+{{/card}}
+
+{{#> card title="Source files" headingTag="h3"}}
+  <p>Each source contributes rows that are normalized into the asset pool.</p>
+  {{#if sources.length}}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Filename</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each sources}}
+          <tr>
+            <td>{{id}}</td>
+            <td><a href="/sources/{{id}}">{{name}}</a></td>
+            <td>{{original_filename}}</td>
+            <td>{{updated_at}}</td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  {{else}}
+    <p>No sources ingested yet.</p>
+  {{/if}}
+{{/card}}

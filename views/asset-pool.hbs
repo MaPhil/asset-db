@@ -1,0 +1,32 @@
+{{#> card title="Unified Assets"}}
+  <p>
+    This list is maintained by the JSON storage and rebuilt whenever mappings or sources change.
+    Use the API endpoints under <code>/api/v1/assets</code> to automate rebuilds.
+  </p>
+  <button type="button" data-rebuild>Rebuild unified assets</button>
+{{/card}}
+
+{{#> card title="Unified asset rows" headingTag="h3"}}
+  {{#if assets.length}}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Canonical name</th>
+          <th>Fields</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each assets}}
+          <tr>
+            <td>{{id}}</td>
+            <td>{{canonical_name}}</td>
+            <td><pre>{{json fields}}</pre></td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  {{else}}
+    <p>The unified asset table is empty. Upload a source via the API to populate it.</p>
+  {{/if}}
+{{/card}}
