@@ -1,0 +1,59 @@
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f7f9fb;
+  color: #222;
+}
+
+header {
+  background: #0f5fff;
+  color: #fff;
+  padding: 1rem;
+}
+
+main {
+  padding: 1.5rem;
+}
+
+a {
+  color: #0f5fff;
+}
+
+nav a {
+  margin-right: 1rem;
+  text-decoration: none;
+}
+
+nav a.active {
+  font-weight: bold;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+}
+
+.table th,
+.table td {
+  border: 1px solid #d9e1ee;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 4px 12px rgba(15, 20, 30, 0.08);
+  margin-bottom: 1.5rem;
+}
+
+pre {
+  background: #1e1e1e;
+  color: #fff;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+}

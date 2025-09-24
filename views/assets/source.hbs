@@ -1,0 +1,34 @@
+<div class="card">
+  <h2>Source: {{source.name}}</h2>
+  <p>
+    Original file: {{source.original_filename}}<br />
+    Uploaded: {{source.created_at}}<br />
+    Stored at: {{source.stored_path}}
+  </p>
+</div>
+
+<div class="card">
+  <h3>Preview</h3>
+  {{#if rows.length}}
+    <table class="table">
+      <thead>
+        <tr>
+          {{#each headers}}
+            <th>{{this}}</th>
+          {{/each}}
+        </tr>
+      </thead>
+      <tbody>
+        {{#each rows}}
+          <tr>
+            {{#each ../headers}}
+              <td>{{lookup ../this this}}</td>
+            {{/each}}
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  {{else}}
+    <p>No rows captured for this source yet.</p>
+  {{/if}}
+</div>
