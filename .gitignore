@@ -7,3 +7,4 @@ npm-debug.log*
 
 # Generated storage backups
 storage/*.tmp
+package-lock.json

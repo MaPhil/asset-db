@@ -62,7 +62,7 @@ app.get('/sources/:id', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5678;
 app.listen(PORT, () => {
   console.log(`Server listening at http://localhost:${PORT}`);
 });
