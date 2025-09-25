@@ -22,13 +22,35 @@ function isExcelFile(filename = '') {
 }
 
 function buildRecords(headers, rows) {
-  return rows.map((cells) => {
+  const records = [];
+
+  rows.forEach((cells = []) => {
     const record = {};
+    let hasValue = false;
+
     headers.forEach((header, index) => {
-      record[header] = cells[index] ?? '';
+      const cell = Array.isArray(cells) ? cells[index] : undefined;
+      const value = cell === undefined || cell === null ? '' : cell;
+
+      if (!hasValue) {
+        if (typeof value === 'string') {
+          if (value.trim() !== '') {
+            hasValue = true;
+          }
+        } else if (value !== '') {
+          hasValue = true;
+        }
+      }
+
+      record[header] = value;
     });
-    return record;
+
+    if (hasValue) {
+      records.push(record);
+    }
   });
+
+  return records;
 }
 
 function validateHeaders(headers) {

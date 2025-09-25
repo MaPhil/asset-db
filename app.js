@@ -38,12 +38,15 @@ app.get('/asset-pool/raw/:id', (req, res) => {
   const rawTableId = Number(req.params.id);
   const rawTable = store.get('raw_tables').rows.find((row) => row.id === rawTableId);
   const status = rawTable ? 200 : 404;
+  const hasRows =
+    rawTable && store.get('raw_rows').rows.some((row) => row.raw_table_id === rawTableId);
 
   res.status(status).render('raw-table', {
     nav: 'assetPool',
     rawTableId,
     rawTableTitle: rawTable?.title || null,
-    missing: !rawTable
+    missing: !rawTable,
+    hasRows: Boolean(hasRows)
   });
 });
 
