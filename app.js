@@ -5,8 +5,17 @@ import path from 'path';
 
 import apiV1 from './api/v1/index.js';
 import { store } from './lib/storage.js';
+import { logger } from './lib/logger.js';
 
 const app = express();
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection detected', { reason });
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception detected', error);
+});
 
 app.engine('hbs', exphbs.engine({
   extname: '.hbs',
@@ -21,6 +30,35 @@ app.set('views', path.join(process.cwd(), 'views'));
 app.use(express.static(path.join(process.cwd(), 'public')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+  logger.debug('Incoming request', {
+    method: req.method,
+    path: req.originalUrl,
+    ip: req.ip
+  });
+
+  res.on('finish', () => {
+    logger.info('Request completed', {
+      method: req.method,
+      path: req.originalUrl,
+      statusCode: res.statusCode,
+      durationMs: Date.now() - startedAt
+    });
+  });
+
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      logger.warn('Response closed before completion', {
+        method: req.method,
+        path: req.originalUrl
+      });
+    }
+  });
+
+  next();
+});
 
 // Mount API v1
 app.use('/api/v1', apiV1);
@@ -110,6 +148,7 @@ app.get('/sources/:id', (req, res) => {
   const id = Number(req.params.id);
   const source = store.get('sources').rows.find((row) => row.id === id);
   if (!source) {
+    logger.warn('Source not found for UI route', { sourceId: id });
     return res.status(404).send('Source not found');
   }
 
@@ -129,6 +168,23 @@ app.get('/sources/:id', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5678;
+app.use((err, req, res, next) => {
+  logger.error('Unhandled error while processing request', err, {
+    method: req.method,
+    path: req.originalUrl,
+    body: req.body,
+    query: req.query
+  });
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const status = err.status && Number.isInteger(err.status) ? err.status : 500;
+  const message = status >= 500 ? 'Internal server error' : err.message;
+  res.status(status).json({ error: message });
+});
+
 app.listen(PORT, () => {
-  console.log(`Server listening at http://localhost:${PORT}`);
+  logger.info(`Server listening at http://localhost:${PORT}`);
 });
