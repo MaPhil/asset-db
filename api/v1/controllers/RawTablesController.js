@@ -131,6 +131,7 @@ export const RawTablesController = {
       title: table.title,
       uploadedAt: table.uploadedAt,
       sourceFileName: table.sourceFileName,
+      description: table.description || '',
       rowCount: rowsByTable[table.id] || 0
     }));
 
@@ -144,6 +145,11 @@ export const RawTablesController = {
       return res.status(404).json({ error: 'Not found' });
     }
 
+    const normalizedTable = {
+      ...table,
+      description: table.description || ''
+    };
+
     const rows = store
       .get('raw_rows')
       .rows.filter((row) => row.raw_table_id === id)
@@ -153,7 +159,7 @@ export const RawTablesController = {
     const mapping = store.get('raw_mappings').rows.find((entry) => entry.raw_table_id === id);
 
     res.json({
-      table,
+      table: normalizedTable,
       rows,
       mapping: mapping ? mapping.pairs || [] : [],
       assetPool: getAssetPoolView()
@@ -297,7 +303,8 @@ export const RawTablesController = {
       uploadedAt: preview.uploadedAt,
       headers: preview.headers,
       idColumn: preview.idColumn,
-      duplicatePolicy: preview.duplicatePolicy
+      duplicatePolicy: preview.duplicatePolicy,
+      description: ''
     });
 
     for (const row of preview.rows) {
@@ -352,6 +359,61 @@ export const RawTablesController = {
       store.set('raw_mappings', mappingStore);
     } else {
       store.insert('raw_mappings', { raw_table_id: id, pairs });
+    }
+
+    res.json({ ok: true });
+  },
+
+  updateDetails: (req, res) => {
+    const id = Number(req.params.id);
+    const tables = store.get('raw_tables');
+    const table = tables.rows.find((entry) => entry.id === id);
+    if (!table) {
+      return res.status(404).json({ error: 'Raw table not found.' });
+    }
+
+    const title = (req.body?.title || '').trim();
+    const description = (req.body?.description || '').trim();
+
+    if (!title) {
+      return res.status(400).json({ fieldErrors: { title: 'Name is required.' } });
+    }
+
+    table.title = title;
+    table.description = description;
+    store.set('raw_tables', tables);
+
+    res.json({
+      ok: true,
+      table: {
+        ...table,
+        description
+      }
+    });
+  },
+
+  delete: (req, res) => {
+    const id = Number(req.params.id);
+    const tables = store.get('raw_tables');
+    const exists = tables.rows.some((entry) => entry.id === id);
+    if (!exists) {
+      return res.status(404).json({ error: 'Raw table not found.' });
+    }
+
+    store.remove('raw_tables', id);
+
+    const rows = store.get('raw_rows');
+    const filteredRows = rows.rows.filter((row) => row.raw_table_id !== id);
+    if (filteredRows.length !== rows.rows.length) {
+      rows.rows = filteredRows;
+      store.set('raw_rows', rows);
+    }
+
+    const mappings = store.get('raw_mappings');
+    const filteredMappings = mappings.rows.filter((entry) => entry.raw_table_id !== id);
+    if (filteredMappings.length !== mappings.rows.length) {
+      mappings.rows = filteredMappings;
+      store.set('raw_mappings', mappings);
     }
 
     res.json({ ok: true });

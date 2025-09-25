@@ -520,6 +520,15 @@ main {
   color: var(--color-primary);
 }
 
+.button--danger {
+  background: #dc2626;
+}
+
+.button--danger:hover,
+.button--danger:focus {
+  background: #b91c1c;
+}
+
 .icon-button {
   appearance: none;
   border: none;
@@ -592,12 +601,18 @@ main {
 
 .form-field input[type='text'],
 .form-field input[type='file'],
-.form-field select {
+.form-field select,
+.form-field textarea {
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   padding: 0.65rem 0.75rem;
   font-size: 0.95rem;
   font-family: inherit;
+}
+
+.form-field textarea {
+  resize: vertical;
+  min-height: 7rem;
 }
 
 .helper-text {
@@ -659,6 +674,67 @@ main {
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   color: var(--color-subtle);
+}
+
+.tab-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tab-list {
+  display: flex;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.tab-button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+
+.tab-button:hover,
+.tab-button:focus {
+  color: var(--color-primary);
+}
+
+.tab-button.is-active {
+  color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.tab-panel[hidden] {
+  display: none;
+}
+
+.danger-zone {
+  margin-top: 2rem;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem;
+  background: rgba(220, 38, 38, 0.08);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.danger-zone h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #b91c1c;
+}
+
+.danger-zone p {
+  margin: 0;
+  color: var(--color-subtle);
+  font-size: 0.9rem;
 }
 
 .toast-container {
