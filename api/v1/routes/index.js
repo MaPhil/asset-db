@@ -4,6 +4,8 @@ import sourcesRouter from './sources.routes.js';
 import mappingsRouter from './mappings.routes.js';
 import categoriesRouter from './categories.routes.js';
 import groupsRouter from './groups.routes.js';
+import rawTablesRouter from './rawTables.routes.js';
+import assetPoolRouter from './assetPool.routes.js';
 
 const router = Router();
 
@@ -12,5 +14,7 @@ router.use('/sources', sourcesRouter);
 router.use('/mappings', mappingsRouter);
 router.use('/categories', categoriesRouter);
 router.use('/groups', groupsRouter);
+router.use('/raw-tables', rawTablesRouter);
+router.use('/asset-pool', assetPoolRouter);
 
 export default router;

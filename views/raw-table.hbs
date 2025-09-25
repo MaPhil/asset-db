@@ -1,0 +1,67 @@
+<div
+  class="asset-pool-app"
+  data-app="asset-pool"
+  data-view="raw"
+  data-raw-table-id="{{rawTableId}}"
+  data-missing="{{missing}}"
+>
+  <aside class="asset-pool-sidebar" aria-label="Asset pool navigation">
+    <div class="sidebar-section">
+      <a href="/asset-pool" class="sidebar-link" data-sidebar-overview>Asset Pool (overview)</a>
+    </div>
+    <div class="sidebar-section">
+      <p class="sidebar-heading">Raw</p>
+      <nav class="sidebar-list" data-raw-list aria-label="Raw tables"></nav>
+      <button class="button button--ghost sidebar-import" type="button" data-open-import>
+        Import Table
+      </button>
+    </div>
+  </aside>
+  <section class="asset-pool-content" data-region="content">
+    <header class="page-header">
+      <div>
+        {{#if missing}}
+          <h1 class="page-title">Raw table not found</h1>
+          <p class="page-subtitle">This raw table may have been removed. Please choose another table.</p>
+        {{else}}
+          <h1 class="page-title">{{rawTableTitle}}</h1>
+          <div class="page-meta">
+            <span class="badge" data-raw-meta></span>
+          </div>
+        {{/if}}
+      </div>
+      <div class="page-actions">
+        <button class="button" type="button" data-open-import>Import Table</button>
+        {{#unless missing}}
+          <button class="button button--ghost" type="button" data-edit-mapping>Edit mappings</button>
+        {{/unless}}
+      </div>
+    </header>
+    <div class="asset-pool-body" data-raw-body>
+      {{#if missing}}
+        <div class="card card--empty">
+          <h2>Raw table unavailable</h2>
+          <p>The requested raw table could not be found. Please select another table from the list.</p>
+        </div>
+      {{else}}
+        <div class="table-container" data-raw-table hidden></div>
+        <div class="card card--empty" data-raw-empty hidden>
+          <h2>File contained no rows</h2>
+          <p>Please re-import.</p>
+        </div>
+      {{/if}}
+    </div>
+  </section>
+</div>
+
+<div class="toast-container" role="status" aria-live="polite"></div>
+
+<div class="modal" data-import-modal hidden>
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+    <header class="modal-header">
+      <h2 id="import-modal-title">Import raw table</h2>
+      <button class="icon-button" type="button" data-close-modal aria-label="Close import modal">&times;</button>
+    </header>
+    <div class="modal-body" data-import-stage></div>
+  </div>
+</div>
