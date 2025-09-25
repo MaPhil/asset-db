@@ -77,12 +77,15 @@ main {
 .asset-pool-app {
   display: grid;
   grid-template-columns: 280px 1fr;
+  height: calc(100vh - 96px);
   min-height: calc(100vh - 96px);
 }
 
 @media (max-width: 960px) {
   .asset-pool-app {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: 0;
   }
 
   .asset-pool-sidebar {
@@ -165,6 +168,9 @@ main {
 
 .asset-pool-content {
   padding: 2.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 @media (max-width: 960px) {
@@ -219,6 +225,11 @@ main {
 
 .asset-pool-body {
   margin-top: 2rem;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .card {
@@ -240,12 +251,16 @@ main {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-elevated);
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
   overflow: hidden;
 }
 
 .table-wrapper {
   width: 100%;
-  overflow-x: auto;
+  flex: 1;
+  overflow: auto;
 }
 
 .table {
