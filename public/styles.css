@@ -78,7 +78,7 @@ main {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   height: calc(100vh - 96px);
-  min-height: calc(100vh - 96px);
+  min-height: calc(100vh - 76px);
 }
 
 @media (max-width: 960px) {
