@@ -103,21 +103,8 @@ const formatDateTime = (value) => {
   }
 };
 
-app.get('/asset-structure', (req, res) => {
-  const categoriesRaw = store.get('categories').rows;
-  const groups = store.get('groups').rows;
-
-  const categories = categoriesRaw.map((category) => ({
-    id: category.id,
-    title: category.title || category.name || `Category ${category.id}`,
-    governingCategory: category.governing_category || '—',
-    owner: category.owner || category.group_owner || '—',
-    integrity: category.integrity || '—',
-    availability: category.availability || '—',
-    confidentiality: category.confidentiality || '—'
-  }));
-
-  const assetTypeStats = groups.reduce((acc, group) => {
+function buildAssetTypes(groups) {
+  const stats = groups.reduce((acc, group) => {
     if (!group?.asset_type) {
       return acc;
     }
@@ -129,18 +116,37 @@ app.get('/asset-structure', (req, res) => {
     return acc;
   }, {});
 
-  const assetTypes = Object.entries(assetTypeStats)
+  return Object.entries(stats)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+app.get('/asset-structure', (req, res) => {
+  const categoriesRaw = store.get('categories').rows;
+
+  const categories = categoriesRaw.map((category) => ({
+    id: category.id,
+    title: category.title || category.name || `Category ${category.id}`,
+    governingCategory: category.governing_category || '—',
+    owner: category.owner || category.group_owner || '—',
+    integrity: category.integrity || '—',
+    availability: category.availability || '—',
+    confidentiality: category.confidentiality || '—'
+  }));
 
   res.render('asset-structure', {
     nav: 'assetStructure',
-    categories,
-    assetTypes,
-    counts: {
-      categories: categories.length,
-      assetTypes: assetTypes.length
-    }
+    categories
+  });
+});
+
+app.get('/asset-types', (req, res) => {
+  const groups = store.get('groups').rows;
+  const assetTypes = buildAssetTypes(groups);
+
+  res.render('asset-types', {
+    nav: 'assetStructure',
+    assetTypes
   });
 });
 

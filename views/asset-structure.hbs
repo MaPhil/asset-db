@@ -2,7 +2,7 @@
   <aside class="asset-structure-sidebar" aria-label="Asset structure navigation">
     <div class="sidebar-section">
       <a href="/asset-structure" class="sidebar-link sidebar-link--active">Categories</a>
-      <a href="#asset-types" class="sidebar-link">Asset types</a>
+      <a href="/asset-types" class="sidebar-link">Asset types</a>
     </div>
   </aside>
   <section class="asset-structure-content">
@@ -52,23 +52,6 @@
         {{/if}}
       </section>
 
-      <section id="asset-types" class="card structure-card" aria-labelledby="asset-types-title">
-        <div class="section-header">
-          <h2 class="section-title" id="asset-types-title">Asset types</h2>
-        </div>
-        {{#if assetTypes.length}}
-          <ul class="asset-type-list">
-            {{#each assetTypes}}
-              <li class="asset-type-item">
-                <span class="asset-type-name">{{name}}</span>
-                <span class="asset-type-count">{{count}} {{#if (eq count 1)}}group{{else}}groups{{/if}}</span>
-              </li>
-            {{/each}}
-          </ul>
-        {{else}}
-          <p class="empty-state">Asset types appear here once groups have been categorised.</p>
-        {{/if}}
-      </section>
     </div>
   </section>
 </div>
@@ -123,7 +106,7 @@
       </form>
       <div class="modal-footer">
         <button class="button button--ghost" type="button" data-close-structure-modal>Cancel</button>
-        <button class="button" type="button">Save category</button>
+        <button class="button" type="button" data-save-category>Save category</button>
       </div>
     </div>
   </div>
