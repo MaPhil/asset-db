@@ -1,32 +1,45 @@
-{{#> card title="Unified Assets"}}
-  <p>
-    This list is maintained by the JSON storage and rebuilt whenever mappings or sources change.
-    Use the API endpoints under <code>/api/v1/assets</code> to automate rebuilds.
-  </p>
-  <button type="button" data-rebuild>Rebuild unified assets</button>
-{{/card}}
+<div class="asset-pool-app" data-app="asset-pool" data-view="overview">
+  <aside class="asset-pool-sidebar" aria-label="Asset pool navigation">
+    <div class="sidebar-section">
+      <a href="/asset-pool" class="sidebar-link sidebar-link--active" data-sidebar-overview>Asset Pool (overview)</a>
+    </div>
+    <div class="sidebar-section">
+      <p class="sidebar-heading">Raw</p>
+      <nav class="sidebar-list" data-raw-list aria-label="Raw tables"></nav>
+      <button class="button button--ghost sidebar-import" type="button" data-open-import>
+        Import Table
+      </button>
+    </div>
+  </aside>
+  <section class="asset-pool-content" data-region="content">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Asset Pool</h1>
+        <p class="page-subtitle">
+          The Asset Pool references data from your raw tables using your column mappings.
+        </p>
+      </div>
+      <button class="button" type="button" data-open-import>Import Table</button>
+    </header>
+    <div class="asset-pool-body" data-overview-body>
+      <div class="card card--empty" data-empty-state hidden>
+        <h2>No data added</h2>
+        <p>Please import a raw table to get started.</p>
+        <button class="button" type="button" data-open-import>Import Table</button>
+      </div>
+      <div class="table-container" data-asset-pool-table hidden></div>
+    </div>
+  </section>
+</div>
 
-{{#> card title="Unified asset rows" headingTag="h3"}}
-  {{#if assets.length}}
-    <table class="table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Canonical name</th>
-          <th>Fields</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each assets}}
-          <tr>
-            <td>{{id}}</td>
-            <td>{{canonical_name}}</td>
-            <td><pre>{{json fields}}</pre></td>
-          </tr>
-        {{/each}}
-      </tbody>
-    </table>
-  {{else}}
-    <p>The unified asset table is empty. Upload a source via the API to populate it.</p>
-  {{/if}}
-{{/card}}
+<div class="toast-container" role="status" aria-live="polite"></div>
+
+<div class="modal" data-import-modal hidden>
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+    <header class="modal-header">
+      <h2 id="import-modal-title">Import raw table</h2>
+      <button class="icon-button" type="button" data-close-modal aria-label="Close import modal">&times;</button>
+    </header>
+    <div class="modal-body" data-import-stage></div>
+  </div>
+</div>

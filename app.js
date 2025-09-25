@@ -29,10 +29,21 @@ app.use('/api/v1', apiV1);
 app.get('/', (req, res) => res.redirect('/asset-pool'));
 
 app.get('/asset-pool', (req, res) => {
-  const assets = store.get('unified_assets').rows;
   res.render('asset-pool', {
+    nav: 'assetPool'
+  });
+});
+
+app.get('/asset-pool/raw/:id', (req, res) => {
+  const rawTableId = Number(req.params.id);
+  const rawTable = store.get('raw_tables').rows.find((row) => row.id === rawTableId);
+  const status = rawTable ? 200 : 404;
+
+  res.status(status).render('raw-table', {
     nav: 'assetPool',
-    assets
+    rawTableId,
+    rawTableTitle: rawTable?.title || null,
+    missing: !rawTable
   });
 });
 
