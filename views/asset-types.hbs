@@ -1,0 +1,40 @@
+<div class="asset-structure-app" data-app="asset-structure">
+  <aside class="asset-structure-sidebar" aria-label="Asset structure navigation">
+    <div class="sidebar-section">
+      <a href="/asset-structure" class="sidebar-link">Categories</a>
+      <a href="/asset-types" class="sidebar-link sidebar-link--active">Asset types</a>
+    </div>
+  </aside>
+  <section class="asset-structure-content">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Asset types</h1>
+        <p class="page-subtitle">
+          Review the asset types derived from your categorised groups.
+        </p>
+      </div>
+      <div class="page-actions">
+        <a class="button button--ghost" href="/asset-structure">Back to categories</a>
+      </div>
+    </header>
+    <div class="structure-body">
+      <section class="card structure-card" aria-labelledby="asset-types-title">
+        <div class="section-header">
+          <h2 class="section-title" id="asset-types-title">Asset types</h2>
+        </div>
+        {{#if assetTypes.length}}
+          <ul class="asset-type-list">
+            {{#each assetTypes}}
+              <li class="asset-type-item">
+                <span class="asset-type-name">{{name}}</span>
+                <span class="asset-type-count">{{count}} {{#if (eq count 1)}}group{{else}}groups{{/if}}</span>
+              </li>
+            {{/each}}
+          </ul>
+        {{else}}
+          <p class="empty-state">Asset types appear here once groups have been categorised.</p>
+        {{/if}}
+      </section>
+    </div>
+  </section>
+</div>
