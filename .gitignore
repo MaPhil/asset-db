@@ -6,5 +6,6 @@ npm-debug.log*
 .env
 
 # Generated storage backups
-storage/*.tmp
+storage/*
+!storage/.gitkeep
 package-lock.json

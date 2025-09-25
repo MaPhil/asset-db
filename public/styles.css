@@ -297,7 +297,7 @@ main {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: rgba(15, 23, 42, 0.05);
+  background: #ddd;
 }
 
 .table th,
@@ -444,6 +444,7 @@ main {
   justify-content: center;
   padding: 1.5rem;
   backdrop-filter: blur(3px);
+  z-index: 2;
 }
 
 .modal[hidden] {
