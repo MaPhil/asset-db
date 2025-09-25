@@ -239,7 +239,8 @@ export const RawTablesController = {
   },
 
   import: (req, res) => {
-    const { previewId, mappings } = req.body;
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const { previewId, mappings } = body;
     if (!previewId) {
       return res.status(400).json({ error: 'Preview ID is required.' });
     }
