@@ -1207,6 +1207,103 @@ function setupEditMapping(root) {
   });
 }
 
+let structureModalOpenCount = 0;
+
+function createStructureModalController(modal) {
+  let lastFocus = null;
+  let isOpen = false;
+
+  function focusInitial() {
+    const focusTarget =
+      select(modal, '[data-auto-focus]') || select(modal, 'input, select, textarea, button');
+    focusTarget?.focus();
+  }
+
+  function open(trigger) {
+    if (isOpen) {
+      return;
+    }
+    lastFocus = trigger || document.activeElement;
+    modal.hidden = false;
+    modal.removeAttribute('aria-hidden');
+    modal.setAttribute('tabindex', '-1');
+    structureModalOpenCount += 1;
+    if (structureModalOpenCount === 1) {
+      document.body.style.overflow = 'hidden';
+    }
+    isOpen = true;
+    focusInitial();
+  }
+
+  function close() {
+    if (!isOpen) {
+      return;
+    }
+    isOpen = false;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    structureModalOpenCount = Math.max(0, structureModalOpenCount - 1);
+    if (structureModalOpenCount === 0) {
+      document.body.style.overflow = '';
+    }
+    if (lastFocus && typeof lastFocus.focus === 'function') {
+      lastFocus.focus();
+    }
+  }
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      close();
+    }
+  });
+
+  selectAll(modal, '[data-close-structure-modal]').forEach((button) => {
+    button.addEventListener('click', () => close());
+  });
+
+  return {
+    open,
+    close,
+    isOpen: () => isOpen
+  };
+}
+
+function setupStructureModals(root) {
+  const controllers = new Map();
+  selectAll(document, '[data-structure-modal]').forEach((modal) => {
+    const key = modal.dataset.structureModal;
+    if (key) {
+      controllers.set(key, createStructureModalController(modal));
+    }
+  });
+
+  selectAll(root, '[data-open-structure-modal]').forEach((button) => {
+    const key = button.dataset.openStructureModal;
+    if (!key) {
+      return;
+    }
+    const controller = controllers.get(key);
+    if (!controller) {
+      return;
+    }
+    button.addEventListener('click', () => controller.open(button));
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    const openController = Array.from(controllers.values()).find((controller) => controller.isOpen());
+    openController?.close();
+  });
+}
+
+function initAssetStructureApp() {
+  const root = document.querySelector('[data-app="asset-structure"]');
+  if (!root) return;
+  setupStructureModals(root);
+}
+
 async function initAssetPoolApp() {
   const root = document.querySelector('[data-app="asset-pool"]');
   if (!root) return;
@@ -1230,4 +1327,5 @@ async function initAssetPoolApp() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initAssetPoolApp();
+  initAssetStructureApp();
 });
