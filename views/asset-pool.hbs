@@ -6,9 +6,6 @@
     <div class="sidebar-section">
       <p class="sidebar-heading">Raw</p>
       <nav class="sidebar-list" data-raw-list aria-label="Raw tables"></nav>
-      <button class="button button--ghost sidebar-import" type="button" data-open-import>
-        Import Table
-      </button>
     </div>
   </aside>
   <section class="asset-pool-content" data-region="content">
@@ -19,13 +16,46 @@
           The Asset Pool references data from your raw tables using your column mappings.
         </p>
       </div>
-      <button class="button" type="button" data-open-import>Import Table</button>
+      <div class="page-actions">
+        <button
+          class="button button--ghost"
+          type="button"
+          data-open-field-manager
+          aria-haspopup="dialog"
+          aria-expanded="false"
+        >
+          Manage Mapping Fields
+        </button>
+      </div>
     </header>
+    <div
+      class="field-manager"
+      data-field-manager
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="field-manager-title"
+      hidden
+    >
+      <div class="field-manager__header">
+        <h2 class="field-manager__title" id="field-manager-title">Mapping fields</h2>
+        <button
+          class="icon-button"
+          type="button"
+          data-close-field-manager
+          aria-label="Close field manager"
+        >&times;</button>
+      </div>
+      <p class="field-manager__description">
+        Review the mapping fields currently used in the Asset Pool. Removing a field deletes it from all
+        mappings.
+      </p>
+      <div class="field-manager__error" data-field-error hidden></div>
+      <div class="field-manager__list" data-field-list></div>
+    </div>
     <div class="asset-pool-body" data-overview-body>
       <div class="card card--empty" data-empty-state hidden>
         <h2>No data added</h2>
         <p>Please import a raw table to get started.</p>
-        <button class="button" type="button" data-open-import>Import Table</button>
       </div>
       <div class="table-container" data-asset-pool-table hidden></div>
     </div>

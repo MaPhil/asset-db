@@ -172,7 +172,7 @@ main {
   flex-direction: column;
   min-height: 0;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 @media (max-width: 960px) {
@@ -182,6 +182,7 @@ main {
 }
 
 .page-header {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -205,6 +206,106 @@ main {
   display: flex;
   gap: 0.75rem;
   align-items: center;
+}
+
+.field-manager {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  right: 0;
+  width: min(420px, 90vw);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+  padding: 1.25rem 1.5rem;
+  z-index: 5;
+}
+
+.field-manager:focus {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 4px;
+}
+
+.field-manager__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.field-manager__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.field-manager__description {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-subtle);
+}
+
+.field-manager__error {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.field-manager__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.field-manager__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.field-manager__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.field-manager__name {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.field-manager__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-subtle);
+}
+
+.field-manager__count {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.field-manager__remove {
+  white-space: nowrap;
+}
+
+.field-manager__empty {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-subtle);
 }
 
 .page-meta {
@@ -419,6 +520,15 @@ main {
   color: var(--color-primary);
 }
 
+.button--danger {
+  background: #dc2626;
+}
+
+.button--danger:hover,
+.button--danger:focus {
+  background: #b91c1c;
+}
+
 .icon-button {
   appearance: none;
   border: none;
@@ -492,12 +602,18 @@ main {
 
 .form-field input[type='text'],
 .form-field input[type='file'],
-.form-field select {
+.form-field select,
+.form-field textarea {
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   padding: 0.65rem 0.75rem;
   font-size: 0.95rem;
   font-family: inherit;
+}
+
+.form-field textarea {
+  resize: vertical;
+  min-height: 7rem;
 }
 
 .helper-text {
@@ -559,6 +675,67 @@ main {
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   color: var(--color-subtle);
+}
+
+.tab-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tab-list {
+  display: flex;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.tab-button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+
+.tab-button:hover,
+.tab-button:focus {
+  color: var(--color-primary);
+}
+
+.tab-button.is-active {
+  color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.tab-panel[hidden] {
+  display: none;
+}
+
+.danger-zone {
+  margin-top: 2rem;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem;
+  background: rgba(220, 38, 38, 0.08);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.danger-zone h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #b91c1c;
+}
+
+.danger-zone p {
+  margin: 0;
+  color: var(--color-subtle);
+  font-size: 0.9rem;
 }
 
 .toast-container {
