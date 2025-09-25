@@ -1,6 +1,7 @@
 const API = {
   rawTables: '/api/v1/raw-tables',
-  assetPool: '/api/v1/asset-pool'
+  assetPool: '/api/v1/asset-pool',
+  assetPoolFields: '/api/v1/asset-pool/fields'
 };
 
 const PAGE_SIZE = 25;
@@ -21,6 +22,11 @@ const state = {
     rawTableId: null,
     tableTitle: '',
     stageOneValues: null
+  },
+  fieldManager: {
+    isOpen: false,
+    busyField: null,
+    error: null
   }
 };
 
@@ -101,6 +107,158 @@ function renderSidebar(root) {
   });
 }
 
+function formatEntryCount(value) {
+  const count = Number.isFinite(value) ? value : Number(value) || 0;
+  return `${count} ${count === 1 ? 'entry' : 'entries'}`;
+}
+
+function renderFieldManager(root) {
+  const panel = select(root, '[data-field-manager]');
+  const trigger = select(root, '[data-open-field-manager]');
+  if (!panel || !trigger) return;
+
+  const list = select(panel, '[data-field-list]');
+  const error = select(panel, '[data-field-error]');
+  if (!list || !error) return;
+
+  const fieldStats = Array.isArray(state.assetPool?.fieldStats) ? state.assetPool.fieldStats : [];
+  list.innerHTML = '';
+
+  if (!fieldStats.length) {
+    const empty = document.createElement('p');
+    empty.className = 'field-manager__empty';
+    empty.textContent = 'No mapping fields available.';
+    list.appendChild(empty);
+  } else {
+    const isBusy = state.fieldManager.busyField !== null;
+    fieldStats.forEach((stat) => {
+      if (!stat?.field) {
+        return;
+      }
+      const item = document.createElement('div');
+      item.className = 'field-manager__item';
+
+      const info = document.createElement('div');
+      info.className = 'field-manager__info';
+
+      const name = document.createElement('p');
+      name.className = 'field-manager__name';
+      name.textContent = stat.field;
+      info.appendChild(name);
+
+      item.appendChild(info);
+
+      const meta = document.createElement('div');
+      meta.className = 'field-manager__meta';
+
+      const count = document.createElement('span');
+      count.className = 'field-manager__count';
+      count.textContent = formatEntryCount(stat.count);
+      meta.appendChild(count);
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'button button--ghost field-manager__remove';
+      remove.textContent = state.fieldManager.busyField === stat.field ? 'Removing…' : 'Remove';
+      remove.disabled = isBusy;
+      remove.addEventListener('click', () => handleRemoveField(stat.field, root));
+      meta.appendChild(remove);
+
+      item.appendChild(meta);
+      list.appendChild(item);
+    });
+  }
+
+  if (state.fieldManager.error) {
+    error.hidden = false;
+    error.textContent = state.fieldManager.error;
+  } else {
+    error.hidden = true;
+    error.textContent = '';
+  }
+
+  panel.hidden = !state.fieldManager.isOpen;
+  trigger.setAttribute('aria-expanded', state.fieldManager.isOpen ? 'true' : 'false');
+}
+
+function openFieldManager(root) {
+  state.fieldManager.isOpen = true;
+  state.fieldManager.error = null;
+  renderFieldManager(root);
+  const panel = select(root, '[data-field-manager]');
+  if (panel) {
+    panel.focus?.();
+  }
+}
+
+function closeFieldManager(root) {
+  if (state.fieldManager.busyField) {
+    return;
+  }
+  state.fieldManager.isOpen = false;
+  state.fieldManager.error = null;
+  renderFieldManager(root);
+}
+
+async function handleRemoveField(field, root) {
+  if (!field) return;
+  state.fieldManager.error = null;
+  state.fieldManager.busyField = field;
+  renderFieldManager(root);
+
+  try {
+    const result = await fetchJson(`${API.assetPoolFields}/${encodeURIComponent(field)}`, {
+      method: 'DELETE'
+    });
+    await Promise.all([refreshAssetPool(), refreshRawTables()]);
+    const message = result?.removed
+      ? `Removed mapping field "${field}".`
+      : `No mappings were using "${field}".`;
+    showToast(message);
+    state.fieldManager.busyField = null;
+    renderFieldManager(root);
+  } catch (err) {
+    state.fieldManager.error = err.payload?.error || err.message;
+    state.fieldManager.busyField = null;
+    renderFieldManager(root);
+  }
+}
+
+function setupFieldManager(root) {
+  const trigger = select(root, '[data-open-field-manager]');
+  const panel = select(root, '[data-field-manager]');
+  if (!trigger || !panel) return;
+
+  if (!panel.hasAttribute('tabindex')) {
+    panel.setAttribute('tabindex', '-1');
+  }
+
+  trigger.addEventListener('click', () => {
+    if (state.fieldManager.isOpen) {
+      closeFieldManager(root);
+    } else {
+      openFieldManager(root);
+    }
+  });
+
+  const closeButton = select(panel, '[data-close-field-manager]');
+  closeButton?.addEventListener('click', () => closeFieldManager(root));
+
+  document.addEventListener('click', (event) => {
+    if (!state.fieldManager.isOpen) return;
+    if (panel.contains(event.target) || trigger.contains(event.target)) {
+      return;
+    }
+    closeFieldManager(root);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.fieldManager.isOpen) {
+      closeFieldManager(root);
+    }
+  });
+}
+
 function formatDate(value) {
   if (!value) return '';
   const date = new Date(value);
@@ -164,16 +322,17 @@ function renderAssetPool(root) {
   emptyState.hidden = true;
   container.hidden = false;
 
-  if (!columns.length || !rows.length) {
+  if (!rows.length) {
     state.assetPoolPage = 1;
     container.innerHTML = '';
     const placeholder = document.createElement('div');
     placeholder.className = 'card card--empty';
     placeholder.innerHTML = `
-      <h2>No mapped columns yet</h2>
-      <p>Map at least one column from a raw table to see data in the Asset Pool.</p>
+      <h2>No mapped rows yet</h2>
+      <p>Map at least one column from a raw table to populate the Asset Pool.</p>
     `;
     container.appendChild(placeholder);
+    renderFieldManager(root);
     return;
   }
 
@@ -289,6 +448,8 @@ function renderAssetPool(root) {
   container.appendChild(tableWrapper);
   container.appendChild(pagination);
 
+  renderFieldManager(root);
+
   selectAll(table, '.sort-button').forEach((button) => {
     button.addEventListener('click', () => {
       const key = button.dataset.sortKey;
@@ -320,9 +481,9 @@ function renderRawTable(root) {
   fetchJson(`${API.rawTables}/${rawTableId}`)
     .then((data) => {
       state.currentRawDetail = data;
-      state.assetFieldSuggestions = Array.from(
-        new Set([...(data.assetPool?.columns || []), ...state.assetFieldSuggestions])
-      );
+      const fieldStats = Array.isArray(data.assetPool?.fieldStats) ? data.assetPool.fieldStats : [];
+      const statNames = fieldStats.map((stat) => stat.field);
+      state.assetFieldSuggestions = Array.from(new Set([...statNames, ...state.assetFieldSuggestions]));
       if (metaBadge) {
         metaBadge.textContent = `${formatDate(data.table.uploadedAt)} · ${data.table.sourceFileName}`;
       }
@@ -720,11 +881,19 @@ async function refreshAssetPool() {
   try {
     const data = await fetchJson(API.assetPool);
     state.assetPool = data;
-    state.assetFieldSuggestions = Array.from(new Set([...(data?.columns || []), ...state.assetFieldSuggestions]));
+    const fieldStats = Array.isArray(data?.fieldStats) ? data.fieldStats : [];
+    const statNames = fieldStats.map((stat) => stat.field);
+    const statSet = new Set(statNames);
+    const preserved = state.assetFieldSuggestions.filter((field) => statSet.has(field));
+    state.assetFieldSuggestions = Array.from(new Set([...preserved, ...statNames]));
     state.assetPoolPage = 1;
     const root = document.querySelector('[data-app="asset-pool"]');
-    if (root && root.dataset.view === 'overview') {
-      renderAssetPool(root);
+    if (root) {
+      if (root.dataset.view === 'overview') {
+        renderAssetPool(root);
+      } else {
+        renderFieldManager(root);
+      }
     }
   } catch (err) {
     console.error(err);
@@ -786,6 +955,7 @@ async function initAssetPoolApp() {
 
   consumePendingToast();
   setupImportButtons(root);
+  setupFieldManager(root);
   setupCloseModal();
   renderSidebar(root);
 
