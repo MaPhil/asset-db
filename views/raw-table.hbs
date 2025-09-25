@@ -44,8 +44,8 @@
           <p>The requested raw table could not be found. Please select another table from the list.</p>
         </div>
       {{else}}
-        <div class="table-container" data-raw-table hidden></div>
-        <div class="card card--empty" data-raw-empty hidden>
+        <div class="table-container" data-raw-table {{#unless hasRows}}hidden{{/unless}}></div>
+        <div class="card card--empty" data-raw-empty {{#if hasRows}}hidden{{/if}}>
           <h2>File contained no rows</h2>
           <p>Please re-import.</p>
         </div>
