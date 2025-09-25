@@ -32,6 +32,18 @@ function selectAll(root, selector) {
   return root ? Array.from(root.querySelectorAll(selector)) : [];
 }
 
+function escapeHtml(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
   let payload = null;
@@ -510,14 +522,17 @@ function renderStageOne() {
 }
 
 function buildMappingRow({ header, value, datalistId }) {
+  const safeHeader = escapeHtml(header);
+  const safeValue = escapeHtml(value || '');
+  const attrHeader = String(header || '').replace(/"/g, '&quot;');
   return `
     <div class="mapping-row">
-      <strong>${header}</strong>
+      <strong>${safeHeader}</strong>
       <input
         type="text"
         name="mapping"
-        data-raw-header="${header.replace(/"/g, '&quot;')}"
-        value="${value || ''}"
+        data-raw-header="${attrHeader}"
+        value="${safeValue}"
         list="${datalistId}"
         placeholder="Start typing to map or create"
       />
@@ -552,7 +567,7 @@ function renderStageTwo({ headers, pairs, allowBack = true, title }) {
       <p class="error-text" data-error="general" hidden></p>
     </form>
     <datalist id="${datalistId}">
-      ${suggestions.map((item) => `<option value="${item}"></option>`).join('')}
+      ${suggestions.map((item) => `<option value="${escapeHtml(item)}"></option>`).join('')}
     </datalist>
   `;
 
@@ -576,6 +591,251 @@ function renderStageTwo({ headers, pairs, allowBack = true, title }) {
     if (modalTitle) {
       modalTitle.textContent = title;
     }
+  }
+}
+
+function renderEditModal({ table, pairs }) {
+  const modal = document.querySelector('[data-import-modal]');
+  const container = select(modal, '[data-import-stage]');
+  if (!container) return;
+
+  const datalistId = 'asset-field-suggestions';
+  const suggestions = Array.from(new Set([...(state.assetFieldSuggestions || [])]));
+  const headers = Array.isArray(table.headers) ? table.headers : [];
+  const inputs = headers
+    .map((header) => {
+      const existing = pairs.find((pair) => pair.rawHeader === header);
+      return buildMappingRow({ header, value: existing?.assetField || '', datalistId });
+    })
+    .join('');
+
+  const modalTitle = document.getElementById('import-modal-title');
+  if (modalTitle) {
+    modalTitle.textContent = `Edit ${table.title}`;
+  }
+
+  container.innerHTML = `
+    <div class="tab-group" data-edit-tabs>
+      <div class="tab-list" role="tablist">
+        <button class="tab-button is-active" type="button" role="tab" aria-selected="true" data-tab="mapping">Mapping</button>
+        <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="admin">Administration</button>
+      </div>
+      <div class="tab-panels">
+        <section class="tab-panel" data-panel="mapping" role="tabpanel">
+          <div class="mapping-tip">Map your file’s headers to Asset Pool fields. Only mapped columns appear in the Asset Pool.</div>
+          <form class="form-grid" data-stage-two>
+            <div class="mapping-list">
+              ${inputs}
+            </div>
+            <div class="modal-footer">
+              <button class="button button--ghost" type="button" data-cancel>Cancel</button>
+              <button class="button" type="submit">Update mappings</button>
+            </div>
+            <p class="error-text" data-error="general" hidden></p>
+          </form>
+        </section>
+        <section class="tab-panel" data-panel="admin" role="tabpanel" aria-hidden="true" hidden>
+          <form class="form-grid" data-admin-form>
+            <div class="form-field">
+              <label for="raw-title">Name</label>
+              <input id="raw-title" name="title" type="text" value="${escapeHtml(table.title)}" required />
+              <p class="error-text" data-error="title" hidden></p>
+            </div>
+            <div class="form-field">
+              <label for="raw-description">Description</label>
+              <textarea id="raw-description" name="description" rows="4">${escapeHtml(table.description || '')}</textarea>
+            </div>
+            <p class="error-text" data-error="general" hidden></p>
+            <div class="modal-footer">
+              <button class="button" type="submit">Save changes</button>
+            </div>
+          </form>
+          <div class="danger-zone">
+            <h3>Delete table</h3>
+            <p>Remove this raw table and all of its data from the Asset Pool.</p>
+            <button class="button button--danger" type="button" data-delete-table>Delete table</button>
+          </div>
+        </section>
+      </div>
+    </div>
+    <datalist id="${datalistId}">
+      ${suggestions.map((item) => `<option value="${escapeHtml(item)}"></option>`).join('')}
+    </datalist>
+  `;
+
+  const tabButtons = selectAll(container, '[data-tab]');
+  const panels = selectAll(container, '[data-panel]');
+
+  const focusTargets = {
+    mapping: () => container.querySelector('[data-panel="mapping"] input[name="mapping"]'),
+    admin: () => container.querySelector('[data-panel="admin"] input[name="title"]')
+  };
+
+  function activateTab(name) {
+    tabButtons.forEach((button) => {
+      const isActive = button.dataset.tab === name;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    panels.forEach((panel) => {
+      const isActive = panel.dataset.panel === name;
+      panel.hidden = !isActive;
+      if (isActive) {
+        panel.removeAttribute('aria-hidden');
+      } else {
+        panel.setAttribute('aria-hidden', 'true');
+      }
+    });
+  }
+
+  tabButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const target = button.dataset.tab;
+      activateTab(target);
+      const focusTarget = focusTargets[target]?.();
+      focusTarget?.focus();
+    });
+  });
+
+  activateTab('mapping');
+
+  const mappingForm = container.querySelector('[data-stage-two]');
+  const cancel = mappingForm.querySelector('[data-cancel]');
+  cancel.addEventListener('click', () => closeModal());
+  mappingForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    handleStageTwoSubmit(mappingForm);
+  });
+  const firstInput = mappingForm.querySelector('input[name="mapping"]');
+  firstInput?.focus();
+
+  const adminForm = container.querySelector('[data-admin-form]');
+  const adminTitleError = adminForm.querySelector('[data-error="title"]');
+  const adminGeneralError = adminForm.querySelector('[data-error="general"]');
+
+  adminForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    if (adminTitleError) {
+      adminTitleError.hidden = true;
+      adminTitleError.textContent = '';
+    }
+    if (adminGeneralError) {
+      adminGeneralError.hidden = true;
+      adminGeneralError.textContent = '';
+    }
+
+    adminForm.dataset.loading = 'true';
+
+    const formData = new FormData(adminForm);
+    const title = (formData.get('title') || '').trim();
+    const description = (formData.get('description') || '').trim();
+
+    if (!title) {
+      if (adminTitleError) {
+        adminTitleError.hidden = false;
+        adminTitleError.textContent = 'Name is required.';
+      }
+      delete adminForm.dataset.loading;
+      return;
+    }
+
+    try {
+      const result = await fetchJson(`${API.rawTables}/${state.modal.rawTableId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description })
+      });
+
+      const updated = result.table || { id: state.modal.rawTableId, title, description };
+      state.modal.tableTitle = updated.title;
+
+      if (state.currentRawDetail) {
+        state.currentRawDetail.table.title = updated.title;
+        state.currentRawDetail.table.description = updated.description || '';
+      }
+
+      const root = document.querySelector('[data-app="asset-pool"]');
+      if (modalTitle) {
+        modalTitle.textContent = `Edit ${updated.title}`;
+      }
+
+      await refreshRawTables();
+      await refreshAssetPool();
+
+      if (root && root.dataset.view === 'raw') {
+        const titleEl = select(root, '.page-title');
+        if (titleEl) {
+          titleEl.textContent = updated.title;
+        }
+      }
+
+      showToast('Raw table details updated.');
+    } catch (err) {
+      if (err.payload?.fieldErrors?.title) {
+        if (adminTitleError) {
+          adminTitleError.hidden = false;
+          adminTitleError.textContent = err.payload.fieldErrors.title;
+        }
+      } else if (adminGeneralError) {
+        adminGeneralError.hidden = false;
+        adminGeneralError.textContent = err.payload?.error || err.message;
+      }
+    } finally {
+      delete adminForm.dataset.loading;
+    }
+  });
+
+  const deleteButton = container.querySelector('[data-delete-table]');
+  if (deleteButton) {
+    deleteButton.addEventListener('click', async () => {
+      if (!state.modal.rawTableId) {
+        return;
+      }
+      const confirmed = window.confirm('Delete this raw table? This action cannot be undone.');
+      if (!confirmed) {
+        return;
+      }
+      deleteButton.disabled = true;
+      const origin = state.modal.origin;
+      const deletedTitle = table.title;
+      try {
+        await fetchJson(`${API.rawTables}/${state.modal.rawTableId}`, {
+          method: 'DELETE'
+        });
+
+        closeModal();
+        state.currentRawDetail = null;
+
+        await refreshRawTables();
+        await refreshAssetPool();
+
+        const message = `Deleted ${deletedTitle}.`;
+
+        if (origin === 'raw') {
+          try {
+            sessionStorage.setItem(TOAST_STORAGE_KEY, message);
+          } catch (err) {
+            // Storage might be unavailable; ignore.
+          }
+          const next = state.rawTables[0];
+          if (next) {
+            window.location.href = `/asset-pool/raw/${next.id}`;
+          } else {
+            window.location.href = '/asset-pool';
+          }
+          return;
+        }
+
+        showToast(message);
+      } catch (err) {
+        deleteButton.disabled = false;
+        if (adminGeneralError) {
+          adminGeneralError.hidden = false;
+          adminGeneralError.textContent = err.payload?.error || err.message;
+        }
+      }
+    });
   }
 }
 
@@ -771,11 +1031,9 @@ function setupEditMapping(root) {
     state.modal.tableTitle = table.title;
     state.modal.preview = null;
     openModal({ mode: 'edit', origin: 'raw' });
-    renderStageTwo({
-      headers: table.headers,
-      pairs: mapping || [],
-      allowBack: false,
-      title: `Edit mappings for ${table.title}`
+    renderEditModal({
+      table,
+      pairs: mapping || []
     });
   });
 }
