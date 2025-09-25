@@ -1,3 +1,4 @@
+import fs from 'fs';
 import XLSX from 'xlsx';
 
 import { store } from '../../../lib/storage.js';
@@ -27,6 +28,20 @@ export const SourcesController = {
     const file = req.file;
     if (!file) {
       return res.status(400).json({ error: 'file is required' });
+    }
+
+    const sources = store.get('sources').rows;
+    const existing = sources.find(
+      (row) => row.original_filename?.toLowerCase() === file.originalname.toLowerCase()
+    );
+
+    if (existing) {
+      if (file.path && fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
+      return res.status(409).json({
+        error: `File "${file.originalname}" has already been uploaded. Please delete the existing source before uploading it again.`
+      });
     }
 
     const displayName = (req.body.name || file.originalname).trim();
