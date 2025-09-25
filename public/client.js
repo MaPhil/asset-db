@@ -187,6 +187,8 @@ function renderAssetPool(root) {
 
   const tableWrapper = document.createElement('div');
   tableWrapper.className = 'table-wrapper';
+  const tableScroller = document.createElement('div');
+  tableScroller.className = 'table-scroller';
   const table = document.createElement('table');
   table.className = 'table';
 
@@ -247,7 +249,8 @@ function renderAssetPool(root) {
     });
   }
   table.appendChild(tbody);
-  tableWrapper.appendChild(table);
+  tableScroller.appendChild(table);
+  tableWrapper.appendChild(tableScroller);
 
   const pagination = document.createElement('div');
   pagination.className = 'pagination';
@@ -344,6 +347,8 @@ function renderRawTable(root) {
         tableContainer.hidden = false;
         const wrapper = document.createElement('div');
         wrapper.className = 'table-wrapper';
+        const scroller = document.createElement('div');
+        scroller.className = 'table-scroller';
         const table = document.createElement('table');
         table.className = 'table';
         const thead = document.createElement('thead');
@@ -367,7 +372,8 @@ function renderRawTable(root) {
           tbody.appendChild(tr);
         });
         table.appendChild(tbody);
-        wrapper.appendChild(table);
+        scroller.appendChild(table);
+        wrapper.appendChild(scroller);
         tableContainer.innerHTML = '';
         tableContainer.appendChild(wrapper);
       }
