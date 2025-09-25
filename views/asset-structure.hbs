@@ -1,43 +1,130 @@
-{{#> card title="Asset schema"}}
-  <p>
-    The unified asset schema defines which fields are available for every asset in the pool. Columns are
-    derived from the mappings you configure.
-  </p>
-  {{#if schema.length}}
-    <ul>
-      {{#each schema}}
-        <li>{{this}}</li>
-      {{/each}}
-    </ul>
-  {{else}}
-    <p>No schema columns defined yet.</p>
-  {{/if}}
-{{/card}}
+<div class="asset-structure-app" data-app="asset-structure">
+  <aside class="asset-structure-sidebar" aria-label="Asset structure navigation">
+    <div class="sidebar-section">
+      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Categories</a>
+      <a href="#asset-types" class="sidebar-link">Asset types</a>
+    </div>
+  </aside>
+  <section class="asset-structure-content">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Asset structure</h1>
+        <p class="page-subtitle">Manage the categories and asset types that organise your asset inventory.</p>
+      </div>
+    </header>
+    <div class="structure-body">
+      <section class="card structure-card" aria-labelledby="categories-title">
+        <div class="section-header">
+          <h2 class="section-title" id="categories-title">Categories</h2>
+          <div class="page-actions">
+            <button class="button" type="button" data-open-structure-modal="category">Add category</button>
+          </div>
+        </div>
+        {{#if categories.length}}
+          <div class="table-wrapper">
+            <table class="table table--interactive" aria-describedby="categories-title">
+              <thead>
+                <tr>
+                  <th scope="col">Category</th>
+                  <th scope="col">Governing category</th>
+                  <th scope="col">Owner</th>
+                  <th scope="col">Integrity</th>
+                  <th scope="col">Availability</th>
+                  <th scope="col">Confidentiality</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each categories}}
+                  <tr>
+                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{title}}</a></td>
+                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{governingCategory}}</a></td>
+                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{owner}}</a></td>
+                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{integrity}}</a></td>
+                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{availability}}</a></td>
+                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{confidentiality}}</a></td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        {{else}}
+          <p class="empty-state">No categories recorded yet. Start by creating your first category.</p>
+        {{/if}}
+      </section>
 
-{{#> card title="Source files" headingTag="h3"}}
-  <p>Each source contributes rows that are normalized into the asset pool.</p>
-  {{#if sources.length}}
-    <table class="table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Name</th>
-          <th>Filename</th>
-          <th>Updated</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each sources}}
-          <tr>
-            <td>{{id}}</td>
-            <td><a href="/sources/{{id}}">{{name}}</a></td>
-            <td>{{original_filename}}</td>
-            <td>{{updated_at}}</td>
-          </tr>
-        {{/each}}
-      </tbody>
-    </table>
-  {{else}}
-    <p>No sources ingested yet.</p>
-  {{/if}}
-{{/card}}
+      <section id="asset-types" class="card structure-card" aria-labelledby="asset-types-title">
+        <div class="section-header">
+          <h2 class="section-title" id="asset-types-title">Asset types</h2>
+        </div>
+        {{#if assetTypes.length}}
+          <ul class="asset-type-list">
+            {{#each assetTypes}}
+              <li class="asset-type-item">
+                <span class="asset-type-name">{{name}}</span>
+                <span class="asset-type-count">{{count}} {{#if (eq count 1)}}group{{else}}groups{{/if}}</span>
+              </li>
+            {{/each}}
+          </ul>
+        {{else}}
+          <p class="empty-state">Asset types appear here once groups have been categorised.</p>
+        {{/if}}
+      </section>
+    </div>
+  </section>
+</div>
+
+<div class="modal" data-structure-modal="category" hidden aria-hidden="true">
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="category-modal-title">
+    <header class="modal-header">
+      <h2 id="category-modal-title">Add category</h2>
+      <button class="icon-button" type="button" aria-label="Close category form" data-close-structure-modal>&times;</button>
+    </header>
+    <div class="modal-body">
+      <form class="form-grid form-grid--two">
+        <div class="form-field">
+          <label for="category-title">Category title</label>
+          <input id="category-title" name="title" type="text" placeholder="e.g. Business critical services" />
+        </div>
+        <div class="form-field">
+          <label for="category-governing">Governing category</label>
+          <input id="category-governing" name="governing_category" type="text" placeholder="e.g. Operational" />
+        </div>
+        <div class="form-field">
+          <label for="category-owner">Owner</label>
+          <input id="category-owner" name="owner" type="text" placeholder="e.g. Asset governance" />
+        </div>
+        <div class="form-field">
+          <label for="category-integrity">Integrity</label>
+          <select id="category-integrity" name="integrity">
+            <option value="">Select rating</option>
+            <option>Low</option>
+            <option>Moderate</option>
+            <option>High</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="category-availability">Availability</label>
+          <select id="category-availability" name="availability">
+            <option value="">Select rating</option>
+            <option>Low</option>
+            <option>Moderate</option>
+            <option>High</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="category-confidentiality">Confidentiality</label>
+          <select id="category-confidentiality" name="confidentiality">
+            <option value="">Select rating</option>
+            <option>Low</option>
+            <option>Moderate</option>
+            <option>High</option>
+          </select>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button class="button button--ghost" type="button" data-close-structure-modal>Cancel</button>
+        <button class="button" type="button">Save category</button>
+      </div>
+    </div>
+  </div>
+</div>

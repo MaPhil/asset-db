@@ -88,13 +88,142 @@ app.get('/asset-pool/raw/:id', (req, res) => {
   });
 });
 
+const formatDateTime = (value) => {
+  if (!value) {
+    return null;
+  }
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(new Date(value));
+  } catch (err) {
+    logger.warn('Failed to format date', { value, err });
+    return null;
+  }
+};
+
 app.get('/asset-structure', (req, res) => {
-  const schema = store.get('schema').rows.map((row) => row.col_name);
-  const sources = store.get('sources').rows;
+  const categoriesRaw = store.get('categories').rows;
+  const groups = store.get('groups').rows;
+
+  const categories = categoriesRaw.map((category) => ({
+    id: category.id,
+    title: category.title || category.name || `Category ${category.id}`,
+    governingCategory: category.governing_category || '—',
+    owner: category.owner || category.group_owner || '—',
+    integrity: category.integrity || '—',
+    availability: category.availability || '—',
+    confidentiality: category.confidentiality || '—'
+  }));
+
+  const assetTypeStats = groups.reduce((acc, group) => {
+    if (!group?.asset_type) {
+      return acc;
+    }
+    const key = String(group.asset_type).trim();
+    if (!key) {
+      return acc;
+    }
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  const assetTypes = Object.entries(assetTypeStats)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   res.render('asset-structure', {
     nav: 'assetStructure',
-    schema,
-    sources
+    categories,
+    assetTypes,
+    counts: {
+      categories: categories.length,
+      assetTypes: assetTypes.length
+    }
+  });
+});
+
+app.get('/asset-structure/categories/:id', (req, res) => {
+  const categoryId = Number(req.params.id);
+  const categories = store.get('categories').rows;
+  const category = categories.find((row) => row.id === categoryId);
+  if (!category) {
+    logger.warn('Category not found for UI route', { categoryId });
+    return res.status(404).send('Category not found');
+  }
+
+  const links = store
+    .get('group_categories')
+    .rows.filter((row) => row.category_id === categoryId);
+  const groups = store
+    .get('groups')
+    .rows.filter((group) => links.some((link) => link.group_id === group.id));
+
+  const viewModel = {
+    id: category.id,
+    title: category.title || category.name || '',
+    displayTitle: category.title || category.name || 'Untitled category',
+    description: category.description || '',
+    governingCategory: category.governing_category || '',
+    owner: category.owner || category.group_owner || '',
+    integrity: category.integrity || '',
+    availability: category.availability || '',
+    confidentiality: category.confidentiality || ''
+  };
+
+  const groupRows = groups.map((group) => ({
+    id: group.id,
+    title: group.title || `Group ${group.id}`,
+    status: group.status || '—',
+    assetType: group.asset_type || '—',
+    updatedAt: formatDateTime(group.updated_at) || '—'
+  }));
+
+  res.render('asset-structure-category', {
+    nav: 'assetStructure',
+    category: viewModel,
+    groups: groupRows
+  });
+});
+
+app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) => {
+  const categoryId = Number(req.params.categoryId);
+  const groupId = Number(req.params.groupId);
+
+  const categories = store.get('categories').rows;
+  const category = categories.find((row) => row.id === categoryId);
+  if (!category) {
+    logger.warn('Category not found for group UI route', { categoryId, groupId });
+    return res.status(404).send('Category not found');
+  }
+
+  const group = store
+    .get('groups')
+    .rows.find((row) => row.id === groupId);
+  if (!group) {
+    logger.warn('Group not found for UI route', { categoryId, groupId });
+    return res.status(404).send('Group not found');
+  }
+
+  const detail = {
+    id: group.id,
+    title: group.title || '',
+    displayTitle: group.title || 'Untitled group',
+    description: group.description || '',
+    status: group.status || '',
+    assetType: group.asset_type || '',
+    createdAt: formatDateTime(group.created_at) || '—',
+    updatedAt: formatDateTime(group.updated_at) || '—'
+  };
+
+  res.render('asset-structure-group', {
+    nav: 'assetStructure',
+    category: {
+      id: category.id,
+      title: category.title || category.name || 'Untitled category'
+    },
+    group: detail
   });
 });
 
