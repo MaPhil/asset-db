@@ -329,22 +329,27 @@ function renderRawTable(root) {
       if (titleEl) {
         titleEl.textContent = data.table.title;
       }
-      if (!data.rows.length) {
-        if (tableContainer) {
-          tableContainer.hidden = true;
+      const hasRows = data.rows.length > 0;
+
+      if (tableContainer) {
+        tableContainer.hidden = !hasRows;
+        tableContainer.setAttribute('aria-hidden', !hasRows ? 'true' : 'false');
+        if (!hasRows) {
           tableContainer.innerHTML = '';
         }
-        if (emptyCard) {
-          emptyCard.hidden = false;
-        }
-        return;
       }
 
       if (emptyCard) {
-        emptyCard.hidden = true;
+        emptyCard.hidden = hasRows;
+        emptyCard.setAttribute('aria-hidden', hasRows ? 'true' : 'false');
       }
+
+      if (!hasRows) {
+        return;
+      }
+
       if (tableContainer) {
-        tableContainer.hidden = false;
+        tableContainer.innerHTML = '';
         const wrapper = document.createElement('div');
         wrapper.className = 'table-wrapper';
         const scroller = document.createElement('div');
