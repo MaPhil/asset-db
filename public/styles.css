@@ -688,7 +688,7 @@ main {
   justify-content: center;
   padding: 1.5rem;
   backdrop-filter: blur(3px);
-  z-index: 2;
+  z-index: 20;
 }
 
 .modal[hidden] {

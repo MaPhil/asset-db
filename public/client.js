@@ -2,7 +2,8 @@ const API = {
   rawTables: '/api/v1/raw-tables',
   assetPool: '/api/v1/asset-pool',
   assetPoolFields: '/api/v1/asset-pool/fields',
-  categories: '/api/v1/categories'
+  categories: '/api/v1/categories',
+  groups: '/api/v1/groups'
 };
 
 const PAGE_SIZE = 25;
@@ -1362,11 +1363,86 @@ function setupCreateCategoryForm(root) {
   });
 }
 
+function setupCreateGroupForm(root) {
+  const categoryId = Number(root?.dataset.categoryId || '');
+  if (!Number.isFinite(categoryId) || categoryId <= 0) {
+    return;
+  }
+
+  const modal = document.querySelector('[data-structure-modal="group"]');
+  const form = modal?.querySelector('form');
+  const saveButton = modal?.querySelector('[data-save-group]');
+  if (!modal || !form || !saveButton) {
+    return;
+  }
+
+  const titleInput = form.querySelector('input[name="title"]');
+  titleInput?.addEventListener('input', () => {
+    titleInput.removeAttribute('aria-invalid');
+  });
+
+  let isSubmitting = false;
+
+  saveButton.addEventListener('click', async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    const formData = new FormData(form);
+    const payload = {};
+    for (const [key, value] of formData.entries()) {
+      payload[key] = typeof value === 'string' ? value.trim() : value;
+    }
+
+    const title = payload.title || '';
+    if (!title) {
+      if (titleInput) {
+        titleInput.setAttribute('aria-invalid', 'true');
+        titleInput.focus();
+      }
+      return;
+    }
+
+    payload.title = title;
+
+    isSubmitting = true;
+    saveButton.disabled = true;
+    saveButton.dataset.loading = 'true';
+
+    try {
+      const response = await fetchJson(API.groups, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const groupId = Number(response?.id);
+      if (Number.isFinite(groupId) && groupId > 0) {
+        await fetchJson(`${API.groups}/${groupId}/link-category`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category_id: categoryId })
+        });
+      }
+
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to create group', error);
+      alert('Failed to save group. Please try again.');
+    } finally {
+      isSubmitting = false;
+      saveButton.disabled = false;
+      delete saveButton.dataset.loading;
+    }
+  });
+}
+
 function initAssetStructureApp() {
   const root = document.querySelector('[data-app="asset-structure"]');
   if (!root) return;
   setupStructureModals(root);
   setupCreateCategoryForm(root);
+  setupCreateGroupForm(root);
 }
 
 async function initAssetPoolApp() {
