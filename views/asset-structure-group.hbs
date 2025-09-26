@@ -122,9 +122,34 @@
           {{#unless groupAssetTypes.length}}hidden{{/unless}}
         >
           {{#each groupAssetTypes}}
-            <li class="group-asset-type-list__item">
+            <li
+              class="group-asset-type-list__item"
+              data-group-asset-type-item
+              data-group-asset-type-name="{{name}}"
+              {{#if id}}data-group-asset-type-id="{{id}}"{{/if}}
+              {{#if isLegacy}}data-group-asset-type-legacy="true"{{/if}}
+            >
               <div class="group-asset-type-pill{{#if isLegacy}} group-asset-type-pill--legacy{{/if}}">
-                <span class="group-asset-type-pill__name">{{name}}</span>
+                <div class="group-asset-type-pill__header">
+                  <span class="group-asset-type-pill__name">{{name}}</span>
+                  <div class="group-asset-type-pill__actions">
+                    <button
+                      type="button"
+                      class="icon-button group-asset-type-pill__remove"
+                      aria-label="Remove asset type {{name}} from this group"
+                      data-group-asset-type-name="{{name}}"
+                      {{#if id}}
+                        data-remove-group-asset-type="{{id}}"
+                      {{else}}
+                        disabled
+                        aria-disabled="true"
+                        title="Update the group information to remove this asset type."
+                      {{/if}}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                </div>
                 <span class="group-asset-type-pill__meta">
                   {{#if count}}
                     {{count}} {{#if (eq count 1)}}asset{{else}}assets{{/if}}

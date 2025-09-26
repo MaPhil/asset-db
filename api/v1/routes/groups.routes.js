@@ -23,5 +23,11 @@ router.post(
   validateId(),
   asyncHandler(GroupAssetTypesController.create)
 );
+router.delete(
+  '/:id/asset-types/:assetTypeId',
+  validateId(),
+  validateId('assetTypeId'),
+  asyncHandler(GroupAssetTypesController.destroy)
+);
 
 export default router;

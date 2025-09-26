@@ -7,6 +7,8 @@ const API = {
   categories: '/api/v1/categories',
   groups: '/api/v1/groups',
   groupAssetTypes: (groupId) => `/api/v1/groups/${groupId}/asset-types`,
+  groupAssetType: (groupId, assetTypeId) =>
+    `/api/v1/groups/${groupId}/asset-types/${assetTypeId}`,
   groupAssetTypesAvailable: (groupId) =>
     `/api/v1/groups/${groupId}/asset-types/available`
 };
@@ -1952,14 +1954,53 @@ function appendGroupAssetTypePill(root, entry) {
 
   const item = document.createElement('li');
   item.className = 'group-asset-type-list__item';
+  item.dataset.groupAssetTypeItem = 'true';
+  const assignmentId = Number(entry?.id);
+  const hasAssignmentId = Number.isInteger(assignmentId) && assignmentId > 0;
+  if (hasAssignmentId) {
+    item.dataset.groupAssetTypeId = String(assignmentId);
+  }
+  const assetTypeName = entry?.name ?? '';
+  item.dataset.groupAssetTypeName = String(assetTypeName);
+  if (entry?.isLegacy) {
+    item.dataset.groupAssetTypeLegacy = 'true';
+  }
 
   const pill = document.createElement('div');
-  pill.className = 'group-asset-type-pill';
+  pill.className = `group-asset-type-pill${entry?.isLegacy ? ' group-asset-type-pill--legacy' : ''}`;
+
+  const header = document.createElement('div');
+  header.className = 'group-asset-type-pill__header';
 
   const nameEl = document.createElement('span');
   nameEl.className = 'group-asset-type-pill__name';
-  nameEl.textContent = entry?.name || '';
-  pill.appendChild(nameEl);
+  nameEl.textContent = assetTypeName;
+  header.appendChild(nameEl);
+
+  const actionsEl = document.createElement('div');
+  actionsEl.className = 'group-asset-type-pill__actions';
+
+  const removeButton = document.createElement('button');
+  removeButton.type = 'button';
+  removeButton.className = 'icon-button group-asset-type-pill__remove';
+  removeButton.textContent = '×';
+  const labelName = assetTypeName || 'this asset type';
+  removeButton.setAttribute(
+    'aria-label',
+    `Remove asset type ${labelName} from this group`
+  );
+  removeButton.dataset.groupAssetTypeName = String(assetTypeName);
+  if (hasAssignmentId) {
+    removeButton.dataset.removeGroupAssetType = String(assignmentId);
+  } else {
+    removeButton.disabled = true;
+    removeButton.setAttribute('aria-disabled', 'true');
+    removeButton.title = 'Update the group information to remove this asset type.';
+  }
+  actionsEl.appendChild(removeButton);
+  header.appendChild(actionsEl);
+
+  pill.appendChild(header);
 
   const metaEl = document.createElement('span');
   metaEl.className = 'group-asset-type-pill__meta';
@@ -1970,6 +2011,13 @@ function appendGroupAssetTypePill(root, entry) {
     metaEl.textContent = 'No Asset Pool entries yet';
   }
   pill.appendChild(metaEl);
+
+  if (entry?.isLegacy) {
+    const tagEl = document.createElement('span');
+    tagEl.className = 'group-asset-type-pill__tag';
+    tagEl.textContent = 'From group details';
+    pill.appendChild(tagEl);
+  }
 
   item.appendChild(pill);
   list.appendChild(item);
@@ -1985,6 +2033,72 @@ function appendGroupAssetTypePill(root, entry) {
       root.dataset.availableGroupAssetTypes = String(Math.max(0, available - 1));
     }
   }
+}
+
+function setupGroupAssetTypeList(root) {
+  const list = select(root, '[data-group-asset-type-list]');
+  if (!list) {
+    return;
+  }
+
+  const emptyEl = select(root, '[data-group-asset-type-empty]');
+  const groupId = Number(root?.dataset?.groupId || '');
+  if (!Number.isInteger(groupId) || groupId <= 0) {
+    return;
+  }
+
+  list.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-remove-group-asset-type]');
+    if (!button || !list.contains(button)) {
+      return;
+    }
+
+    const assignmentId = Number(button.dataset.removeGroupAssetType || '');
+    if (!Number.isInteger(assignmentId) || assignmentId <= 0) {
+      return;
+    }
+
+    if (button.dataset.loading === 'true') {
+      return;
+    }
+
+    button.dataset.loading = 'true';
+    button.disabled = true;
+
+    const item = button.closest('[data-group-asset-type-item]');
+    const assetTypeName =
+      button.dataset.groupAssetTypeName || item?.dataset.groupAssetTypeName || 'this asset type';
+    const groupName = root?.dataset?.groupName || 'this group';
+
+    try {
+      await fetchJson(API.groupAssetType(groupId, assignmentId), { method: 'DELETE' });
+
+      item?.remove();
+
+      const remainingItems = list.querySelectorAll('[data-group-asset-type-item]').length;
+      if (remainingItems === 0) {
+        list.hidden = true;
+        if (emptyEl) {
+          emptyEl.hidden = false;
+        }
+      }
+
+      if (root?.dataset) {
+        const available = Number(root.dataset.availableGroupAssetTypes || '0');
+        const next = Number.isFinite(available) ? available + 1 : 1;
+        root.dataset.availableGroupAssetTypes = String(next);
+      }
+
+      showToast(`Removed asset type “${assetTypeName}” from ${groupName}.`);
+    } catch (error) {
+      const message =
+        error?.payload?.error || error?.message || 'Failed to remove asset type from this group.';
+      showToast(message);
+      button.disabled = false;
+    } finally {
+      delete button.dataset.loading;
+    }
+  });
 }
 
 function setupGroupAssetTypeModal(root) {
@@ -2215,6 +2329,7 @@ function initAssetStructureApp() {
   setupCreateCategoryForm(root);
   setupCreateGroupForm(root);
   setupAssetTypeDecisionModal(root);
+  setupGroupAssetTypeList(root);
   setupGroupAssetTypeModal(root);
 }
 
