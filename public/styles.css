@@ -462,6 +462,43 @@ main {
   color: rgb(153, 27, 27);
 }
 
+.asset-type-groups {
+  margin-top: 0.75rem;
+}
+
+.asset-type-groups__list {
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.asset-type-groups__item {
+  margin: 0;
+}
+
+.asset-type-groups__link {
+  color: var(--color-primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.asset-type-groups__link:hover,
+.asset-type-groups__link:focus {
+  text-decoration: underline;
+}
+
+.asset-type-groups__text {
+  font-weight: 500;
+}
+
+.asset-type-groups__warning {
+  margin: 0.5rem 0 0;
+  color: #b45309;
+}
+
 .group-asset-type-list {
   margin: 0;
   padding: 0;
@@ -877,6 +914,11 @@ main {
 }
 
 .form-field label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.form-field__label {
   font-weight: 600;
   font-size: 0.95rem;
 }
