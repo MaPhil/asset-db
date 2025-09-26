@@ -18,39 +18,43 @@
       </div>
     </header>
     <div class="structure-body">
-      <section class="card structure-card" aria-labelledby="asset-types-title">
+      <section class="structure-section" aria-labelledby="asset-types-title">
         <div class="section-header">
           <h2 class="section-title" id="asset-types-title">Asset types</h2>
         </div>
         {{#if assetTypeField}}
-          <p class="helper-text">
+          <p class="structure-section__subtitle">
             Asset types are derived from the <strong>{{assetTypeField}}</strong> field in your Asset Pool.
           </p>
-          {{#if assetTypes.length}}
-            <div class="asset-type-grid" data-asset-type-list>
-              {{#each assetTypes}}
-                <button
-                  class="asset-type-pill"
-                  type="button"
-                  data-asset-type-button
-                  data-asset-type-name="{{name}}"
-                  data-asset-type-decision="{{decision}}"
-                  data-asset-type-comment="{{comment}}"
-                >
-                  <span class="asset-type-pill__name">{{name}}</span>
-                  <span class="asset-type-pill__meta">{{count}} {{#if (eq count 1)}}asset{{else}}assets{{/if}}</span>
-                  <span class="asset-type-pill__status" data-asset-type-status data-status="{{decision}}">
-                    {{#if (eq decision "ignore")}}Ignore{{else}}Use{{/if}}
-                  </span>
-                </button>
-              {{/each}}
-            </div>
-          {{else}}
-            <p class="empty-state">No asset pool entries matched the field "{{assetTypeField}}".</p>
-          {{/if}}
-        {{else}}
-          <p class="empty-state">Choose an asset type field in the Asset Pool overview to populate this list.</p>
         {{/if}}
+        <div class="card structure-card">
+          {{#if assetTypeField}}
+            {{#if assetTypes.length}}
+              <div class="asset-type-grid" data-asset-type-list>
+                {{#each assetTypes}}
+                  <button
+                    class="asset-type-pill"
+                    type="button"
+                    data-asset-type-button
+                    data-asset-type-name="{{name}}"
+                    data-asset-type-decision="{{decision}}"
+                    data-asset-type-comment="{{comment}}"
+                  >
+                    <span class="asset-type-pill__name">{{name}}</span>
+                    <span class="asset-type-pill__meta">{{count}} {{#if (eq count 1)}}asset{{else}}assets{{/if}}</span>
+                    <span class="asset-type-pill__status" data-asset-type-status data-status="{{decision}}">
+                      {{#if (eq decision "ignore")}}Ignore{{else}}Use{{/if}}
+                    </span>
+                  </button>
+                {{/each}}
+              </div>
+            {{else}}
+              <p class="empty-state">No asset pool entries matched the field "{{assetTypeField}}".</p>
+            {{/if}}
+          {{else}}
+            <p class="empty-state">Choose an asset type field in the Asset Pool overview to populate this list.</p>
+          {{/if}}
+        </div>
       </section>
     </div>
   </section>

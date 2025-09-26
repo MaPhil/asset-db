@@ -13,43 +13,45 @@
       </div>
     </header>
     <div class="structure-body">
-      <section class="card structure-card" aria-labelledby="categories-title">
+      <section class="structure-section" aria-labelledby="categories-title">
         <div class="section-header">
           <h2 class="section-title" id="categories-title">Categories</h2>
           <div class="page-actions">
             <button class="button" type="button" data-open-structure-modal="category">Add category</button>
           </div>
         </div>
-        {{#if categories.length}}
-          <div class="table-wrapper">
-            <table class="table table--interactive" aria-describedby="categories-title">
-              <thead>
-                <tr>
-                  <th scope="col">Category</th>
-                  <th scope="col">Governing category</th>
-                  <th scope="col">Owner</th>
-                  <th scope="col">Integrity</th>
-                  <th scope="col">Availability</th>
-                  <th scope="col">Confidentiality</th>
-                </tr>
-              </thead>
-              <tbody>
-                {{#each categories}}
+        <div class="card structure-card">
+          {{#if categories.length}}
+            <div class="table-wrapper">
+              <table class="table table--interactive" aria-describedby="categories-title">
+                <thead>
                   <tr>
-                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{title}}</a></td>
-                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{governingCategory}}</a></td>
-                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{owner}}</a></td>
-                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{integrity}}</a></td>
-                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{availability}}</a></td>
-                    <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{confidentiality}}</a></td>
+                    <th scope="col">Category</th>
+                    <th scope="col">Governing category</th>
+                    <th scope="col">Owner</th>
+                    <th scope="col">Integrity</th>
+                    <th scope="col">Availability</th>
+                    <th scope="col">Confidentiality</th>
                   </tr>
-                {{/each}}
-              </tbody>
-            </table>
-          </div>
-        {{else}}
-          <p class="empty-state">No categories recorded yet. Start by creating your first category.</p>
-        {{/if}}
+                </thead>
+                <tbody>
+                  {{#each categories}}
+                    <tr>
+                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{title}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{governingCategory}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{owner}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{integrity}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{availability}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{confidentiality}}</a></td>
+                    </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+          {{else}}
+            <p class="empty-state">No categories recorded yet. Start by creating your first category.</p>
+          {{/if}}
+        </div>
       </section>
 
     </div>
