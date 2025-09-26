@@ -1,4 +1,4 @@
-<div class="asset-structure-app" data-app="asset-structure">
+<div class="asset-structure-app" data-app="asset-structure" data-category-id="{{category.id}}">
   <aside class="asset-structure-sidebar" aria-label="Asset structure navigation">
     <div class="sidebar-section">
       <a href="/asset-structure" class="sidebar-link sidebar-link--active">Categories</a>
@@ -146,7 +146,13 @@
       <form class="form-grid">
         <div class="form-field">
           <label for="group-title">Title</label>
-          <input id="group-title" type="text" name="title" placeholder="e.g. Customer-facing applications" />
+          <input
+            id="group-title"
+            type="text"
+            name="title"
+            placeholder="e.g. Customer-facing applications"
+            data-auto-focus
+          />
         </div>
         <div class="form-field">
           <label for="group-description">Description</label>
@@ -160,7 +166,7 @@
       </form>
       <div class="modal-footer">
         <button class="button button--ghost" type="button" data-close-structure-modal>Cancel</button>
-        <button class="button" type="button">Save group</button>
+        <button class="button" type="button" data-save-group>Save group</button>
       </div>
     </div>
   </div>
