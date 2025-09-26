@@ -2,6 +2,8 @@ const API = {
   rawTables: '/api/v1/raw-tables',
   assetPool: '/api/v1/asset-pool',
   assetPoolFields: '/api/v1/asset-pool/fields',
+  assetTypeField: '/api/v1/asset-pool/settings/asset-type-field',
+  assetTypes: '/api/v1/asset-types',
   categories: '/api/v1/categories',
   groups: '/api/v1/groups'
 };
@@ -28,6 +30,18 @@ const state = {
   fieldManager: {
     isOpen: false,
     busyField: null,
+    error: null
+  },
+  assetTypeFieldModal: {
+    isOpen: false,
+    isSaving: false,
+    trigger: null,
+    error: null
+  },
+  assetTypeDecisionModal: {
+    isOpen: false,
+    isSaving: false,
+    activeButton: null,
     error: null
   }
 };
@@ -269,6 +283,216 @@ function setupFieldManager(root) {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.fieldManager.isOpen) {
       closeFieldManager(root);
+    }
+  });
+}
+
+function populateAssetTypeFieldSelect(modal) {
+  const selectEl = select(modal, '[data-asset-type-field-select]');
+  const helper = select(modal, '[data-asset-type-field-helper]');
+  const errorEl = select(modal, '[data-asset-type-field-error]');
+  const saveButton = select(modal, '[data-save-asset-type-field]');
+  if (!selectEl || !helper) {
+    return;
+  }
+
+  const stats = Array.isArray(state.assetPool?.fieldStats) ? state.assetPool.fieldStats : [];
+  const current = state.assetPool?.assetTypeField || '';
+  const options = [];
+  const seen = new Set();
+
+  stats.forEach((stat) => {
+    const field = stat?.field;
+    if (!field) {
+      return;
+    }
+    if (seen.has(field)) {
+      return;
+    }
+    seen.add(field);
+    options.push({ name: field, missing: false });
+  });
+
+  if (current && !seen.has(current)) {
+    options.unshift({ name: current, missing: true });
+  }
+
+  selectEl.innerHTML = '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Select a field';
+  selectEl.appendChild(placeholder);
+
+  options.forEach((option) => {
+    const opt = document.createElement('option');
+    opt.value = option.name;
+    opt.textContent = option.missing
+      ? `${option.name} (no longer available)`
+      : option.name;
+    selectEl.appendChild(opt);
+  });
+
+  selectEl.value = current || '';
+  selectEl.disabled = options.length === 0;
+
+  helper.textContent = options.length
+    ? 'Only mapped fields with data appear in this list.'
+    : 'Add mapping fields to choose an asset type.';
+
+  if (errorEl) {
+    if (state.assetTypeFieldModal.error) {
+      errorEl.hidden = false;
+      errorEl.textContent = state.assetTypeFieldModal.error;
+    } else {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+  }
+
+  if (saveButton) {
+    saveButton.disabled = state.assetTypeFieldModal.isSaving;
+  }
+}
+
+function openAssetTypeFieldModal(trigger) {
+  const modal = document.querySelector('[data-asset-type-modal]');
+  if (!modal || state.assetTypeFieldModal.isOpen) {
+    return;
+  }
+
+  state.assetTypeFieldModal.isOpen = true;
+  state.assetTypeFieldModal.trigger = trigger || null;
+  state.assetTypeFieldModal.error = null;
+
+  trigger?.setAttribute('aria-expanded', 'true');
+
+  populateAssetTypeFieldSelect(modal);
+
+  modal.hidden = false;
+  modal.removeAttribute('aria-hidden');
+  if (!modal.hasAttribute('tabindex')) {
+    modal.setAttribute('tabindex', '-1');
+  }
+  modal.focus?.();
+
+  if (!state.modal.isOpen) {
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeAssetTypeFieldModal() {
+  if (!state.assetTypeFieldModal.isOpen) {
+    return;
+  }
+
+  const modal = document.querySelector('[data-asset-type-modal]');
+  state.assetTypeFieldModal.isOpen = false;
+  state.assetTypeFieldModal.isSaving = false;
+
+  if (modal) {
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  const trigger = state.assetTypeFieldModal.trigger;
+  if (trigger) {
+    trigger.setAttribute('aria-expanded', 'false');
+    if (typeof trigger.focus === 'function') {
+      trigger.focus();
+    }
+  }
+
+  state.assetTypeFieldModal.trigger = null;
+  state.assetTypeFieldModal.error = null;
+
+  if (!state.modal.isOpen) {
+    document.body.style.overflow = '';
+  }
+}
+
+function setupAssetTypeFieldModal(root) {
+  const trigger = select(root, '[data-open-asset-type-modal]');
+  const modal = document.querySelector('[data-asset-type-modal]');
+  if (!trigger || !modal) {
+    return;
+  }
+
+  const saveButton = select(modal, '[data-save-asset-type-field]');
+  const cancelButton = select(modal, '[data-cancel-asset-type-modal]');
+  const closeButton = select(modal, '[data-close-asset-type-modal]');
+  const selectEl = select(modal, '[data-asset-type-field-select]');
+  const errorEl = select(modal, '[data-asset-type-field-error]');
+
+  trigger.addEventListener('click', () => {
+    if (state.assetTypeFieldModal.isOpen) {
+      closeAssetTypeFieldModal();
+    } else {
+      openAssetTypeFieldModal(trigger);
+    }
+  });
+
+  cancelButton?.addEventListener('click', () => closeAssetTypeFieldModal());
+  closeButton?.addEventListener('click', () => closeAssetTypeFieldModal());
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeAssetTypeFieldModal();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.assetTypeFieldModal.isOpen) {
+      closeAssetTypeFieldModal();
+    }
+  });
+
+  saveButton?.addEventListener('click', async () => {
+    if (state.assetTypeFieldModal.isSaving) {
+      return;
+    }
+
+    if (!selectEl) {
+      return;
+    }
+
+    state.assetTypeFieldModal.isSaving = true;
+    state.assetTypeFieldModal.error = null;
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+    saveButton.disabled = true;
+
+    const value = selectEl.disabled ? '' : selectEl.value;
+    const payload = { field: value || null };
+
+    try {
+      const result = await fetchJson(API.assetTypeField, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      await refreshAssetPool();
+      const field = result?.field;
+      if (field) {
+        showToast(`Asset type field set to "${field}".`);
+      } else {
+        showToast('Asset type field cleared.');
+      }
+      closeAssetTypeFieldModal();
+    } catch (error) {
+      const message = error?.payload?.error || error?.message || 'Failed to save asset type field.';
+      state.assetTypeFieldModal.error = message;
+      if (errorEl) {
+        errorEl.hidden = false;
+        errorEl.textContent = message;
+      }
+    } finally {
+      state.assetTypeFieldModal.isSaving = false;
+      saveButton.disabled = false;
+      if (state.assetTypeFieldModal.isOpen) {
+        populateAssetTypeFieldSelect(modal);
+      }
     }
   });
 }
@@ -1437,12 +1661,174 @@ function setupCreateGroupForm(root) {
   });
 }
 
+function setupAssetTypeDecisionModal(root) {
+  const modal = document.querySelector('[data-asset-type-decision-modal]');
+  if (!modal) {
+    return;
+  }
+
+  const buttons = selectAll(root, '[data-asset-type-button]');
+  if (!buttons.length) {
+    return;
+  }
+
+  const titleEl = select(modal, '[data-asset-type-modal-title]');
+  const selectEl = select(modal, '[data-asset-type-decision-select]');
+  const commentInput = select(modal, '[data-asset-type-comment]');
+  const errorEl = select(modal, '[data-asset-type-decision-error]');
+  const saveButton = select(modal, '[data-save-asset-type-decision]');
+  const cancelButton = select(modal, '[data-cancel-asset-type-decision]');
+  const closeButton = select(modal, '[data-close-asset-type-decision]');
+
+  function open(button) {
+    const name = button?.dataset.assetTypeName || '';
+    state.assetTypeDecisionModal.isOpen = true;
+    state.assetTypeDecisionModal.isSaving = false;
+    state.assetTypeDecisionModal.activeButton = button;
+    state.assetTypeDecisionModal.error = null;
+
+    if (titleEl) {
+      titleEl.textContent = name ? `Configure “${name}”` : 'Configure asset type';
+    }
+    if (selectEl) {
+      selectEl.value = button?.dataset.assetTypeDecision || 'use';
+    }
+    if (commentInput) {
+      commentInput.value = button?.dataset.assetTypeComment || '';
+    }
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+
+    modal.hidden = false;
+    modal.removeAttribute('aria-hidden');
+    if (!modal.hasAttribute('tabindex')) {
+      modal.setAttribute('tabindex', '-1');
+    }
+    modal.focus?.();
+
+    structureModalOpenCount += 1;
+    if (structureModalOpenCount === 1) {
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function close() {
+    if (!state.assetTypeDecisionModal.isOpen) {
+      return;
+    }
+
+    state.assetTypeDecisionModal.isOpen = false;
+    state.assetTypeDecisionModal.isSaving = false;
+
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+
+    structureModalOpenCount = Math.max(0, structureModalOpenCount - 1);
+    if (structureModalOpenCount === 0) {
+      document.body.style.overflow = '';
+    }
+
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+
+    const button = state.assetTypeDecisionModal.activeButton;
+    state.assetTypeDecisionModal.activeButton = null;
+    if (button && typeof button.focus === 'function') {
+      button.focus();
+    }
+  }
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => open(button));
+  });
+
+  cancelButton?.addEventListener('click', () => close());
+  closeButton?.addEventListener('click', () => close());
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      close();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.assetTypeDecisionModal.isOpen) {
+      close();
+    }
+  });
+
+  saveButton?.addEventListener('click', async () => {
+    if (state.assetTypeDecisionModal.isSaving) {
+      return;
+    }
+
+    const button = state.assetTypeDecisionModal.activeButton;
+    if (!button) {
+      return;
+    }
+
+    const name = button.dataset.assetTypeName || '';
+    if (!name) {
+      return;
+    }
+
+    const decision = selectEl ? selectEl.value || 'use' : 'use';
+    const comment = commentInput ? commentInput.value.trim() : '';
+
+    state.assetTypeDecisionModal.isSaving = true;
+    state.assetTypeDecisionModal.error = null;
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+    saveButton.disabled = true;
+
+    try {
+      const response = await fetchJson(`${API.assetTypes}/${encodeURIComponent(name)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision, comment })
+      });
+
+      const nextDecision = response?.decision || decision;
+      const nextComment = response?.comment ?? comment;
+
+      button.dataset.assetTypeDecision = nextDecision;
+      button.dataset.assetTypeComment = nextComment;
+      button.setAttribute('data-asset-type-decision', nextDecision);
+
+      const statusEl = button.querySelector('[data-asset-type-status]');
+      if (statusEl) {
+        statusEl.textContent = nextDecision === 'ignore' ? 'Ignore' : 'Use';
+        statusEl.dataset.status = nextDecision;
+      }
+
+      close();
+    } catch (error) {
+      const message = error?.payload?.error || error?.message || 'Failed to save asset type decision.';
+      state.assetTypeDecisionModal.error = message;
+      if (errorEl) {
+        errorEl.hidden = false;
+        errorEl.textContent = message;
+      }
+    } finally {
+      state.assetTypeDecisionModal.isSaving = false;
+      saveButton.disabled = false;
+    }
+  });
+}
+
 function initAssetStructureApp() {
   const root = document.querySelector('[data-app="asset-structure"]');
   if (!root) return;
   setupStructureModals(root);
   setupCreateCategoryForm(root);
   setupCreateGroupForm(root);
+  setupAssetTypeDecisionModal(root);
 }
 
 async function initAssetPoolApp() {
@@ -1452,6 +1838,7 @@ async function initAssetPoolApp() {
   consumePendingToast();
   setupImportButtons(root);
   setupFieldManager(root);
+  setupAssetTypeFieldModal(root);
   setupCloseModal();
   renderSidebar(root);
 

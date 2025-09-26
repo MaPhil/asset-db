@@ -1,4 +1,8 @@
 import { getAssetPoolView } from '../../../lib/assetPool.js';
+import {
+  getAssetTypeField as getStoredAssetTypeField,
+  setAssetTypeField as setStoredAssetTypeField
+} from '../../../lib/assetTypes.js';
 import { store } from '../../../lib/storage.js';
 import { logger } from '../../../lib/logger.js';
 
@@ -6,7 +10,8 @@ export const AssetPoolController = {
   view: (req, res) => {
     logger.debug('Fetching asset pool view');
     const view = getAssetPoolView();
-    res.json(view);
+    const assetTypeField = getStoredAssetTypeField();
+    res.json({ ...view, assetTypeField });
   },
   removeField: (req, res) => {
     const field = (req.params.field || '').trim();
@@ -39,5 +44,38 @@ export const AssetPoolController = {
     });
 
     res.json({ ok: true, removed });
+  },
+  getAssetTypeField: (req, res) => {
+    const field = getStoredAssetTypeField();
+    res.json({ field });
+  },
+  updateAssetTypeField: (req, res) => {
+    const rawField = req.body?.field;
+
+    if (rawField === undefined || rawField === null || rawField === '') {
+      setStoredAssetTypeField(null);
+      return res.json({ field: null });
+    }
+
+    const field = String(rawField).trim();
+    if (!field) {
+      setStoredAssetTypeField(null);
+      return res.json({ field: null });
+    }
+
+    const view = getAssetPoolView();
+    const available = new Set(
+      Array.isArray(view?.fieldStats) ? view.fieldStats.map((stat) => stat.field) : []
+    );
+
+    if (!available.has(field)) {
+      logger.warn('Attempted to set asset type field to unavailable field', { field });
+      return res
+        .status(400)
+        .json({ error: 'Selected field is not available in the Asset Pool.' });
+    }
+
+    const storedField = setStoredAssetTypeField(field);
+    res.json({ field: storedField });
   }
 };

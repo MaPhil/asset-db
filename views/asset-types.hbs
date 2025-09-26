@@ -10,7 +10,7 @@
       <div>
         <h1 class="page-title">Asset types</h1>
         <p class="page-subtitle">
-          Review the asset types derived from your categorised groups.
+          Review and curate the asset types sourced from your Asset Pool mappings.
         </p>
       </div>
       <div class="page-actions">
@@ -22,19 +22,69 @@
         <div class="section-header">
           <h2 class="section-title" id="asset-types-title">Asset types</h2>
         </div>
-        {{#if assetTypes.length}}
-          <ul class="asset-type-list">
-            {{#each assetTypes}}
-              <li class="asset-type-item">
-                <span class="asset-type-name">{{name}}</span>
-                <span class="asset-type-count">{{count}} {{#if (eq count 1)}}group{{else}}groups{{/if}}</span>
-              </li>
-            {{/each}}
-          </ul>
+        {{#if assetTypeField}}
+          <p class="helper-text">
+            Asset types are derived from the <strong>{{assetTypeField}}</strong> field in your Asset Pool.
+          </p>
+          {{#if assetTypes.length}}
+            <div class="asset-type-grid" data-asset-type-list>
+              {{#each assetTypes}}
+                <button
+                  class="asset-type-pill"
+                  type="button"
+                  data-asset-type-button
+                  data-asset-type-name="{{name}}"
+                  data-asset-type-decision="{{decision}}"
+                  data-asset-type-comment="{{comment}}"
+                >
+                  <span class="asset-type-pill__name">{{name}}</span>
+                  <span class="asset-type-pill__meta">{{count}} {{#if (eq count 1)}}asset{{else}}assets{{/if}}</span>
+                  <span class="asset-type-pill__status" data-asset-type-status data-status="{{decision}}">
+                    {{#if (eq decision "ignore")}}Ignore{{else}}Use{{/if}}
+                  </span>
+                </button>
+              {{/each}}
+            </div>
+          {{else}}
+            <p class="empty-state">No asset pool entries matched the field "{{assetTypeField}}".</p>
+          {{/if}}
         {{else}}
-          <p class="empty-state">Asset types appear here once groups have been categorised.</p>
+          <p class="empty-state">Choose an asset type field in the Asset Pool overview to populate this list.</p>
         {{/if}}
       </section>
     </div>
   </section>
+</div>
+
+<div class="modal" data-asset-type-decision-modal hidden aria-hidden="true">
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-type-decision-title">
+    <header class="modal-header">
+      <h2 id="asset-type-decision-title" data-asset-type-modal-title>Asset type options</h2>
+      <button class="icon-button" type="button" data-close-asset-type-decision aria-label="Close asset type settings">&times;</button>
+    </header>
+    <div class="modal-body">
+      <div class="form-field">
+        <label for="asset-type-decision-select">Decision</label>
+        <select id="asset-type-decision-select" name="decision" data-asset-type-decision-select>
+          <option value="use">Use</option>
+          <option value="ignore">Ignore</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="asset-type-comment">Comment</label>
+        <textarea
+          id="asset-type-comment"
+          name="comment"
+          rows="3"
+          placeholder="Add an optional comment"
+          data-asset-type-comment
+        ></textarea>
+      </div>
+      <p class="form-error" data-asset-type-decision-error hidden></p>
+    </div>
+    <div class="modal-footer">
+      <button class="button button--ghost" type="button" data-cancel-asset-type-decision>Cancel</button>
+      <button class="button" type="button" data-save-asset-type-decision>Save</button>
+    </div>
+  </div>
 </div>

@@ -6,6 +6,7 @@ import path from 'path';
 import apiV1 from './api/v1/index.js';
 import { store } from './lib/storage.js';
 import { logger } from './lib/logger.js';
+import { getAssetTypeSummary } from './lib/assetTypes.js';
 
 const app = express();
 
@@ -103,24 +104,6 @@ const formatDateTime = (value) => {
   }
 };
 
-function buildAssetTypes(groups) {
-  const stats = groups.reduce((acc, group) => {
-    if (!group?.asset_type) {
-      return acc;
-    }
-    const key = String(group.asset_type).trim();
-    if (!key) {
-      return acc;
-    }
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
-
-  return Object.entries(stats)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
 app.get('/asset-structure', (req, res) => {
   const categoriesRaw = store.get('categories').rows;
 
@@ -141,12 +124,12 @@ app.get('/asset-structure', (req, res) => {
 });
 
 app.get('/asset-types', (req, res) => {
-  const groups = store.get('groups').rows;
-  const assetTypes = buildAssetTypes(groups);
+  const summary = getAssetTypeSummary();
 
   res.render('asset-types', {
     nav: 'assetStructure',
-    assetTypes
+    assetTypes: summary.entries,
+    assetTypeField: summary.field
   });
 });
 
