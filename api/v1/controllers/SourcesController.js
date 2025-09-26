@@ -16,7 +16,7 @@ export const SourcesController = {
     const source = store.get('sources').rows.find((row) => row.id === id);
     if (!source) {
       logger.warn('Quelle nicht gefunden', { sourceId: id });
-      return res.status(404).json({ error: 'Not found' });
+      return res.status(404).json({ error: 'Nicht gefunden.' });
     }
 
     const rows = store
@@ -32,7 +32,7 @@ export const SourcesController = {
     const file = req.file;
     if (!file) {
       logger.warn('Upload ohne Datei versucht');
-      return res.status(400).json({ error: 'file is required' });
+      return res.status(400).json({ error: 'Datei ist erforderlich.' });
     }
 
     const sources = store.get('sources').rows;
@@ -46,7 +46,7 @@ export const SourcesController = {
       }
       logger.warn('Doppelter Quellen-Upload blockiert', { originalName: file.originalname });
       return res.status(409).json({
-        error: `File "${file.originalname}" has already been uploaded. Please delete the existing source before uploading it again.`
+        error: `Die Datei "${file.originalname}" wurde bereits hochgeladen. Bitte löschen Sie die vorhandene Quelle, bevor Sie sie erneut hochladen.`
       });
     }
 
@@ -75,7 +75,9 @@ export const SourcesController = {
         fs.unlinkSync(file.path);
       }
       store.remove('sources', id);
-      return res.status(400).json({ error: 'Could not read the uploaded file. Ensure it is a valid Excel document.' });
+      return res
+        .status(400)
+        .json({ error: 'Die hochgeladene Datei konnte nicht gelesen werden. Bitte stellen Sie sicher, dass es sich um ein gültiges Excel-Dokument handelt.' });
     }
 
     let index = 0;
@@ -108,7 +110,7 @@ export const SourcesController = {
     const exists = sources.rows.some((row) => row.id === id);
     if (!exists) {
       logger.warn('Versuch, fehlende Quelle zu entfernen', { sourceId: id });
-      return res.status(404).json({ error: 'Not found' });
+      return res.status(404).json({ error: 'Nicht gefunden.' });
     }
 
     sources.rows = sources.rows.filter((row) => row.id !== id);

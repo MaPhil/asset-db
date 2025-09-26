@@ -1358,7 +1358,7 @@ async function handleStageTwoSubmit(form) {
   if (!mappings.length) {
     if (errorEl) {
       errorEl.hidden = false;
-      errorEl.textContent = 'Please map at least one column before continuing.';
+      errorEl.textContent = 'Bitte ordnen Sie vor dem Fortfahren mindestens eine Spalte zu.';
     }
     return;
   }
