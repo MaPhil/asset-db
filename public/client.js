@@ -33,7 +33,8 @@ const state = {
   fieldManager: {
     isOpen: false,
     busyField: null,
-    error: null
+    error: null,
+    trigger: null
   },
   assetTypeFieldModal: {
     isOpen: false,
@@ -56,6 +57,25 @@ const state = {
     error: null
   }
 };
+
+let structureModalOpenCount = 0;
+
+function lockBodyScroll() {
+  document.body.style.overflow = 'hidden';
+}
+
+function unlockBodyScrollIfIdle() {
+  const anyModalOpen =
+    state.modal.isOpen ||
+    state.fieldManager.isOpen ||
+    state.assetTypeFieldModal.isOpen ||
+    state.assetTypeDecisionModal.isOpen ||
+    state.groupAssetTypeModal.isOpen ||
+    structureModalOpenCount > 0;
+  if (!anyModalOpen) {
+    document.body.style.overflow = '';
+  }
+}
 
 function select(root, selector) {
   return root ? root.querySelector(selector) : null;
@@ -152,9 +172,10 @@ function formatEntryCount(value) {
 }
 
 function renderFieldManager(root) {
-  const panel = select(root, '[data-field-manager]');
+  const modal = document.querySelector('[data-field-manager-modal]');
+  const panel = select(modal, '[data-field-manager]');
   const trigger = select(root, '[data-open-field-manager]');
-  if (!panel || !trigger) return;
+  if (!modal || !panel || !trigger) return;
 
   const list = select(panel, '[data-field-list]');
   const error = select(panel, '[data-field-error]');
@@ -216,27 +237,53 @@ function renderFieldManager(root) {
     error.textContent = '';
   }
 
-  panel.hidden = !state.fieldManager.isOpen;
+  if (state.fieldManager.isOpen) {
+    modal.hidden = false;
+    modal.removeAttribute('aria-hidden');
+  } else {
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
   trigger.setAttribute('aria-expanded', state.fieldManager.isOpen ? 'true' : 'false');
 }
 
-function openFieldManager(root) {
+function openFieldManager(root, trigger) {
+  if (state.fieldManager.isOpen) {
+    return;
+  }
+
   state.fieldManager.isOpen = true;
   state.fieldManager.error = null;
+  state.fieldManager.trigger = trigger || null;
   renderFieldManager(root);
-  const panel = select(root, '[data-field-manager]');
-  if (panel) {
-    panel.focus?.();
+  const modal = document.querySelector('[data-field-manager-modal]');
+  const panel = select(modal, '[data-field-manager]');
+  if (panel && typeof panel.focus === 'function') {
+    panel.focus();
   }
+  lockBodyScroll();
 }
 
 function closeFieldManager(root) {
   if (state.fieldManager.busyField) {
     return;
   }
+  if (!state.fieldManager.isOpen) {
+    return;
+  }
+
   state.fieldManager.isOpen = false;
   state.fieldManager.error = null;
   renderFieldManager(root);
+
+  const trigger = state.fieldManager.trigger;
+  state.fieldManager.trigger = null;
+  if (trigger && typeof trigger.focus === 'function') {
+    trigger.focus();
+  }
+
+  unlockBodyScrollIfIdle();
 }
 
 async function handleRemoveField(field, root) {
@@ -265,8 +312,9 @@ async function handleRemoveField(field, root) {
 
 function setupFieldManager(root) {
   const trigger = select(root, '[data-open-field-manager]');
-  const panel = select(root, '[data-field-manager]');
-  if (!trigger || !panel) return;
+  const modal = document.querySelector('[data-field-manager-modal]');
+  const panel = select(modal, '[data-field-manager]');
+  if (!trigger || !modal || !panel) return;
 
   if (!panel.hasAttribute('tabindex')) {
     panel.setAttribute('tabindex', '-1');
@@ -276,19 +324,19 @@ function setupFieldManager(root) {
     if (state.fieldManager.isOpen) {
       closeFieldManager(root);
     } else {
-      openFieldManager(root);
+      openFieldManager(root, trigger);
     }
   });
 
-  const closeButton = select(panel, '[data-close-field-manager]');
-  closeButton?.addEventListener('click', () => closeFieldManager(root));
+  const closeButtons = selectAll(modal, '[data-close-field-manager]');
+  closeButtons.forEach((button) => {
+    button.addEventListener('click', () => closeFieldManager(root));
+  });
 
-  document.addEventListener('click', (event) => {
-    if (!state.fieldManager.isOpen) return;
-    if (panel.contains(event.target) || trigger.contains(event.target)) {
-      return;
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeFieldManager(root);
     }
-    closeFieldManager(root);
   });
 
   document.addEventListener('keydown', (event) => {
@@ -387,7 +435,7 @@ function openAssetTypeFieldModal(trigger) {
   modal.focus?.();
 
   if (!state.modal.isOpen) {
-    document.body.style.overflow = 'hidden';
+    lockBodyScroll();
   }
 }
 
@@ -417,7 +465,7 @@ function closeAssetTypeFieldModal() {
   state.assetTypeFieldModal.error = null;
 
   if (!state.modal.isOpen) {
-    document.body.style.overflow = '';
+    unlockBodyScrollIfIdle();
   }
 }
 
@@ -1444,8 +1492,6 @@ function setupEditMapping(root) {
   });
 }
 
-let structureModalOpenCount = 0;
-
 function createStructureModalController(modal) {
   let lastFocus = null;
   let isOpen = false;
@@ -1465,9 +1511,7 @@ function createStructureModalController(modal) {
     modal.removeAttribute('aria-hidden');
     modal.setAttribute('tabindex', '-1');
     structureModalOpenCount += 1;
-    if (structureModalOpenCount === 1) {
-      document.body.style.overflow = 'hidden';
-    }
+    lockBodyScroll();
     isOpen = true;
     focusInitial();
   }
@@ -1480,9 +1524,7 @@ function createStructureModalController(modal) {
     modal.hidden = true;
     modal.setAttribute('aria-hidden', 'true');
     structureModalOpenCount = Math.max(0, structureModalOpenCount - 1);
-    if (structureModalOpenCount === 0) {
-      document.body.style.overflow = '';
-    }
+    unlockBodyScrollIfIdle();
     if (lastFocus && typeof lastFocus.focus === 'function') {
       lastFocus.focus();
     }
@@ -1720,9 +1762,7 @@ function setupAssetTypeDecisionModal(root) {
     modal.focus?.();
 
     structureModalOpenCount += 1;
-    if (structureModalOpenCount === 1) {
-      document.body.style.overflow = 'hidden';
-    }
+    lockBodyScroll();
   }
 
   function close() {
@@ -1737,9 +1777,7 @@ function setupAssetTypeDecisionModal(root) {
     modal.setAttribute('aria-hidden', 'true');
 
     structureModalOpenCount = Math.max(0, structureModalOpenCount - 1);
-    if (structureModalOpenCount === 0) {
-      document.body.style.overflow = '';
-    }
+    unlockBodyScrollIfIdle();
 
     if (errorEl) {
       errorEl.hidden = true;
@@ -1923,9 +1961,7 @@ function setupGroupAssetTypeModal(root) {
     modal.setAttribute('aria-hidden', 'true');
 
     structureModalOpenCount = Math.max(0, structureModalOpenCount - 1);
-    if (structureModalOpenCount === 0) {
-      document.body.style.overflow = '';
-    }
+    unlockBodyScrollIfIdle();
 
     if (loadingEl) {
       loadingEl.hidden = true;
@@ -2077,9 +2113,7 @@ function setupGroupAssetTypeModal(root) {
     modal.focus?.();
 
     structureModalOpenCount += 1;
-    if (structureModalOpenCount === 1) {
-      document.body.style.overflow = 'hidden';
-    }
+    lockBodyScroll();
 
     loadOptions();
   }

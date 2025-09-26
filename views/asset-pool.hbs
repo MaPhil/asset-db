@@ -40,30 +40,6 @@
         </button>
       </div>
     </header>
-    <div
-      class="field-manager"
-      data-field-manager
-      role="dialog"
-      aria-modal="false"
-      aria-labelledby="field-manager-title"
-      hidden
-    >
-      <div class="field-manager__header">
-        <h2 class="field-manager__title" id="field-manager-title">Mapping fields</h2>
-        <button
-          class="icon-button"
-          type="button"
-          data-close-field-manager
-          aria-label="Close field manager"
-        >&times;</button>
-      </div>
-      <p class="field-manager__description">
-        Review the mapping fields currently used in the Asset Pool. Removing a field deletes it from all
-        mappings.
-      </p>
-      <div class="field-manager__error" data-field-error hidden></div>
-      <div class="field-manager__list" data-field-list></div>
-    </div>
     <div class="asset-pool-body" data-overview-body>
       <div class="card card--empty" data-empty-state hidden>
         <h2>No data added</h2>
@@ -75,6 +51,34 @@
 </div>
 
 <div class="toast-container" role="status" aria-live="polite"></div>
+
+<div class="modal" data-field-manager-modal hidden aria-hidden="true">
+  <div
+    class="modal-dialog field-manager"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="field-manager-title"
+    data-field-manager
+  >
+    <div class="field-manager__header">
+      <h2 class="field-manager__title" id="field-manager-title">Mapping fields</h2>
+      <button
+        class="icon-button"
+        type="button"
+        data-close-field-manager
+        aria-label="Close mapping fields"
+      >&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="field-manager__description">
+        Review the mapping fields currently used in the Asset Pool. Removing a field deletes it from all
+        mappings.
+      </p>
+      <div class="field-manager__error" data-field-error hidden></div>
+      <div class="field-manager__list" data-field-list></div>
+    </div>
+  </div>
+</div>
 
 <div class="modal" data-asset-type-modal hidden aria-hidden="true">
   <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-type-modal-title">
