@@ -1,92 +1,92 @@
 <div class="asset-structure-app" data-app="asset-structure" data-category-id="{{category.id}}">
-  <aside class="asset-structure-sidebar" aria-label="Asset structure navigation">
+  <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
-      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Categories</a>
-      <a href="/asset-types" class="sidebar-link">Asset types</a>
+      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Kategorien</a>
+      <a href="/asset-types" class="sidebar-link">Asset-Typen</a>
     </div>
   </aside>
   <section class="asset-structure-content">
     <header class="page-header">
       <div>
-        <h1 class="page-title">{{#if category.displayTitle}}{{category.displayTitle}}{{else}}Untitled category{{/if}}</h1>
-        <p class="page-subtitle">Update category details and manage the groups that belong to it.</p>
+        <h1 class="page-title">{{#if category.displayTitle}}{{category.displayTitle}}{{else}}Unbenannte Kategorie{{/if}}</h1>
+        <p class="page-subtitle">Aktualisieren Sie die Kategoriedetails und verwalten Sie die zugehörigen Gruppen.</p>
       </div>
       <div class="page-actions">
-        <a class="button button--ghost" href="/asset-structure">Back to overview</a>
+        <a class="button button--ghost" href="/asset-structure">Zur Übersicht</a>
       </div>
     </header>
 
     <div class="structure-body">
       <section class="card structure-card" aria-labelledby="category-details-title">
         <div class="section-header">
-          <h2 class="section-title" id="category-details-title">Category information</h2>
-          <button class="button" type="button">Save changes</button>
+          <h2 class="section-title" id="category-details-title">Kategorieninformationen</h2>
+          <button class="button" type="button">Änderungen speichern</button>
         </div>
         <form class="form-grid form-grid--two">
           <div class="form-field">
-            <label for="category-name">Category title</label>
+            <label for="category-name">Kategorietitel</label>
             <input
               id="category-name"
               type="text"
               name="title"
               value="{{category.title}}"
-              placeholder="Enter category title"
+              placeholder="Kategorietitel eingeben"
             />
           </div>
           <div class="form-field">
-            <label for="category-governing">Governing category</label>
+            <label for="category-governing">Übergeordnete Kategorie</label>
             <input
               id="category-governing"
               type="text"
               name="governing_category"
               value="{{category.governingCategory}}"
-              placeholder="e.g. Operational"
+              placeholder="z. B. Operativ"
             />
           </div>
           <div class="form-field">
-            <label for="category-owner">Owner</label>
+            <label for="category-owner">Verantwortlich</label>
             <input
               id="category-owner"
               type="text"
               name="owner"
               value="{{category.owner}}"
-              placeholder="e.g. Asset governance"
+              placeholder="z. B. Asset-Governance"
             />
           </div>
           <div class="form-field">
-            <label for="category-integrity">Integrity</label>
+            <label for="category-integrity">Integrität</label>
             <select id="category-integrity" name="integrity">
-              <option value="" {{#unless category.integrity}}selected{{/unless}}>Select rating</option>
-              <option {{#if (eq category.integrity 'Low')}}selected{{/if}}>Low</option>
-              <option {{#if (eq category.integrity 'Moderate')}}selected{{/if}}>Moderate</option>
-              <option {{#if (eq category.integrity 'High')}}selected{{/if}}>High</option>
+              <option value="" {{#unless category.integrity}}selected{{/unless}}>Bewertung auswählen</option>
+              <option {{#if (eq category.integrity 'Low')}}selected{{/if}}>Niedrig</option>
+              <option {{#if (eq category.integrity 'Moderate')}}selected{{/if}}>Mittel</option>
+              <option {{#if (eq category.integrity 'High')}}selected{{/if}}>Hoch</option>
             </select>
           </div>
           <div class="form-field">
-            <label for="category-availability">Availability</label>
+            <label for="category-availability">Verfügbarkeit</label>
             <select id="category-availability" name="availability">
-              <option value="" {{#unless category.availability}}selected{{/unless}}>Select rating</option>
-              <option {{#if (eq category.availability 'Low')}}selected{{/if}}>Low</option>
-              <option {{#if (eq category.availability 'Moderate')}}selected{{/if}}>Moderate</option>
-              <option {{#if (eq category.availability 'High')}}selected{{/if}}>High</option>
+              <option value="" {{#unless category.availability}}selected{{/unless}}>Bewertung auswählen</option>
+              <option {{#if (eq category.availability 'Low')}}selected{{/if}}>Niedrig</option>
+              <option {{#if (eq category.availability 'Moderate')}}selected{{/if}}>Mittel</option>
+              <option {{#if (eq category.availability 'High')}}selected{{/if}}>Hoch</option>
             </select>
           </div>
           <div class="form-field">
-            <label for="category-confidentiality">Confidentiality</label>
+            <label for="category-confidentiality">Vertraulichkeit</label>
             <select id="category-confidentiality" name="confidentiality">
-              <option value="" {{#unless category.confidentiality}}selected{{/unless}}>Select rating</option>
-              <option {{#if (eq category.confidentiality 'Low')}}selected{{/if}}>Low</option>
-              <option {{#if (eq category.confidentiality 'Moderate')}}selected{{/if}}>Moderate</option>
-              <option {{#if (eq category.confidentiality 'High')}}selected{{/if}}>High</option>
+              <option value="" {{#unless category.confidentiality}}selected{{/unless}}>Bewertung auswählen</option>
+              <option {{#if (eq category.confidentiality 'Low')}}selected{{/if}}>Niedrig</option>
+              <option {{#if (eq category.confidentiality 'Moderate')}}selected{{/if}}>Mittel</option>
+              <option {{#if (eq category.confidentiality 'High')}}selected{{/if}}>Hoch</option>
             </select>
           </div>
           <div class="form-field form-field--full">
-            <label for="category-description">Description</label>
+            <label for="category-description">Beschreibung</label>
             <textarea
               id="category-description"
               name="description"
               rows="4"
-              placeholder="Describe how this category is used"
+              placeholder="Beschreiben Sie, wie diese Kategorie verwendet wird"
             >{{category.description}}</textarea>
           </div>
         </form>
@@ -94,18 +94,18 @@
 
       <section class="card structure-card" aria-labelledby="groups-title">
         <div class="section-header">
-          <h2 class="section-title" id="groups-title">Groups</h2>
-          <button class="button" type="button" data-open-structure-modal="group">Add group</button>
+          <h2 class="section-title" id="groups-title">Gruppen</h2>
+          <button class="button" type="button" data-open-structure-modal="group">Gruppe hinzufügen</button>
         </div>
         {{#if groups.length}}
           <div class="table-wrapper">
             <table class="table table--interactive" aria-describedby="groups-title">
               <thead>
                 <tr>
-                  <th scope="col">Group</th>
+                  <th scope="col">Gruppe</th>
                   <th scope="col">Status</th>
-                  <th scope="col">Asset type</th>
-                  <th scope="col">Last updated</th>
+                  <th scope="col">Asset-Typ</th>
+                  <th scope="col">Zuletzt aktualisiert</th>
                 </tr>
               </thead>
               <tbody>
@@ -129,7 +129,7 @@
             </table>
           </div>
         {{else}}
-          <p class="empty-state">No groups are linked to this category yet.</p>
+          <p class="empty-state">Es sind noch keine Gruppen mit dieser Kategorie verknüpft.</p>
         {{/if}}
       </section>
     </div>
@@ -139,34 +139,34 @@
 <div class="modal" data-structure-modal="group" hidden aria-hidden="true">
   <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="group-modal-title">
     <header class="modal-header">
-      <h2 id="group-modal-title">Add group</h2>
-      <button class="icon-button" type="button" aria-label="Close group form" data-close-structure-modal>&times;</button>
+      <h2 id="group-modal-title">Gruppe hinzufügen</h2>
+      <button class="icon-button" type="button" aria-label="Gruppenformular schließen" data-close-structure-modal>&times;</button>
     </header>
     <div class="modal-body">
       <form class="form-grid">
         <div class="form-field">
-          <label for="group-title">Title</label>
+          <label for="group-title">Titel</label>
           <input
             id="group-title"
             type="text"
             name="title"
-            placeholder="e.g. Customer-facing applications"
+            placeholder="z. B. Kundenorientierte Anwendungen"
             data-auto-focus
           />
         </div>
         <div class="form-field">
-          <label for="group-description">Description</label>
+          <label for="group-description">Beschreibung</label>
           <textarea
             id="group-description"
             name="description"
             rows="4"
-            placeholder="Provide a short summary of this group"
+            placeholder="Geben Sie eine kurze Zusammenfassung dieser Gruppe an"
           ></textarea>
         </div>
       </form>
       <div class="modal-footer">
-        <button class="button button--ghost" type="button" data-close-structure-modal>Cancel</button>
-        <button class="button" type="button" data-save-group>Save group</button>
+        <button class="button button--ghost" type="button" data-close-structure-modal>Abbrechen</button>
+        <button class="button" type="button" data-save-group>Gruppe speichern</button>
       </div>
     </div>
   </div>

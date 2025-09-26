@@ -15,11 +15,11 @@ import {
 const app = express();
 
 process.on('unhandledRejection', (reason) => {
-  logger.error('Unhandled promise rejection detected', { reason });
+  logger.error('Nicht behandelte Promise-Zurückweisung erkannt', { reason });
 });
 
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught exception detected', error);
+  logger.error('Nicht abgefangene Ausnahme erkannt', error);
 });
 
 app.engine('hbs', exphbs.engine({
@@ -38,14 +38,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
   const startedAt = Date.now();
-  logger.debug('Incoming request', {
+  logger.debug('Eingehende Anfrage', {
     method: req.method,
     path: req.originalUrl,
     ip: req.ip
   });
 
   res.on('finish', () => {
-    logger.info('Request completed', {
+    logger.info('Anfrage abgeschlossen', {
       method: req.method,
       path: req.originalUrl,
       statusCode: res.statusCode,
@@ -55,7 +55,7 @@ app.use((req, res, next) => {
 
   res.on('close', () => {
     if (!res.writableEnded) {
-      logger.warn('Response closed before completion', {
+      logger.warn('Antwort vor Abschluss geschlossen', {
         method: req.method,
         path: req.originalUrl
       });
@@ -98,12 +98,12 @@ const formatDateTime = (value) => {
     return null;
   }
   try {
-    return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('de-DE', {
       dateStyle: 'medium',
       timeStyle: 'short'
     }).format(new Date(value));
   } catch (err) {
-    logger.warn('Failed to format date', { value, err });
+    logger.warn('Datumsformatierung fehlgeschlagen', { value, err });
     return null;
   }
 };
@@ -113,7 +113,7 @@ app.get('/asset-structure', (req, res) => {
 
   const categories = categoriesRaw.map((category) => ({
     id: category.id,
-    title: category.title || category.name || `Category ${category.id}`,
+    title: category.title || category.name || `Kategorie ${category.id}`,
     governingCategory: category.governing_category || '—',
     owner: category.owner || category.group_owner || '—',
     integrity: category.integrity || '—',
@@ -142,8 +142,8 @@ app.get('/asset-structure/categories/:id', (req, res) => {
   const categories = store.get('categories').rows;
   const category = categories.find((row) => row.id === categoryId);
   if (!category) {
-    logger.warn('Category not found for UI route', { categoryId });
-    return res.status(404).send('Category not found');
+    logger.warn('Kategorie für UI-Route nicht gefunden', { categoryId });
+    return res.status(404).send('Kategorie nicht gefunden');
   }
 
   const links = store
@@ -156,7 +156,7 @@ app.get('/asset-structure/categories/:id', (req, res) => {
   const viewModel = {
     id: category.id,
     title: category.title || category.name || '',
-    displayTitle: category.title || category.name || 'Untitled category',
+    displayTitle: category.title || category.name || 'Unbenannte Kategorie',
     description: category.description || '',
     governingCategory: category.governing_category || '',
     owner: category.owner || category.group_owner || '',
@@ -167,7 +167,7 @@ app.get('/asset-structure/categories/:id', (req, res) => {
 
   const groupRows = groups.map((group) => ({
     id: group.id,
-    title: group.title || `Group ${group.id}`,
+    title: group.title || `Gruppe ${group.id}`,
     status: group.status || '—',
     assetType: group.asset_type || '—',
     updatedAt: formatDateTime(group.updated_at) || '—'
@@ -187,14 +187,14 @@ app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) =>
   const categories = store.get('categories').rows;
   const category = categories.find((row) => row.id === categoryId);
   if (!category) {
-    logger.warn('Category not found for group UI route', { categoryId, groupId });
-    return res.status(404).send('Category not found');
+    logger.warn('Kategorie für Gruppen-UI-Route nicht gefunden', { categoryId, groupId });
+    return res.status(404).send('Kategorie nicht gefunden');
   }
 
   const categoryOptions = categories
     .map((row) => ({
       id: row.id,
-      title: row.title || row.name || `Category ${row.id}`
+      title: row.title || row.name || `Kategorie ${row.id}`
     }))
     .sort((a, b) => a.title.localeCompare(b.title));
 
@@ -202,14 +202,14 @@ app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) =>
     .get('groups')
     .rows.find((row) => row.id === groupId);
   if (!group) {
-    logger.warn('Group not found for UI route', { categoryId, groupId });
-    return res.status(404).send('Group not found');
+    logger.warn('Gruppe für UI-Route nicht gefunden', { categoryId, groupId });
+    return res.status(404).send('Gruppe nicht gefunden');
   }
 
   const detail = {
     id: group.id,
     title: group.title || '',
-    displayTitle: group.title || 'Untitled group',
+    displayTitle: group.title || 'Unbenannte Gruppe',
     description: group.description || '',
     status: group.status || '',
     assetType: group.asset_type || '',
@@ -224,7 +224,7 @@ app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) =>
     nav: 'assetStructure',
     category: {
       id: category.id,
-      title: category.title || category.name || 'Untitled category'
+      title: category.title || category.name || 'Unbenannte Kategorie'
     },
     group: detail,
     categoryOptions,
@@ -245,10 +245,10 @@ app.get('/measures', (req, res) => {
   }, {});
 
   const metrics = [
-    { label: 'Total unified assets', value: assets.length },
-    { label: 'Schema columns', value: schema.length },
-    { label: 'Active sources', value: sources.length },
-    { label: 'Rows ingested', value: sourceRows.length }
+    { label: 'Summe vereinheitlichter Assets', value: assets.length },
+    { label: 'Schema-Spalten', value: schema.length },
+    { label: 'Aktive Quellen', value: sources.length },
+    { label: 'Übernommene Zeilen', value: sourceRows.length }
   ];
 
   const latestUpdate = sources
@@ -285,8 +285,8 @@ app.get('/sources/:id', (req, res) => {
   const id = Number(req.params.id);
   const source = store.get('sources').rows.find((row) => row.id === id);
   if (!source) {
-    logger.warn('Source not found for UI route', { sourceId: id });
-    return res.status(404).send('Source not found');
+    logger.warn('Quelle für UI-Route nicht gefunden', { sourceId: id });
+    return res.status(404).send('Quelle nicht gefunden');
   }
 
   const rows = store
@@ -306,7 +306,7 @@ app.get('/sources/:id', (req, res) => {
 
 const PORT = process.env.PORT || 5678;
 app.use((err, req, res, next) => {
-  logger.error('Unhandled error while processing request', err, {
+  logger.error('Unbehandelter Fehler bei der Verarbeitung einer Anfrage', err, {
     method: req.method,
     path: req.originalUrl,
     body: req.body,
@@ -318,10 +318,10 @@ app.use((err, req, res, next) => {
   }
 
   const status = err.status && Number.isInteger(err.status) ? err.status : 500;
-  const message = status >= 500 ? 'Internal server error' : err.message;
+  const message = status >= 500 ? 'Interner Serverfehler' : err.message;
   res.status(status).json({ error: message });
 });
 
 app.listen(PORT, () => {
-  logger.info(`Server listening at http://localhost:${PORT}`);
+  logger.info(`Server hört auf http://localhost:${PORT}`);
 });

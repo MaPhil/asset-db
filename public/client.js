@@ -108,7 +108,7 @@ async function fetchJson(url, options = {}) {
     payload = {};
   }
   if (!response.ok) {
-    const error = new Error(payload.error || 'Request failed');
+    const error = new Error(payload.error || 'Anforderung fehlgeschlagen');
     error.payload = payload;
     throw error;
   }
@@ -148,7 +148,7 @@ function renderSidebar(root) {
   if (!state.rawTables.length) {
     const empty = document.createElement('p');
     empty.className = 'helper-text';
-    empty.textContent = 'No raw tables yet.';
+    empty.textContent = 'Noch keine Rohdatentabellen.';
     list.appendChild(empty);
     return;
   }
@@ -170,7 +170,7 @@ function renderSidebar(root) {
 
 function formatEntryCount(value) {
   const count = Number.isFinite(value) ? value : Number(value) || 0;
-  return `${count} ${count === 1 ? 'entry' : 'entries'}`;
+  return `${count} ${count === 1 ? 'Eintrag' : 'Einträge'}`;
 }
 
 function renderFieldManager(root) {
@@ -189,7 +189,7 @@ function renderFieldManager(root) {
   if (!fieldStats.length) {
     const empty = document.createElement('p');
     empty.className = 'field-manager__empty';
-    empty.textContent = 'No mapping fields available.';
+    empty.textContent = 'Keine Zuordnungsfelder verfügbar.';
     list.appendChild(empty);
   } else {
     const isBusy = state.fieldManager.busyField !== null;
@@ -221,7 +221,7 @@ function renderFieldManager(root) {
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'button button--ghost field-manager__remove';
-      remove.textContent = state.fieldManager.busyField === stat.field ? 'Removing…' : 'Remove';
+      remove.textContent = state.fieldManager.busyField === stat.field ? 'Wird entfernt…' : 'Entfernen';
       remove.disabled = isBusy;
       remove.addEventListener('click', () => handleRemoveField(stat.field, root));
       meta.appendChild(remove);
@@ -300,8 +300,8 @@ async function handleRemoveField(field, root) {
     });
     await Promise.all([refreshAssetPool(), refreshRawTables()]);
     const message = result?.removed
-      ? `Removed mapping field "${field}".`
-      : `No mappings were using "${field}".`;
+      ? `Zuordnungsfeld „${field}“ wurde entfernt.`
+      : `Keine Zuordnungen nutzten „${field}“.`;
     showToast(message);
     state.fieldManager.busyField = null;
     renderFieldManager(root);
@@ -381,7 +381,7 @@ function populateAssetTypeFieldSelect(modal) {
   selectEl.innerHTML = '';
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = 'Select a field';
+  placeholder.textContent = 'Feld auswählen';
   selectEl.appendChild(placeholder);
 
   options.forEach((option) => {
@@ -397,8 +397,8 @@ function populateAssetTypeFieldSelect(modal) {
   selectEl.disabled = options.length === 0;
 
   helper.textContent = options.length
-    ? 'Only mapped fields with data appear in this list.'
-    : 'Add mapping fields to choose an asset type.';
+    ? 'Nur zugeordnete Felder mit Daten erscheinen in dieser Liste.'
+    : 'Fügen Sie Zuordnungsfelder hinzu, um einen Asset-Typ auszuwählen.';
 
   if (errorEl) {
     if (state.assetTypeFieldModal.error) {
@@ -536,13 +536,13 @@ function setupAssetTypeFieldModal(root) {
       await refreshAssetPool();
       const field = result?.field;
       if (field) {
-        showToast(`Asset type field set to "${field}".`);
+        showToast(`Feld für Asset-Typ auf „${field}“ gesetzt.`);
       } else {
-        showToast('Asset type field cleared.');
+        showToast('Feld für Asset-Typ gelöscht.');
       }
       closeAssetTypeFieldModal();
     } catch (error) {
-      const message = error?.payload?.error || error?.message || 'Failed to save asset type field.';
+      const message = error?.payload?.error || error?.message || 'Speichern des Felds für Asset-Typ fehlgeschlagen.';
       state.assetTypeFieldModal.error = message;
       if (errorEl) {
         errorEl.hidden = false;
@@ -627,8 +627,8 @@ function renderAssetPool(root) {
     const placeholder = document.createElement('div');
     placeholder.className = 'card card--empty';
     placeholder.innerHTML = `
-      <h2>No mapped rows yet</h2>
-      <p>Map at least one column from a raw table to populate the Asset Pool.</p>
+      <h2>Noch keine zugeordneten Zeilen</h2>
+      <p>Ordnen Sie mindestens eine Spalte aus einer Rohdatentabelle zu, um den Asset-Pool zu füllen.</p>
     `;
     container.appendChild(placeholder);
     renderFieldManager(root);
@@ -653,8 +653,8 @@ function renderAssetPool(root) {
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
   const headers = [
-    { key: '__rowId', label: 'Row ID' },
-    { key: '__table', label: 'Raw Table' },
+    { key: '__rowId', label: 'Zeilen-ID' },
+    { key: '__table', label: 'Rohdatentabelle' },
     ...columns.map((col) => ({ key: col, label: col }))
   ];
 
@@ -683,7 +683,7 @@ function renderAssetPool(root) {
     const cell = document.createElement('td');
     cell.colSpan = headers.length;
     cell.className = 'table-empty';
-    cell.textContent = 'No rows available for the current filters.';
+    cell.textContent = 'Für die aktuellen Filter sind keine Zeilen verfügbar.';
     row.appendChild(cell);
     tbody.appendChild(row);
   } else {
@@ -694,7 +694,7 @@ function renderAssetPool(root) {
       tr.appendChild(rowIdCell);
 
       const tableCell = document.createElement('td');
-      tableCell.textContent = row.rawTableTitle || `Raw table ${row.rawTableId}`;
+      tableCell.textContent = row.rawTableTitle || `Rohdatentabelle ${row.rawTableId}`;
       tr.appendChild(tableCell);
 
       columns.forEach((column) => {
@@ -715,17 +715,17 @@ function renderAssetPool(root) {
 
   const info = document.createElement('span');
   info.className = 'pagination-info';
-  info.textContent = `Showing ${Math.min(sortedRows.length, start + 1)}-${Math.min(
+  info.textContent = `Angezeigt: ${Math.min(sortedRows.length, start + 1)}-${Math.min(
     sortedRows.length,
     start + pageRows.length
-  )} of ${sortedRows.length}`;
+  )} von ${sortedRows.length}`;
   pagination.appendChild(info);
 
   const controls = document.createElement('div');
   controls.className = 'pagination-controls';
   const prev = document.createElement('button');
   prev.type = 'button';
-  prev.textContent = 'Prev';
+  prev.textContent = 'Zurück';
   prev.disabled = state.assetPoolPage === 1;
   prev.addEventListener('click', () => {
     state.assetPoolPage = Math.max(1, state.assetPoolPage - 1);
@@ -733,7 +733,7 @@ function renderAssetPool(root) {
   });
   const next = document.createElement('button');
   next.type = 'button';
-  next.textContent = 'Next';
+  next.textContent = 'Weiter';
   next.disabled = state.assetPoolPage === totalPages;
   next.addEventListener('click', () => {
     state.assetPoolPage = Math.min(totalPages, state.assetPoolPage + 1);
@@ -846,7 +846,7 @@ function renderRawTable(root) {
     .catch(() => {
       state.currentRawDetail = null;
       if (titleEl) {
-        titleEl.textContent = 'Raw table unavailable';
+        titleEl.textContent = 'Rohdatentabelle nicht verfügbar';
       }
       if (metaBadge) {
         metaBadge.textContent = '';
@@ -922,38 +922,38 @@ function renderStageOne() {
 
   const modalTitle = document.getElementById('import-modal-title');
   if (modalTitle) {
-    modalTitle.textContent = 'Import raw table';
+    modalTitle.textContent = 'Rohdatentabelle importieren';
   }
 
   container.innerHTML = `
     <form class="form-grid" data-stage-one>
       <div class="form-field">
-        <label for="import-file">Excel file (.xlsx)</label>
+        <label for="import-file">Excel-Datei (.xlsx)</label>
         <input id="import-file" name="file" type="file" accept=".xlsx" required />
-        <p class="helper-text">We take the <strong>first worksheet</strong> automatically.</p>
+        <p class="helper-text">Das <strong>erste Arbeitsblatt</strong> wird automatisch übernommen.</p>
         <p class="error-text" data-error="file" hidden></p>
       </div>
       <div class="form-field">
-        <label for="import-title">Title</label>
+        <label for="import-title">Titel</label>
         <input id="import-title" name="title" type="text" value="${values.title || ''}" required />
         <p class="error-text" data-error="title" hidden></p>
       </div>
       <label class="checkbox-field">
         <input name="duplicatePolicy" type="checkbox" ${values.duplicatePolicy === 'first' ? 'checked' : ''} />
         <span>
-          On duplicate IDs, keep the <strong>first occurrence</strong>.<br />
-          <span class="helper-text">If unchecked, duplicates cause an error.</span>
+          Bei doppelten IDs die <strong>erste Vorkommnis</strong> behalten.<br />
+          <span class="helper-text">Wenn nicht aktiviert, führen Duplikate zu einem Fehler.</span>
         </span>
       </label>
       <div class="form-field">
-        <label for="id-column">Unique ID column name</label>
+        <label for="id-column">Spaltenname für eindeutige ID</label>
         <input id="id-column" name="idColumn" type="text" value="${values.idColumn || ''}" />
-        <p class="helper-text">If <strong>not set</strong>, the system will generate an index.</p>
+        <p class="helper-text">Wenn <strong>nicht angegeben</strong>, erstellt das System einen Index.</p>
         <p class="error-text" data-error="idColumn" hidden></p>
       </div>
       <div class="modal-footer">
-        <button class="button button--ghost" type="button" data-cancel>Cancel</button>
-        <button class="button" type="submit">Next</button>
+        <button class="button button--ghost" type="button" data-cancel>Abbrechen</button>
+        <button class="button" type="submit">Weiter</button>
       </div>
     </form>
   `;
@@ -982,7 +982,7 @@ function buildMappingRow({ header, value, datalistId }) {
         data-raw-header="${attrHeader}"
         value="${safeValue}"
         list="${datalistId}"
-        placeholder="Start typing to map or create"
+        placeholder="Beginnen Sie zu tippen, um zuzuordnen oder zu erstellen"
       />
     </div>
   `;
@@ -1002,15 +1002,15 @@ function renderStageTwo({ headers, pairs, allowBack = true, title }) {
     .join('');
 
   container.innerHTML = `
-    <div class="mapping-tip">Map your file’s headers to Asset Pool fields. Only mapped columns appear in the Asset Pool.</div>
+    <div class="mapping-tip">Ordnen Sie die Kopfzeilen Ihrer Datei den Asset-Pool-Feldern zu. Nur zugeordnete Spalten erscheinen im Asset-Pool.</div>
     <form class="form-grid" data-stage-two>
       <div class="mapping-list">
         ${inputs}
       </div>
       <div class="modal-footer">
-        ${allowBack ? '<button class="button button--ghost" type="button" data-back>Back</button>' : ''}
-        <button class="button button--ghost" type="button" data-cancel>Cancel</button>
-        <button class="button" type="submit">${state.modal.mode === 'edit' ? 'Update mappings' : 'Import'}</button>
+        ${allowBack ? '<button class="button button--ghost" type="button" data-back>Zurück</button>' : ''}
+        <button class="button button--ghost" type="button" data-cancel>Abbrechen</button>
+        <button class="button" type="submit">${state.modal.mode === 'edit' ? 'Zuordnungen aktualisieren' : 'Importieren'}</button>
       </div>
       <p class="error-text" data-error="general" hidden></p>
     </form>
@@ -1076,8 +1076,8 @@ function renderEditModal({ table, pairs }) {
               ${inputs}
             </div>
             <div class="modal-footer">
-              <button class="button button--ghost" type="button" data-cancel>Cancel</button>
-              <button class="button" type="submit">Update mappings</button>
+              <button class="button button--ghost" type="button" data-cancel>Abbrechen</button>
+              <button class="button" type="submit">Zuordnungen aktualisieren</button>
             </div>
             <p class="error-text" data-error="general" hidden></p>
           </form>
@@ -1090,18 +1090,18 @@ function renderEditModal({ table, pairs }) {
               <p class="error-text" data-error="title" hidden></p>
             </div>
             <div class="form-field">
-              <label for="raw-description">Description</label>
+              <label for="raw-description">Beschreibung</label>
               <textarea id="raw-description" name="description" rows="4">${escapeHtml(table.description || '')}</textarea>
             </div>
             <p class="error-text" data-error="general" hidden></p>
             <div class="modal-footer">
-              <button class="button" type="submit">Save changes</button>
+              <button class="button" type="submit">Änderungen speichern</button>
             </div>
           </form>
           <div class="danger-zone">
-            <h3>Delete table</h3>
-            <p>Remove this raw table and all of its data from the Asset Pool.</p>
-            <button class="button button--danger" type="button" data-delete-table>Delete table</button>
+            <h3>Tabelle löschen</h3>
+            <p>Entfernen Sie diese Rohdatentabelle und alle zugehörigen Daten aus dem Asset-Pool.</p>
+            <button class="button button--danger" type="button" data-delete-table>Tabelle löschen</button>
           </div>
         </section>
       </div>
@@ -1182,7 +1182,7 @@ function renderEditModal({ table, pairs }) {
     if (!title) {
       if (adminTitleError) {
         adminTitleError.hidden = false;
-        adminTitleError.textContent = 'Name is required.';
+        adminTitleError.textContent = 'Name ist erforderlich.';
       }
       delete adminForm.dataset.loading;
       return;
@@ -1205,7 +1205,7 @@ function renderEditModal({ table, pairs }) {
 
       const root = document.querySelector('[data-app="asset-pool"]');
       if (modalTitle) {
-        modalTitle.textContent = `Edit ${updated.title}`;
+        modalTitle.textContent = `Bearbeiten: ${updated.title}`;
       }
 
       await refreshRawTables();
@@ -1218,7 +1218,7 @@ function renderEditModal({ table, pairs }) {
         }
       }
 
-      showToast('Raw table details updated.');
+      showToast('Details der Rohdatentabelle aktualisiert.');
     } catch (err) {
       if (err.payload?.fieldErrors?.title) {
         if (adminTitleError) {
@@ -1240,7 +1240,7 @@ function renderEditModal({ table, pairs }) {
       if (!state.modal.rawTableId) {
         return;
       }
-      const confirmed = window.confirm('Delete this raw table? This action cannot be undone.');
+      const confirmed = window.confirm('Diese Rohdatentabelle löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.');
       if (!confirmed) {
         return;
       }
@@ -1258,7 +1258,7 @@ function renderEditModal({ table, pairs }) {
         await refreshRawTables();
         await refreshAssetPool();
 
-        const message = `Deleted ${deletedTitle}.`;
+        const message = `${deletedTitle} gelöscht.`;
 
         if (origin === 'raw') {
           try {
@@ -1377,7 +1377,7 @@ async function handleStageTwoSubmit(form) {
         body: JSON.stringify({ mappings })
       });
       closeModal();
-      showToast('Mappings updated. Asset Pool refreshed.');
+      showToast('Zuordnungen aktualisiert. Asset-Pool aktualisiert.');
       await refreshAssetPool();
       if (state.modal.origin === 'raw') {
         renderRawTable(document.querySelector('[data-app="asset-pool"]'));
@@ -1390,7 +1390,7 @@ async function handleStageTwoSubmit(form) {
         body: JSON.stringify({ previewId: preview.previewId, mappings })
       });
       closeModal();
-      const message = `Imported ${preview.title}. Asset Pool updated.`;
+      const message = `${preview.title} importiert. Asset-Pool aktualisiert.`;
       if (state.modal.origin === 'raw') {
         sessionStorage.setItem(TOAST_STORAGE_KEY, message);
         window.location.href = `/asset-pool/raw/${result.rawTableId}`;
@@ -1632,8 +1632,8 @@ function setupCreateCategoryForm(root) {
       });
       window.location.assign('/asset-structure');
     } catch (error) {
-      console.error('Failed to create category', error);
-      alert('Failed to save category. Please try again.');
+      console.error('Fehler beim Erstellen der Kategorie', error);
+      alert('Kategorie konnte nicht gespeichert werden. Bitte erneut versuchen.');
     } finally {
       isSubmitting = false;
       saveButton.disabled = false;
@@ -1706,8 +1706,8 @@ function setupCreateGroupForm(root) {
 
       window.location.reload();
     } catch (error) {
-      console.error('Failed to create group', error);
-      alert('Failed to save group. Please try again.');
+      console.error('Fehler beim Erstellen der Gruppe', error);
+      alert('Gruppe konnte nicht gespeichert werden. Bitte erneut versuchen.');
     } finally {
       isSubmitting = false;
       saveButton.disabled = false;
@@ -1769,7 +1769,7 @@ function setupAssetTypeDecisionModal(root) {
       sortedEntries.forEach((entry) => {
         const item = document.createElement('li');
         item.className = 'asset-type-groups__item';
-        const title = entry?.title || (Number.isInteger(entry?.id) ? `Group ${entry.id}` : 'Group');
+        const title = entry?.title || (Number.isInteger(entry?.id) ? `Gruppe ${entry.id}` : 'Gruppe');
         if (entry?.url) {
           const link = document.createElement('a');
           link.href = entry.url;
@@ -1811,7 +1811,7 @@ function setupAssetTypeDecisionModal(root) {
     state.assetTypeDecisionModal.error = null;
 
     if (titleEl) {
-      titleEl.textContent = name ? `Configure “${name}”` : 'Configure asset type';
+      titleEl.textContent = name ? `„${name}“ konfigurieren` : 'Asset-Typ konfigurieren';
     }
     if (selectEl) {
       selectEl.value = button?.dataset.assetTypeDecision || 'use';
@@ -1926,13 +1926,13 @@ function setupAssetTypeDecisionModal(root) {
 
       const statusEl = button.querySelector('[data-asset-type-status]');
       if (statusEl) {
-        statusEl.textContent = nextDecision === 'ignore' ? 'Ignore' : 'Use';
+        statusEl.textContent = nextDecision === 'ignore' ? 'Ignorieren' : 'Verwenden';
         statusEl.dataset.status = nextDecision;
       }
 
       close();
     } catch (error) {
-      const message = error?.payload?.error || error?.message || 'Failed to save asset type decision.';
+      const message = error?.payload?.error || error?.message || 'Entscheidung zum Asset-Typ konnte nicht gespeichert werden.';
       state.assetTypeDecisionModal.error = message;
       if (errorEl) {
         errorEl.hidden = false;
@@ -1984,10 +1984,10 @@ function appendGroupAssetTypePill(root, entry) {
   removeButton.type = 'button';
   removeButton.className = 'icon-button group-asset-type-pill__remove';
   removeButton.textContent = '×';
-  const labelName = assetTypeName || 'this asset type';
+  const labelName = assetTypeName || 'dieser Asset-Typ';
   removeButton.setAttribute(
     'aria-label',
-    `Remove asset type ${labelName} from this group`
+    `Asset-Typ ${labelName} aus dieser Gruppe entfernen`
   );
   removeButton.dataset.groupAssetTypeName = String(assetTypeName);
   if (hasAssignmentId) {
@@ -1995,7 +1995,7 @@ function appendGroupAssetTypePill(root, entry) {
   } else {
     removeButton.disabled = true;
     removeButton.setAttribute('aria-disabled', 'true');
-    removeButton.title = 'Update the group information to remove this asset type.';
+    removeButton.title = 'Aktualisieren Sie die Gruppeninformationen, um diesen Asset-Typ zu entfernen.';
   }
   actionsEl.appendChild(removeButton);
   header.appendChild(actionsEl);
@@ -2006,16 +2006,16 @@ function appendGroupAssetTypePill(root, entry) {
   metaEl.className = 'group-asset-type-pill__meta';
   const count = Number(entry?.count);
   if (Number.isFinite(count) && count > 0) {
-    metaEl.textContent = `${count} ${count === 1 ? 'asset' : 'assets'}`;
+    metaEl.textContent = `${count} ${count === 1 ? 'Asset' : 'Assets'}`;
   } else {
-    metaEl.textContent = 'No Asset Pool entries yet';
+    metaEl.textContent = 'Noch keine Einträge im Asset-Pool';
   }
   pill.appendChild(metaEl);
 
   if (entry?.isLegacy) {
     const tagEl = document.createElement('span');
     tagEl.className = 'group-asset-type-pill__tag';
-    tagEl.textContent = 'From group details';
+    tagEl.textContent = 'Aus Gruppendetails';
     pill.appendChild(tagEl);
   }
 
@@ -2067,8 +2067,8 @@ function setupGroupAssetTypeList(root) {
 
     const item = button.closest('[data-group-asset-type-item]');
     const assetTypeName =
-      button.dataset.groupAssetTypeName || item?.dataset.groupAssetTypeName || 'this asset type';
-    const groupName = root?.dataset?.groupName || 'this group';
+      button.dataset.groupAssetTypeName || item?.dataset.groupAssetTypeName || 'dieser Asset-Typ';
+    const groupName = root?.dataset?.groupName || 'dieser Gruppe';
 
     try {
       await fetchJson(API.groupAssetType(groupId, assignmentId), { method: 'DELETE' });
@@ -2089,10 +2089,10 @@ function setupGroupAssetTypeList(root) {
         root.dataset.availableGroupAssetTypes = String(next);
       }
 
-      showToast(`Removed asset type “${assetTypeName}” from ${groupName}.`);
+      showToast(`Asset-Typ „${assetTypeName}“ wurde aus ${groupName} entfernt.`);
     } catch (error) {
       const message =
-        error?.payload?.error || error?.message || 'Failed to remove asset type from this group.';
+        error?.payload?.error || error?.message || 'Asset-Typ konnte nicht aus dieser Gruppe entfernt werden.';
       showToast(message);
       button.disabled = false;
     } finally {
@@ -2183,9 +2183,9 @@ function setupGroupAssetTypeModal(root) {
       metaEl.className = 'group-asset-type-modal__meta';
       const count = Number(entry?.count);
       if (Number.isFinite(count) && count > 0) {
-        metaEl.textContent = `${count} ${count === 1 ? 'asset' : 'assets'}`;
+        metaEl.textContent = `${count} ${count === 1 ? 'Asset' : 'Assets'}`;
       } else {
-        metaEl.textContent = 'No Asset Pool entries yet';
+        metaEl.textContent = 'Noch keine Einträge im Asset-Pool';
       }
 
       button.appendChild(nameEl);
@@ -2219,12 +2219,12 @@ function setupGroupAssetTypeModal(root) {
             count: payload?.count ?? entry?.count ?? 0
           });
 
-          const groupName = root?.dataset?.groupName || 'this group';
-          showToast(`Added asset type “${payload?.name || entry?.name || ''}” to ${groupName}.`);
+          const groupName = root?.dataset?.groupName || 'dieser Gruppe';
+          showToast(`Asset-Typ „${payload?.name || entry?.name || ''}“ wurde ${groupName} hinzugefügt.`);
           close();
         } catch (error) {
           const message =
-            error?.payload?.error || error?.message || 'Failed to add asset type to this group.';
+            error?.payload?.error || error?.message || 'Asset-Typ konnte dieser Gruppe nicht hinzugefügt werden.';
           state.groupAssetTypeModal.error = message;
           if (errorEl) {
             errorEl.hidden = false;
@@ -2265,7 +2265,7 @@ function setupGroupAssetTypeModal(root) {
       }
     } catch (error) {
       const message =
-        error?.payload?.error || error?.message || 'Failed to load available asset types.';
+        error?.payload?.error || error?.message || 'Verfügbare Asset-Typen konnten nicht geladen werden.';
       state.groupAssetTypeModal.error = message;
       if (errorEl) {
         errorEl.hidden = false;

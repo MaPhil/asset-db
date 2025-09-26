@@ -1,13 +1,13 @@
 {{#> card}}
-  <h2>Source: {{source.name}}</h2>
+  <h2>Quelle: {{source.name}}</h2>
   <p>
-    Original file: {{source.original_filename}}<br />
-    Uploaded: {{source.created_at}}<br />
-    Stored at: {{source.stored_path}}
+    Originaldatei: {{source.original_filename}}<br />
+    Hochgeladen: {{source.created_at}}<br />
+    Gespeichert unter: {{source.stored_path}}
   </p>
 {{/card}}
 
-{{#> card title="Preview" headingTag="h3"}}
+{{#> card title="Vorschau" headingTag="h3"}}
   {{#if rows.length}}
     <table class="table">
       <thead>
@@ -28,6 +28,6 @@
       </tbody>
     </table>
   {{else}}
-    <p>No rows captured for this source yet.</p>
+    <p>Für diese Quelle wurden noch keine Zeilen erfasst.</p>
   {{/if}}
 {{/card}}

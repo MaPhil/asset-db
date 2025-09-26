@@ -1,22 +1,22 @@
 <div class="asset-pool-app" data-app="asset-pool" data-view="overview">
-  <aside class="asset-pool-sidebar" aria-label="Asset pool navigation">
+  <aside class="asset-pool-sidebar" aria-label="Navigation des Asset-Pools">
     <div class="sidebar-section">
-      <a href="/asset-pool" class="sidebar-link sidebar-link--active" data-sidebar-overview>Asset Pool (overview)</a>
+      <a href="/asset-pool" class="sidebar-link sidebar-link--active" data-sidebar-overview>Asset-Pool (Übersicht)</a>
     </div>
     <div class="sidebar-section">
-      <p class="sidebar-heading">Raw</p>
-      <nav class="sidebar-list" data-raw-list aria-label="Raw tables"></nav>
+      <p class="sidebar-heading">Rohdaten</p>
+      <nav class="sidebar-list" data-raw-list aria-label="Rohdatentabellen"></nav>
       <button class="button sidebar-import" type="button" data-open-import>
-        Import Table
+        Tabelle importieren
       </button>
     </div>
   </aside>
   <section class="asset-pool-content" data-region="content">
     <header class="page-header">
       <div>
-        <h1 class="page-title">Asset Pool</h1>
+        <h1 class="page-title">Asset-Pool</h1>
         <p class="page-subtitle">
-          The Asset Pool references data from your raw tables using your column mappings.
+          Der Asset-Pool greift über Ihre Spaltenzuordnungen auf Daten aus den Rohtabellen zu.
         </p>
       </div>
       <div class="page-actions">
@@ -27,7 +27,7 @@
           aria-haspopup="dialog"
           aria-expanded="false"
         >
-          Set Asset Type Field
+          Feld für Asset-Typ festlegen
         </button>
         <button
           class="button button--ghost"
@@ -36,14 +36,14 @@
           aria-haspopup="dialog"
           aria-expanded="false"
         >
-          Manage Mapping Fields
+          Zuordnungsfelder verwalten
         </button>
       </div>
     </header>
     <div class="asset-pool-body" data-overview-body>
       <div class="card card--empty" data-empty-state hidden>
-        <h2>No data added</h2>
-        <p>Please import a raw table to get started.</p>
+        <h2>Keine Daten hinzugefügt</h2>
+        <p>Bitte importieren Sie eine Rohdatentabelle, um zu beginnen.</p>
       </div>
       <div class="table-container" data-asset-pool-table hidden></div>
     </div>
@@ -61,24 +61,24 @@
     data-field-manager
   >
     <header class="modal-header">
-      <h2 id="field-manager-title">Mapping fields</h2>
+      <h2 id="field-manager-title">Zuordnungsfelder</h2>
       <button
         class="icon-button"
         type="button"
         data-close-field-manager
-        aria-label="Close mapping fields"
+        aria-label="Zuordnungsfelder schließen"
       >&times;</button>
     </header>
     <div class="modal-body">
       <p class="modal-description field-manager__description">
-        Review the mapping fields currently used in the Asset Pool. Removing a field deletes it from all
-        mappings.
+        Prüfen Sie die Zuordnungsfelder, die derzeit im Asset-Pool verwendet werden. Das Entfernen eines Feldes
+        löscht es aus allen Zuordnungen.
       </p>
       <div class="field-manager__error" data-field-error hidden></div>
       <div class="field-manager__list" data-field-list></div>
     </div>
     <footer class="modal-footer">
-      <button class="button button--ghost" type="button" data-close-field-manager>Close</button>
+      <button class="button button--ghost" type="button" data-close-field-manager>Schließen</button>
     </footer>
   </div>
 </div>
@@ -86,27 +86,27 @@
 <div class="modal" data-asset-type-modal hidden aria-hidden="true">
   <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-type-modal-title">
     <header class="modal-header">
-      <h2 id="asset-type-modal-title">Choose asset type field</h2>
-      <button class="icon-button" type="button" data-close-asset-type-modal aria-label="Close asset type field dialog">&times;</button>
+      <h2 id="asset-type-modal-title">Feld für Asset-Typ auswählen</h2>
+      <button class="icon-button" type="button" data-close-asset-type-modal aria-label="Dialog zum Feld für Asset-Typ schließen">&times;</button>
     </header>
     <div class="modal-body">
       <p class="modal-description">
-        Select which Asset Pool field should populate asset types in the Asset Structure area.
+        Wählen Sie, welches Asset-Pool-Feld die Asset-Typen im Bereich Asset-Struktur füllen soll.
       </p>
       <div class="form-field">
-        <label for="asset-type-field-select">Asset type field</label>
+        <label for="asset-type-field-select">Feld für Asset-Typ</label>
         <select id="asset-type-field-select" name="assetTypeField" data-asset-type-field-select>
-          <option value="">Select a field</option>
+          <option value="">Feld auswählen</option>
         </select>
         <p class="helper-text" data-asset-type-field-helper>
-          Only mapped fields with data appear in this list.
+          Nur zugeordnete Felder mit Daten erscheinen in dieser Liste.
         </p>
       </div>
       <p class="form-error" data-asset-type-field-error hidden></p>
     </div>
     <div class="modal-footer">
-      <button class="button button--ghost" type="button" data-cancel-asset-type-modal>Cancel</button>
-      <button class="button" type="button" data-save-asset-type-field>Save</button>
+      <button class="button button--ghost" type="button" data-cancel-asset-type-modal>Abbrechen</button>
+      <button class="button" type="button" data-save-asset-type-field>Speichern</button>
     </div>
   </div>
 </div>
@@ -114,8 +114,8 @@
 <div class="modal" data-import-modal hidden>
   <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
     <header class="modal-header">
-      <h2 id="import-modal-title">Import raw table</h2>
-      <button class="icon-button" type="button" data-close-modal aria-label="Close import modal">&times;</button>
+      <h2 id="import-modal-title">Rohdatentabelle importieren</h2>
+      <button class="icon-button" type="button" data-close-modal aria-label="Import-Dialog schließen">&times;</button>
     </header>
     <div class="modal-body" data-import-stage></div>
   </div>

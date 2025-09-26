@@ -120,7 +120,7 @@ function removeTempFile(filePath) {
 
 export const RawTablesController = {
   list: (req, res) => {
-    logger.debug('Listing raw tables');
+    logger.debug('Roh-Tabellen werden aufgelistet');
     const tables = store.get('raw_tables');
     const rowsByTable = store.get('raw_rows').rows.reduce((acc, row) => {
       const key = row.raw_table_id;
@@ -144,7 +144,7 @@ export const RawTablesController = {
     const id = Number(req.params.id);
     const table = store.get('raw_tables').rows.find((entry) => entry.id === id);
     if (!table) {
-      logger.warn('Raw table not found', { rawTableId: id });
+      logger.warn('Roh-Tabelle nicht gefunden', { rawTableId: id });
       return res.status(404).json({ error: 'Not found' });
     }
 
@@ -161,7 +161,7 @@ export const RawTablesController = {
 
     const mapping = store.get('raw_mappings').rows.find((entry) => entry.raw_table_id === id);
 
-    logger.debug('Raw table detail retrieved', {
+    logger.debug('Details der Roh-Tabelle abgerufen', {
       rawTableId: id,
       rowCount: rows.length,
       hasMapping: Boolean(mapping)
@@ -178,7 +178,7 @@ export const RawTablesController = {
   preview: (req, res) => {
     const file = req.file;
     if (!file) {
-      logger.warn('Raw table preview attempted without file upload');
+      logger.warn('Vorschau der Roh-Tabelle ohne Dateiupload versucht');
       return res.status(400).json({ error: 'File is required.' });
     }
 
@@ -188,13 +188,15 @@ export const RawTablesController = {
 
     if (!trimmedTitle) {
       removeTempFile(file.path);
-      logger.warn('Raw table preview missing title');
+      logger.warn('Vorschau der Roh-Tabelle ohne Titel');
       return res.status(400).json({ fieldErrors: { title: 'Title is required.' } });
     }
 
     if (!isExcelFile(file.originalname)) {
       removeTempFile(file.path);
-      logger.warn('Raw table preview rejected non-excel file', { filename: file.originalname });
+      logger.warn('Vorschau der Roh-Tabelle hat Nicht-Excel-Datei abgelehnt', {
+        filename: file.originalname
+      });
       return res
         .status(400)
         .json({ fieldErrors: { file: 'Please upload an Excel file (.xlsx).' } });
@@ -205,7 +207,7 @@ export const RawTablesController = {
       const sheetName = workbook.SheetNames[0];
       if (!sheetName) {
         removeTempFile(file.path);
-        logger.warn('Raw table preview failed due to empty workbook');
+        logger.warn('Vorschau der Roh-Tabelle wegen leerer Arbeitsmappe fehlgeschlagen');
         return res.status(400).json({ error: 'Workbook contains no worksheets.' });
       }
 
@@ -214,7 +216,7 @@ export const RawTablesController = {
 
       if (!rows.length) {
         removeTempFile(file.path);
-        logger.warn('Raw table preview failed due to missing rows');
+        logger.warn('Vorschau der Roh-Tabelle wegen fehlender Zeilen fehlgeschlagen');
         return res.status(400).json({ error: 'Worksheet has no headers.' });
       }
 
@@ -222,7 +224,7 @@ export const RawTablesController = {
       const headerValidation = validateHeaders(rawHeaders);
       if (!headerValidation.ok) {
         removeTempFile(file.path);
-        logger.warn('Raw table preview failed header validation', {
+        logger.warn('Vorschau der Roh-Tabelle scheiterte an Kopfzeilenprüfung', {
           reason: headerValidation.message
         });
         return res.status(400).json({ error: headerValidation.message });
@@ -231,7 +233,7 @@ export const RawTablesController = {
       const normalizedIdColumn = (idColumn || '').trim();
       if (normalizedIdColumn && !rawHeaders.includes(normalizedIdColumn)) {
         removeTempFile(file.path);
-        logger.warn('Raw table preview failed due to missing ID column', {
+        logger.warn('Vorschau der Roh-Tabelle scheiterte wegen fehlender ID-Spalte', {
           idColumn: normalizedIdColumn
         });
         return res.status(400).json({
@@ -252,7 +254,7 @@ export const RawTablesController = {
 
       if (!processed.ok) {
         removeTempFile(file.path);
-        logger.warn('Raw table preview failed due to duplicate policy violation', {
+        logger.warn('Vorschau der Roh-Tabelle scheiterte wegen Duplikatregel-Verstoß', {
           message: processed.message
         });
         return res.status(400).json({ error: processed.message });
@@ -272,7 +274,7 @@ export const RawTablesController = {
 
       removeTempFile(file.path);
 
-      logger.info('Raw table preview created', {
+      logger.info('Vorschau der Roh-Tabelle erstellt', {
         previewId,
         title: trimmedTitle,
         rowCount: processed.rows.length
@@ -291,7 +293,9 @@ export const RawTablesController = {
       });
     } catch (err) {
       removeTempFile(file?.path);
-      logger.error('Failed to process raw table preview', err, { filename: file?.originalname });
+      logger.error('Verarbeitung der Roh-Tabellen-Vorschau fehlgeschlagen', err, {
+        filename: file?.originalname
+      });
       res.status(400).json({ error: 'Could not read the file. Please upload a valid Excel (.xlsx).' });
     }
   },
@@ -300,13 +304,15 @@ export const RawTablesController = {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     const { previewId, mappings } = body;
     if (!previewId) {
-      logger.warn('Raw table import attempted without previewId');
+      logger.warn('Import der Roh-Tabelle ohne Vorschau-ID versucht');
       return res.status(400).json({ error: 'Preview ID is required.' });
     }
 
     const preview = readPreview(previewId);
     if (!preview) {
-      logger.warn('Raw table import failed because preview was not found', { previewId });
+      logger.warn('Import der Roh-Tabelle fehlgeschlagen, weil Vorschau nicht gefunden wurde', {
+        previewId
+      });
       return res.status(404).json({ error: 'Preview not found. Please restart the import.' });
     }
 
@@ -320,14 +326,14 @@ export const RawTablesController = {
       : [];
 
     if (!pairs.length) {
-      logger.warn('Raw table import rejected due to missing mappings', { previewId });
+      logger.warn('Import der Roh-Tabelle wegen fehlender Zuordnungen abgelehnt', { previewId });
       return res.status(400).json({ error: 'Please map at least one column.' });
     }
 
     const validPairs = pairs.filter((pair) => preview.headers.includes(pair.rawHeader));
 
     if (!validPairs.length) {
-      logger.warn('Raw table import rejected due to invalid headers', { previewId });
+      logger.warn('Import der Roh-Tabelle wegen ungültiger Kopfzeilen abgelehnt', { previewId });
       return res.status(400).json({ error: 'Mappings reference unknown headers.' });
     }
 
@@ -357,7 +363,7 @@ export const RawTablesController = {
 
     deletePreview(previewId);
 
-    logger.info('Raw table imported successfully', {
+    logger.info('Roh-Tabelle erfolgreich importiert', {
       rawTableId: tableId,
       rowCount: preview.rows.length,
       mappingCount: validPairs.length
@@ -370,7 +376,9 @@ export const RawTablesController = {
     const id = Number(req.params.id);
     const table = store.get('raw_tables').rows.find((entry) => entry.id === id);
     if (!table) {
-      logger.warn('Attempted to update mapping for missing raw table', { rawTableId: id });
+      logger.warn('Versuch, Zuordnung für fehlende Roh-Tabelle zu aktualisieren', {
+        rawTableId: id
+      });
       return res.status(404).json({ error: 'Raw table not found.' });
     }
 
@@ -384,13 +392,15 @@ export const RawTablesController = {
       : [];
 
     if (!pairs.length) {
-      logger.warn('Raw table mapping update rejected due to missing mappings', { rawTableId: id });
+      logger.warn('Aktualisierung der Roh-Tabellen-Zuordnung wegen fehlender Zuordnungen abgelehnt', {
+        rawTableId: id
+      });
       return res.status(400).json({ error: 'Please map at least one column.' });
     }
 
     const invalidHeaders = pairs.filter((pair) => !table.headers.includes(pair.rawHeader));
     if (invalidHeaders.length) {
-      logger.warn('Raw table mapping update rejected due to invalid headers', {
+      logger.warn('Aktualisierung der Roh-Tabellen-Zuordnung wegen ungültiger Kopfzeilen abgelehnt', {
         rawTableId: id,
         invalidHeaders: invalidHeaders.map((pair) => pair.rawHeader)
       });
@@ -407,7 +417,7 @@ export const RawTablesController = {
       store.insert('raw_mappings', { raw_table_id: id, pairs });
     }
 
-    logger.info('Raw table mapping updated', { rawTableId: id, mappingCount: pairs.length });
+    logger.info('Zuordnung der Roh-Tabelle aktualisiert', { rawTableId: id, mappingCount: pairs.length });
 
     res.json({ ok: true });
   },
@@ -417,7 +427,7 @@ export const RawTablesController = {
     const tables = store.get('raw_tables');
     const table = tables.rows.find((entry) => entry.id === id);
     if (!table) {
-      logger.warn('Attempted to update details for missing raw table', { rawTableId: id });
+      logger.warn('Versuch, Details für fehlende Roh-Tabelle zu aktualisieren', { rawTableId: id });
       return res.status(404).json({ error: 'Raw table not found.' });
     }
 
@@ -425,7 +435,9 @@ export const RawTablesController = {
     const description = (req.body?.description || '').trim();
 
     if (!title) {
-      logger.warn('Raw table detail update rejected due to missing title', { rawTableId: id });
+      logger.warn('Aktualisierung der Roh-Tabellen-Details wegen fehlendem Titel abgelehnt', {
+        rawTableId: id
+      });
       return res.status(400).json({ fieldErrors: { title: 'Name is required.' } });
     }
 
@@ -433,7 +445,7 @@ export const RawTablesController = {
     table.description = description;
     store.set('raw_tables', tables);
 
-    logger.info('Raw table details updated', { rawTableId: id });
+    logger.info('Details der Roh-Tabelle aktualisiert', { rawTableId: id });
 
     res.json({
       ok: true,
@@ -449,7 +461,7 @@ export const RawTablesController = {
     const tables = store.get('raw_tables');
     const exists = tables.rows.some((entry) => entry.id === id);
     if (!exists) {
-      logger.warn('Attempted to delete missing raw table', { rawTableId: id });
+      logger.warn('Versuch, fehlende Roh-Tabelle zu löschen', { rawTableId: id });
       return res.status(404).json({ error: 'Raw table not found.' });
     }
 
@@ -469,7 +481,7 @@ export const RawTablesController = {
       store.set('raw_mappings', mappings);
     }
 
-    logger.info('Raw table deleted', { rawTableId: id });
+    logger.info('Roh-Tabelle gelöscht', { rawTableId: id });
 
     res.json({ ok: true });
   }

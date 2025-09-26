@@ -7,7 +7,7 @@ import { logger } from '../../../lib/logger.js';
 
 export const SourcesController = {
   list: (req, res) => {
-    logger.debug('Listing sources');
+    logger.debug('Quellen werden aufgelistet');
     res.json(store.get('sources').rows);
   },
 
@@ -15,7 +15,7 @@ export const SourcesController = {
     const id = Number(req.params.id);
     const source = store.get('sources').rows.find((row) => row.id === id);
     if (!source) {
-      logger.warn('Source not found', { sourceId: id });
+      logger.warn('Quelle nicht gefunden', { sourceId: id });
       return res.status(404).json({ error: 'Not found' });
     }
 
@@ -24,14 +24,14 @@ export const SourcesController = {
       .rows.filter((row) => row.source_id === id)
       .sort((a, b) => a.row_index - b.row_index);
 
-    logger.debug('Source retrieved', { sourceId: id, rowCount: rows.length });
+    logger.debug('Quelle abgerufen', { sourceId: id, rowCount: rows.length });
     res.json({ source, rows });
   },
 
   upload: (req, res) => {
     const file = req.file;
     if (!file) {
-      logger.warn('Upload attempted without file');
+      logger.warn('Upload ohne Datei versucht');
       return res.status(400).json({ error: 'file is required' });
     }
 
@@ -44,14 +44,14 @@ export const SourcesController = {
       if (file.path && fs.existsSync(file.path)) {
         fs.unlinkSync(file.path);
       }
-      logger.warn('Duplicate source upload blocked', { originalName: file.originalname });
+      logger.warn('Doppelter Quellen-Upload blockiert', { originalName: file.originalname });
       return res.status(409).json({
         error: `File "${file.originalname}" has already been uploaded. Please delete the existing source before uploading it again.`
       });
     }
 
     const displayName = (req.body.name || file.originalname).trim();
-    logger.info('Processing source upload', { originalName: file.originalname, displayName });
+    logger.info('Quellen-Upload wird verarbeitet', { originalName: file.originalname, displayName });
     const id = store.insert('sources', {
       name: displayName,
       original_filename: file.originalname,
@@ -67,7 +67,10 @@ export const SourcesController = {
       const sheetName = workbook.SheetNames[0];
       records = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: null });
     } catch (error) {
-      logger.error('Failed to parse uploaded source file', error, { sourceId: id, path: file.path });
+      logger.error('Hochgeladene Quelldatei konnte nicht gelesen werden', error, {
+        sourceId: id,
+        path: file.path
+      });
       if (file.path && fs.existsSync(file.path)) {
         fs.unlinkSync(file.path);
       }
@@ -90,7 +93,7 @@ export const SourcesController = {
 
     rebuildUnified();
 
-    logger.info('Source uploaded successfully', {
+    logger.info('Quelle erfolgreich hochgeladen', {
       sourceId: id,
       rowCount: records.length,
       columnCount: records[0] ? Object.keys(records[0]).length : 0
@@ -104,7 +107,7 @@ export const SourcesController = {
     const sources = store.get('sources');
     const exists = sources.rows.some((row) => row.id === id);
     if (!exists) {
-      logger.warn('Attempted to remove missing source', { sourceId: id });
+      logger.warn('Versuch, fehlende Quelle zu entfernen', { sourceId: id });
       return res.status(404).json({ error: 'Not found' });
     }
 
@@ -121,7 +124,7 @@ export const SourcesController = {
 
     rebuildUnified();
 
-    logger.info('Source removed', { sourceId: id });
+    logger.info('Quelle entfernt', { sourceId: id });
 
     res.json({ ok: true });
   },
@@ -134,7 +137,7 @@ export const SourcesController = {
       .sort((a, b) => a.row_index - b.row_index);
 
     const headers = rows[0] ? Object.keys(rows[0].data || {}) : [];
-    logger.debug('Source headers retrieved', { sourceId: id, headerCount: headers.length });
+    logger.debug('Quellen-Header abgerufen', { sourceId: id, headerCount: headers.length });
     res.json({ headers });
   }
 };

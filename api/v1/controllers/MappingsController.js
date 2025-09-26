@@ -6,21 +6,21 @@ export const MappingsController = {
   addSchemaCol: (req, res) => {
     const column = (req.body.col || '').trim();
     if (!column) {
-      logger.warn('Attempted to add schema column without name', {
+      logger.warn('Versuch, Schema-Spalte ohne Namen hinzuzufügen', {
         path: req.originalUrl
       });
       return res.status(400).json({ error: 'col required' });
     }
-    logger.info('Adding schema column', { column });
+    logger.info('Schema-Spalte wird hinzugefügt', { column });
     store.upsertSchemaCol(column);
     rebuildUnified();
-    logger.info('Schema column added and unified assets rebuilt', { column });
+    logger.info('Schema-Spalte hinzugefügt und vereinheitlichte Assets neu aufgebaut', { column });
     res.json({ ok: true });
   },
 
   save: (req, res) => {
     const payload = req.body.mappings || {};
-    logger.info('Saving mappings', { sourceCount: Object.keys(payload).length });
+    logger.info('Zuordnungen werden gespeichert', { sourceCount: Object.keys(payload).length });
     const data = store.get('mappings');
 
     for (const [sourceId, mapping] of Object.entries(payload)) {
@@ -42,7 +42,7 @@ export const MappingsController = {
 
     store.set('mappings', data);
     rebuildUnified();
-    logger.info('Mappings saved and unified assets rebuilt');
+    logger.info('Zuordnungen gespeichert und vereinheitlichte Assets neu aufgebaut');
     res.json({ ok: true });
   }
 };

@@ -5,25 +5,25 @@
   data-group-name="{{group.displayTitle}}"
   data-available-group-asset-types="{{availableGroupAssetTypesCount}}"
 >
-  <aside class="asset-structure-sidebar" aria-label="Asset structure navigation">
+  <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
-      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Categories</a>
-      <a href="/asset-types" class="sidebar-link">Asset types</a>
+      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Kategorien</a>
+      <a href="/asset-types" class="sidebar-link">Asset-Typen</a>
     </div>
   </aside>
   <section class="asset-structure-content">
     <header class="page-header">
       <div>
-        <h1 class="page-title">{{#if group.displayTitle}}{{group.displayTitle}}{{else}}Untitled group{{/if}}</h1>
-        <p class="page-subtitle">Review and edit the group’s details without leaving your flow.</p>
+        <h1 class="page-title">{{#if group.displayTitle}}{{group.displayTitle}}{{else}}Unbenannte Gruppe{{/if}}</h1>
+        <p class="page-subtitle">Überprüfen und bearbeiten Sie die Gruppendetails, ohne Ihren Arbeitsablauf zu verlassen.</p>
       </div>
       <div class="page-actions">
-        <a class="button button--ghost" href="/asset-structure/categories/{{category.id}}">Back to category</a>
+        <a class="button button--ghost" href="/asset-structure/categories/{{category.id}}">Zur Kategorie zurück</a>
       </div>
     </header>
 
     <nav class="breadcrumb" aria-label="Breadcrumb">
-      <a href="/asset-structure">Asset structure</a>
+      <a href="/asset-structure">Asset-Struktur</a>
       <span aria-hidden="true">›</span>
       <a href="/asset-structure/categories/{{category.id}}">{{category.title}}</a>
       <span aria-hidden="true">›</span>
@@ -33,68 +33,68 @@
     <div class="structure-body">
       <section class="card structure-card" aria-labelledby="group-details-title">
         <div class="section-header">
-          <h2 class="section-title" id="group-details-title">Group information</h2>
-          <button class="button" type="button">Save changes</button>
+          <h2 class="section-title" id="group-details-title">Gruppeninformationen</h2>
+          <button class="button" type="button">Änderungen speichern</button>
         </div>
         <form class="form-grid form-grid--two">
           <div class="form-field">
-            <label for="group-name">Title</label>
+            <label for="group-name">Titel</label>
             <input
               id="group-name"
               name="title"
               type="text"
               value="{{group.title}}"
-              placeholder="Enter group title"
+              placeholder="Gruppentitel eingeben"
             />
           </div>
           <div class="form-field">
-            <label for="group-parent-category">Parent category</label>
+            <label for="group-parent-category">Übergeordnete Kategorie</label>
             <select id="group-parent-category" name="category_id">
               {{#if categoryOptions.length}}
                 {{#each categoryOptions}}
                   <option value="{{id}}" {{#if (eq ../category.id id)}}selected{{/if}}>{{title}}</option>
                 {{/each}}
               {{else}}
-                <option value="" disabled>No categories available</option>
+                <option value="" disabled>Keine Kategorien verfügbar</option>
               {{/if}}
             </select>
           </div>
           <div class="form-field">
             <label for="group-status">Status</label>
             <select id="group-status" name="status">
-              <option value="" {{#unless group.status}}selected{{/unless}}>Select status</option>
-              <option {{#if (eq group.status 'Active')}}selected{{/if}}>Active</option>
-              <option {{#if (eq group.status 'Planned')}}selected{{/if}}>Planned</option>
-              <option {{#if (eq group.status 'Retired')}}selected{{/if}}>Retired</option>
+              <option value="" {{#unless group.status}}selected{{/unless}}>Status auswählen</option>
+              <option {{#if (eq group.status 'Active')}}selected{{/if}}>Aktiv</option>
+              <option {{#if (eq group.status 'Planned')}}selected{{/if}}>Geplant</option>
+              <option {{#if (eq group.status 'Retired')}}selected{{/if}}>Außer Betrieb</option>
             </select>
           </div>
           <div class="form-field form-field--full">
-            <label for="group-description">Description</label>
+            <label for="group-description">Beschreibung</label>
             <textarea
               id="group-description"
               name="description"
               rows="4"
-              placeholder="Add a short description"
+              placeholder="Kurze Beschreibung hinzufügen"
             >{{group.description}}</textarea>
           </div>
           <div class="form-field">
-            <label for="group-asset-type">Asset type</label>
+            <label for="group-asset-type">Asset-Typ</label>
             <input
               id="group-asset-type"
               type="text"
               name="asset_type"
               value="{{group.assetType}}"
-              placeholder="e.g. Application"
+              placeholder="z. B. Anwendung"
             />
           </div>
         </form>
         <dl class="meta-grid">
           <div class="meta-item">
-            <dt>Created</dt>
+            <dt>Erstellt</dt>
             <dd>{{group.createdAt}}</dd>
           </div>
           <div class="meta-item">
-            <dt>Last updated</dt>
+            <dt>Zuletzt aktualisiert</dt>
             <dd>{{group.updatedAt}}</dd>
           </div>
         </dl>
@@ -102,19 +102,19 @@
 
       <section class="card structure-card" aria-labelledby="group-asset-types-title">
         <div class="section-header">
-          <h2 class="section-title" id="group-asset-types-title">Asset types</h2>
-          <button class="button" type="button" data-open-group-asset-type-modal>Add asset type</button>
+          <h2 class="section-title" id="group-asset-types-title">Asset-Typen</h2>
+          <button class="button" type="button" data-open-group-asset-type-modal>Asset-Typ hinzufügen</button>
         </div>
         <p class="helper-text">
-          Select from the available asset types sourced from your Asset Pool. Each asset type can belong to
-          only one group unless it has been ignored.
+          Wählen Sie aus den verfügbaren Asset-Typen aus Ihrem Asset-Pool. Jeder Asset-Typ kann nur einer
+          Gruppe zugeordnet sein, sofern er nicht ignoriert wird.
         </p>
         <p
           class="empty-state"
           data-group-asset-type-empty
           {{#if groupAssetTypes.length}}hidden{{/if}}
         >
-          No asset types have been assigned to this group yet.
+          Dieser Gruppe wurden noch keine Asset-Typen zugewiesen.
         </p>
         <ul
           class="group-asset-type-list"
@@ -136,14 +136,14 @@
                     <button
                       type="button"
                       class="icon-button group-asset-type-pill__remove"
-                      aria-label="Remove asset type {{name}} from this group"
+                      aria-label="Asset-Typ {{name}} aus dieser Gruppe entfernen"
                       data-group-asset-type-name="{{name}}"
                       {{#if id}}
                         data-remove-group-asset-type="{{id}}"
                       {{else}}
                         disabled
                         aria-disabled="true"
-                        title="Update the group information to remove this asset type."
+                        title="Aktualisieren Sie die Gruppeninformationen, um diesen Asset-Typ zu entfernen."
                       {{/if}}
                     >
                       &times;
@@ -152,13 +152,13 @@
                 </div>
                 <span class="group-asset-type-pill__meta">
                   {{#if count}}
-                    {{count}} {{#if (eq count 1)}}asset{{else}}assets{{/if}}
+                    {{count}} {{#if (eq count 1)}}Asset{{else}}Assets{{/if}}
                   {{else}}
-                    No Asset Pool entries yet
+                    Noch keine Einträge im Asset-Pool
                   {{/if}}
                 </span>
                 {{#if isLegacy}}
-                  <span class="group-asset-type-pill__tag">From group details</span>
+                  <span class="group-asset-type-pill__tag">Aus Gruppendetails</span>
                 {{/if}}
               </div>
             </li>
@@ -172,11 +172,11 @@
 <div class="modal" data-group-asset-type-modal hidden aria-hidden="true">
   <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="group-asset-type-modal-title">
     <header class="modal-header">
-      <h2 id="group-asset-type-modal-title">Add asset type</h2>
+      <h2 id="group-asset-type-modal-title">Asset-Typ hinzufügen</h2>
       <button
         class="icon-button"
         type="button"
-        aria-label="Close asset type selection"
+        aria-label="Auswahl des Asset-Typs schließen"
         data-close-group-asset-type-modal
       >
         &times;
@@ -184,17 +184,17 @@
     </header>
     <div class="modal-body">
       <p class="modal-description">
-        Choose one of the available asset types to associate it with {{group.displayTitle}}.
+        Wählen Sie einen der verfügbaren Asset-Typen, um ihn mit {{group.displayTitle}} zu verknüpfen.
       </p>
-      <p class="helper-text" data-group-asset-type-loading>Loading available asset types…</p>
+      <p class="helper-text" data-group-asset-type-loading>Verfügbare Asset-Typen werden geladen…</p>
       <p class="empty-state" data-group-asset-type-modal-empty hidden>
-        All asset types are currently assigned to other groups or marked to be ignored.
+        Alle Asset-Typen sind derzeit anderen Gruppen zugeordnet oder zum Ignorieren markiert.
       </p>
       <p class="form-error" data-group-asset-type-error hidden></p>
       <ul class="group-asset-type-modal__list" data-group-asset-type-options></ul>
     </div>
     <div class="modal-footer">
-      <button class="button button--ghost" type="button" data-close-group-asset-type-modal>Close</button>
+      <button class="button button--ghost" type="button" data-close-group-asset-type-modal>Schließen</button>
     </div>
   </div>
 </div>
