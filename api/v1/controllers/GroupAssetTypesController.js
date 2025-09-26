@@ -1,7 +1,8 @@
 import {
   addAssetTypeToGroup,
   getAvailableAssetTypesForGroup,
-  listGroupAssetTypes
+  listGroupAssetTypes,
+  removeAssetTypeFromGroup
 } from '../../../lib/groupAssetTypes.js';
 import { logger } from '../../../lib/logger.js';
 
@@ -69,6 +70,30 @@ export const GroupAssetTypesController = {
       res
         .status(statusCode)
         .json({ error: error?.message || 'Failed to assign asset type to group.' });
+    }
+  },
+
+  destroy: (req, res) => {
+    const groupId = req.params?.id;
+    const assetTypeId = req.params?.assetTypeId;
+    try {
+      const entry = removeAssetTypeFromGroup(groupId, assetTypeId);
+      res.json(entry);
+    } catch (error) {
+      const statusCode =
+        error?.statusCode && Number.isInteger(error.statusCode) ? error.statusCode : 400;
+      if (statusCode >= 500) {
+        logger.error('Failed to remove asset type from group', { error, groupId, assetTypeId });
+      } else {
+        logger.warn('Validation error while removing asset type from group', {
+          error: error?.message,
+          groupId,
+          assetTypeId
+        });
+      }
+      res
+        .status(statusCode)
+        .json({ error: error?.message || 'Failed to remove asset type from group.' });
     }
   }
 };

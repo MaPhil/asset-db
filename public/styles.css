@@ -524,6 +524,29 @@ main {
   background: #fff;
 }
 
+.group-asset-type-pill__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.group-asset-type-pill__actions {
+  display: flex;
+  align-items: center;
+}
+
+.group-asset-type-pill__remove {
+  font-size: 1.15rem;
+  padding: 0.25rem;
+  margin: -0.25rem -0.25rem 0 0;
+}
+
+.group-asset-type-pill__remove[disabled] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 .group-asset-type-pill--legacy {
   border-style: dashed;
 }
