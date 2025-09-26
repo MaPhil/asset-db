@@ -204,6 +204,13 @@ app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) =>
     return res.status(404).send('Category not found');
   }
 
+  const categoryOptions = categories
+    .map((row) => ({
+      id: row.id,
+      title: row.title || row.name || `Category ${row.id}`
+    }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+
   const group = store
     .get('groups')
     .rows.find((row) => row.id === groupId);
@@ -229,7 +236,8 @@ app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) =>
       id: category.id,
       title: category.title || category.name || 'Untitled category'
     },
-    group: detail
+    group: detail,
+    categoryOptions
   });
 });
 
