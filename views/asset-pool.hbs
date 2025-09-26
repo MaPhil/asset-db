@@ -23,6 +23,15 @@
         <button
           class="button button--ghost"
           type="button"
+          data-open-asset-type-modal
+          aria-haspopup="dialog"
+          aria-expanded="false"
+        >
+          Set Asset Type Field
+        </button>
+        <button
+          class="button button--ghost"
+          type="button"
           data-open-field-manager
           aria-haspopup="dialog"
           aria-expanded="false"
@@ -66,6 +75,34 @@
 </div>
 
 <div class="toast-container" role="status" aria-live="polite"></div>
+
+<div class="modal" data-asset-type-modal hidden aria-hidden="true">
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-type-modal-title">
+    <header class="modal-header">
+      <h2 id="asset-type-modal-title">Choose asset type field</h2>
+      <button class="icon-button" type="button" data-close-asset-type-modal aria-label="Close asset type field dialog">&times;</button>
+    </header>
+    <div class="modal-body">
+      <p class="modal-description">
+        Select which Asset Pool field should populate asset types in the Asset Structure area.
+      </p>
+      <div class="form-field">
+        <label for="asset-type-field-select">Asset type field</label>
+        <select id="asset-type-field-select" name="assetTypeField" data-asset-type-field-select>
+          <option value="">Select a field</option>
+        </select>
+        <p class="helper-text" data-asset-type-field-helper>
+          Only mapped fields with data appear in this list.
+        </p>
+      </div>
+      <p class="form-error" data-asset-type-field-error hidden></p>
+    </div>
+    <div class="modal-footer">
+      <button class="button button--ghost" type="button" data-cancel-asset-type-modal>Cancel</button>
+      <button class="button" type="button" data-save-asset-type-field>Save</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal" data-import-modal hidden>
   <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">

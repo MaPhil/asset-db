@@ -6,6 +6,7 @@ import path from 'path';
 import apiV1 from './api/v1/index.js';
 import { store } from './lib/storage.js';
 import { logger } from './lib/logger.js';
+import { getAssetTypeSummary } from './lib/assetTypes.js';
 
 const app = express();
 
@@ -103,24 +104,6 @@ const formatDateTime = (value) => {
   }
 };
 
-function buildAssetTypes(groups) {
-  const stats = groups.reduce((acc, group) => {
-    if (!group?.asset_type) {
-      return acc;
-    }
-    const key = String(group.asset_type).trim();
-    if (!key) {
-      return acc;
-    }
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
-
-  return Object.entries(stats)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
 app.get('/asset-structure', (req, res) => {
   const categoriesRaw = store.get('categories').rows;
 
@@ -141,12 +124,12 @@ app.get('/asset-structure', (req, res) => {
 });
 
 app.get('/asset-types', (req, res) => {
-  const groups = store.get('groups').rows;
-  const assetTypes = buildAssetTypes(groups);
+  const summary = getAssetTypeSummary();
 
   res.render('asset-types', {
     nav: 'assetStructure',
-    assetTypes
+    assetTypes: summary.entries,
+    assetTypeField: summary.field
   });
 });
 
@@ -204,6 +187,13 @@ app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) =>
     return res.status(404).send('Category not found');
   }
 
+  const categoryOptions = categories
+    .map((row) => ({
+      id: row.id,
+      title: row.title || row.name || `Category ${row.id}`
+    }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+
   const group = store
     .get('groups')
     .rows.find((row) => row.id === groupId);
@@ -229,11 +219,12 @@ app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) =>
       id: category.id,
       title: category.title || category.name || 'Untitled category'
     },
-    group: detail
+    group: detail,
+    categoryOptions
   });
 });
 
-app.get('/measurements', (req, res) => {
+app.get('/measures', (req, res) => {
   const assets = store.get('unified_assets').rows;
   const schema = store.get('schema').rows.map((row) => row.col_name);
   const sources = store.get('sources').rows;
@@ -264,7 +255,7 @@ app.get('/measurements', (req, res) => {
   }));
 
   res.render('measurements', {
-    nav: 'measurements',
+    nav: 'measures',
     metrics,
     sourceMetrics,
     latestUpdate
@@ -276,6 +267,8 @@ app.get('/implementation', (req, res) => {
     nav: 'implementation'
   });
 });
+
+app.get('/measurements', (req, res) => res.redirect(302, '/measures'));
 
 app.get('/assets', (req, res) => res.redirect('/asset-pool'));
 

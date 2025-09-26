@@ -5,3 +5,4 @@ export { CategoriesController } from './CategoriesController.js';
 export { GroupsController } from './GroupsController.js';
 export { RawTablesController } from './RawTablesController.js';
 export { AssetPoolController } from './AssetPoolController.js';
+export { AssetTypesController } from './AssetTypesController.js';

@@ -41,6 +41,18 @@
           />
         </div>
         <div class="form-field">
+          <label for="group-parent-category">Parent category</label>
+          <select id="group-parent-category" name="category_id">
+            {{#if categoryOptions.length}}
+              {{#each categoryOptions}}
+                <option value="{{id}}" {{#if (eq ../category.id id)}}selected{{/if}}>{{title}}</option>
+              {{/each}}
+            {{else}}
+              <option value="" disabled>No categories available</option>
+            {{/if}}
+          </select>
+        </div>
+        <div class="form-field">
           <label for="group-status">Status</label>
           <select id="group-status" name="status">
             <option value="" {{#unless group.status}}selected{{/unless}}>Select status</option>
