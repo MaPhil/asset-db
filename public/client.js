@@ -5,7 +5,10 @@ const API = {
   assetTypeField: '/api/v1/asset-pool/settings/asset-type-field',
   assetTypes: '/api/v1/asset-types',
   categories: '/api/v1/categories',
-  groups: '/api/v1/groups'
+  groups: '/api/v1/groups',
+  groupAssetTypes: (groupId) => `/api/v1/groups/${groupId}/asset-types`,
+  groupAssetTypesAvailable: (groupId) =>
+    `/api/v1/groups/${groupId}/asset-types/available`
 };
 
 const PAGE_SIZE = 25;
@@ -42,6 +45,14 @@ const state = {
     isOpen: false,
     isSaving: false,
     activeButton: null,
+    error: null
+  },
+  groupAssetTypeModal: {
+    isOpen: false,
+    isLoading: false,
+    isSaving: false,
+    trigger: null,
+    options: [],
     error: null
   }
 };
@@ -1822,6 +1833,275 @@ function setupAssetTypeDecisionModal(root) {
   });
 }
 
+function appendGroupAssetTypePill(root, entry) {
+  const list = select(root, '[data-group-asset-type-list]');
+  const emptyEl = select(root, '[data-group-asset-type-empty]');
+  if (!list) {
+    return;
+  }
+
+  const item = document.createElement('li');
+  item.className = 'group-asset-type-list__item';
+
+  const pill = document.createElement('div');
+  pill.className = 'group-asset-type-pill';
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'group-asset-type-pill__name';
+  nameEl.textContent = entry?.name || '';
+  pill.appendChild(nameEl);
+
+  const metaEl = document.createElement('span');
+  metaEl.className = 'group-asset-type-pill__meta';
+  const count = Number(entry?.count);
+  if (Number.isFinite(count) && count > 0) {
+    metaEl.textContent = `${count} ${count === 1 ? 'asset' : 'assets'}`;
+  } else {
+    metaEl.textContent = 'No Asset Pool entries yet';
+  }
+  pill.appendChild(metaEl);
+
+  item.appendChild(pill);
+  list.appendChild(item);
+
+  list.hidden = false;
+  if (emptyEl) {
+    emptyEl.hidden = true;
+  }
+
+  if (root?.dataset) {
+    const available = Number(root.dataset.availableGroupAssetTypes || '0');
+    if (Number.isFinite(available) && available > 0) {
+      root.dataset.availableGroupAssetTypes = String(Math.max(0, available - 1));
+    }
+  }
+}
+
+function setupGroupAssetTypeModal(root) {
+  const groupId = Number(root?.dataset.groupId || '');
+  if (!Number.isFinite(groupId) || groupId <= 0) {
+    return;
+  }
+
+  const trigger = select(root, '[data-open-group-asset-type-modal]');
+  const modal = document.querySelector('[data-group-asset-type-modal]');
+  if (!trigger || !modal) {
+    return;
+  }
+
+  const optionsList = select(modal, '[data-group-asset-type-options]');
+  const loadingEl = select(modal, '[data-group-asset-type-loading]');
+  const emptyEl = select(modal, '[data-group-asset-type-modal-empty]');
+  const errorEl = select(modal, '[data-group-asset-type-error]');
+  const closeButtons = selectAll(modal, '[data-close-group-asset-type-modal]');
+
+  function resetModalState() {
+    if (optionsList) {
+      optionsList.innerHTML = '';
+    }
+    if (emptyEl) {
+      emptyEl.hidden = true;
+    }
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+  }
+
+  function close(focusTrigger = true) {
+    if (!state.groupAssetTypeModal.isOpen) {
+      return;
+    }
+
+    state.groupAssetTypeModal.isOpen = false;
+    state.groupAssetTypeModal.isLoading = false;
+    state.groupAssetTypeModal.isSaving = false;
+    state.groupAssetTypeModal.error = null;
+    state.groupAssetTypeModal.options = [];
+
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+
+    structureModalOpenCount = Math.max(0, structureModalOpenCount - 1);
+    if (structureModalOpenCount === 0) {
+      document.body.style.overflow = '';
+    }
+
+    if (loadingEl) {
+      loadingEl.hidden = true;
+    }
+
+    resetModalState();
+
+    trigger.setAttribute('aria-expanded', 'false');
+    state.groupAssetTypeModal.trigger = null;
+
+    if (focusTrigger && typeof trigger.focus === 'function') {
+      trigger.focus();
+    }
+  }
+
+  function renderOptions(entries) {
+    if (!optionsList) {
+      return;
+    }
+
+    optionsList.innerHTML = '';
+    entries.forEach((entry) => {
+      const item = document.createElement('li');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'group-asset-type-modal__button';
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'group-asset-type-modal__name';
+      nameEl.textContent = entry?.name || '';
+
+      const metaEl = document.createElement('span');
+      metaEl.className = 'group-asset-type-modal__meta';
+      const count = Number(entry?.count);
+      if (Number.isFinite(count) && count > 0) {
+        metaEl.textContent = `${count} ${count === 1 ? 'asset' : 'assets'}`;
+      } else {
+        metaEl.textContent = 'No Asset Pool entries yet';
+      }
+
+      button.appendChild(nameEl);
+      button.appendChild(metaEl);
+
+      button.addEventListener('click', async () => {
+        if (state.groupAssetTypeModal.isSaving) {
+          return;
+        }
+
+        state.groupAssetTypeModal.isSaving = true;
+        state.groupAssetTypeModal.error = null;
+        if (errorEl) {
+          errorEl.hidden = true;
+          errorEl.textContent = '';
+        }
+
+        selectAll(optionsList, 'button').forEach((btn) => {
+          btn.disabled = true;
+        });
+
+        try {
+          const payload = await fetchJson(API.groupAssetTypes(groupId), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: entry?.name || '' })
+          });
+
+          appendGroupAssetTypePill(root, {
+            name: payload?.name || entry?.name || '',
+            count: payload?.count ?? entry?.count ?? 0
+          });
+
+          const groupName = root?.dataset?.groupName || 'this group';
+          showToast(`Added asset type “${payload?.name || entry?.name || ''}” to ${groupName}.`);
+          close();
+        } catch (error) {
+          const message =
+            error?.payload?.error || error?.message || 'Failed to add asset type to this group.';
+          state.groupAssetTypeModal.error = message;
+          if (errorEl) {
+            errorEl.hidden = false;
+            errorEl.textContent = message;
+          }
+          selectAll(optionsList, 'button').forEach((btn) => {
+            btn.disabled = false;
+          });
+        } finally {
+          state.groupAssetTypeModal.isSaving = false;
+        }
+      });
+
+      item.appendChild(button);
+      optionsList.appendChild(item);
+    });
+  }
+
+  async function loadOptions() {
+    state.groupAssetTypeModal.isLoading = true;
+    state.groupAssetTypeModal.error = null;
+    if (loadingEl) {
+      loadingEl.hidden = false;
+    }
+    resetModalState();
+
+    try {
+      const response = await fetchJson(API.groupAssetTypesAvailable(groupId));
+      const entries = Array.isArray(response?.entries) ? response.entries : [];
+      state.groupAssetTypeModal.options = entries;
+
+      if (!entries.length) {
+        if (emptyEl) {
+          emptyEl.hidden = false;
+        }
+      } else {
+        renderOptions(entries);
+      }
+    } catch (error) {
+      const message =
+        error?.payload?.error || error?.message || 'Failed to load available asset types.';
+      state.groupAssetTypeModal.error = message;
+      if (errorEl) {
+        errorEl.hidden = false;
+        errorEl.textContent = message;
+      }
+    } finally {
+      state.groupAssetTypeModal.isLoading = false;
+      if (loadingEl) {
+        loadingEl.hidden = true;
+      }
+    }
+  }
+
+  function open() {
+    if (state.groupAssetTypeModal.isOpen) {
+      return;
+    }
+
+    state.groupAssetTypeModal.isOpen = true;
+    state.groupAssetTypeModal.trigger = trigger;
+    state.groupAssetTypeModal.error = null;
+    state.groupAssetTypeModal.options = [];
+
+    trigger.setAttribute('aria-expanded', 'true');
+
+    modal.hidden = false;
+    modal.removeAttribute('aria-hidden');
+    if (!modal.hasAttribute('tabindex')) {
+      modal.setAttribute('tabindex', '-1');
+    }
+    modal.focus?.();
+
+    structureModalOpenCount += 1;
+    if (structureModalOpenCount === 1) {
+      document.body.style.overflow = 'hidden';
+    }
+
+    loadOptions();
+  }
+
+  trigger.addEventListener('click', () => open());
+  closeButtons.forEach((button) => {
+    button.addEventListener('click', () => close());
+  });
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      close();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.groupAssetTypeModal.isOpen) {
+      close();
+    }
+  });
+}
+
 function initAssetStructureApp() {
   const root = document.querySelector('[data-app="asset-structure"]');
   if (!root) return;
@@ -1829,6 +2109,7 @@ function initAssetStructureApp() {
   setupCreateCategoryForm(root);
   setupCreateGroupForm(root);
   setupAssetTypeDecisionModal(root);
+  setupGroupAssetTypeModal(root);
 }
 
 async function initAssetPoolApp() {

@@ -1,4 +1,10 @@
-<div class="asset-structure-app" data-app="asset-structure">
+<div
+  class="asset-structure-app"
+  data-app="asset-structure"
+  data-group-id="{{group.id}}"
+  data-group-name="{{group.displayTitle}}"
+  data-available-group-asset-types="{{availableGroupAssetTypesCount}}"
+>
   <aside class="asset-structure-sidebar" aria-label="Asset structure navigation">
     <div class="sidebar-section">
       <a href="/asset-structure" class="sidebar-link sidebar-link--active">Categories</a>
@@ -24,73 +30,146 @@
       <span aria-current="page">{{group.displayTitle}}</span>
     </nav>
 
-    <section class="card structure-card" aria-labelledby="group-details-title">
-      <div class="section-header">
-        <h2 class="section-title" id="group-details-title">Group information</h2>
-        <button class="button" type="button">Save changes</button>
-      </div>
-      <form class="form-grid form-grid--two">
-        <div class="form-field">
-          <label for="group-name">Title</label>
-          <input
-            id="group-name"
-            name="title"
-            type="text"
-            value="{{group.title}}"
-            placeholder="Enter group title"
-          />
+    <div class="structure-body">
+      <section class="card structure-card" aria-labelledby="group-details-title">
+        <div class="section-header">
+          <h2 class="section-title" id="group-details-title">Group information</h2>
+          <button class="button" type="button">Save changes</button>
         </div>
-        <div class="form-field">
-          <label for="group-parent-category">Parent category</label>
-          <select id="group-parent-category" name="category_id">
-            {{#if categoryOptions.length}}
-              {{#each categoryOptions}}
-                <option value="{{id}}" {{#if (eq ../category.id id)}}selected{{/if}}>{{title}}</option>
-              {{/each}}
-            {{else}}
-              <option value="" disabled>No categories available</option>
-            {{/if}}
-          </select>
+        <form class="form-grid form-grid--two">
+          <div class="form-field">
+            <label for="group-name">Title</label>
+            <input
+              id="group-name"
+              name="title"
+              type="text"
+              value="{{group.title}}"
+              placeholder="Enter group title"
+            />
+          </div>
+          <div class="form-field">
+            <label for="group-parent-category">Parent category</label>
+            <select id="group-parent-category" name="category_id">
+              {{#if categoryOptions.length}}
+                {{#each categoryOptions}}
+                  <option value="{{id}}" {{#if (eq ../category.id id)}}selected{{/if}}>{{title}}</option>
+                {{/each}}
+              {{else}}
+                <option value="" disabled>No categories available</option>
+              {{/if}}
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="group-status">Status</label>
+            <select id="group-status" name="status">
+              <option value="" {{#unless group.status}}selected{{/unless}}>Select status</option>
+              <option {{#if (eq group.status 'Active')}}selected{{/if}}>Active</option>
+              <option {{#if (eq group.status 'Planned')}}selected{{/if}}>Planned</option>
+              <option {{#if (eq group.status 'Retired')}}selected{{/if}}>Retired</option>
+            </select>
+          </div>
+          <div class="form-field form-field--full">
+            <label for="group-description">Description</label>
+            <textarea
+              id="group-description"
+              name="description"
+              rows="4"
+              placeholder="Add a short description"
+            >{{group.description}}</textarea>
+          </div>
+          <div class="form-field">
+            <label for="group-asset-type">Asset type</label>
+            <input
+              id="group-asset-type"
+              type="text"
+              name="asset_type"
+              value="{{group.assetType}}"
+              placeholder="e.g. Application"
+            />
+          </div>
+        </form>
+        <dl class="meta-grid">
+          <div class="meta-item">
+            <dt>Created</dt>
+            <dd>{{group.createdAt}}</dd>
+          </div>
+          <div class="meta-item">
+            <dt>Last updated</dt>
+            <dd>{{group.updatedAt}}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="card structure-card" aria-labelledby="group-asset-types-title">
+        <div class="section-header">
+          <h2 class="section-title" id="group-asset-types-title">Asset types</h2>
+          <button class="button" type="button" data-open-group-asset-type-modal>Add asset type</button>
         </div>
-        <div class="form-field">
-          <label for="group-status">Status</label>
-          <select id="group-status" name="status">
-            <option value="" {{#unless group.status}}selected{{/unless}}>Select status</option>
-            <option {{#if (eq group.status 'Active')}}selected{{/if}}>Active</option>
-            <option {{#if (eq group.status 'Planned')}}selected{{/if}}>Planned</option>
-            <option {{#if (eq group.status 'Retired')}}selected{{/if}}>Retired</option>
-          </select>
-        </div>
-        <div class="form-field form-field--full">
-          <label for="group-description">Description</label>
-          <textarea
-            id="group-description"
-            name="description"
-            rows="4"
-            placeholder="Add a short description"
-          >{{group.description}}</textarea>
-        </div>
-        <div class="form-field">
-          <label for="group-asset-type">Asset type</label>
-          <input
-            id="group-asset-type"
-            type="text"
-            name="asset_type"
-            value="{{group.assetType}}"
-            placeholder="e.g. Application"
-          />
-        </div>
-      </form>
-      <dl class="meta-grid">
-        <div class="meta-item">
-          <dt>Created</dt>
-          <dd>{{group.createdAt}}</dd>
-        </div>
-        <div class="meta-item">
-          <dt>Last updated</dt>
-          <dd>{{group.updatedAt}}</dd>
-        </div>
-      </dl>
-    </section>
+        <p class="helper-text">
+          Select from the available asset types sourced from your Asset Pool. Each asset type can belong to
+          only one group unless it has been ignored.
+        </p>
+        <p
+          class="empty-state"
+          data-group-asset-type-empty
+          {{#if groupAssetTypes.length}}hidden{{/if}}
+        >
+          No asset types have been assigned to this group yet.
+        </p>
+        <ul
+          class="group-asset-type-list"
+          data-group-asset-type-list
+          {{#unless groupAssetTypes.length}}hidden{{/unless}}
+        >
+          {{#each groupAssetTypes}}
+            <li class="group-asset-type-list__item">
+              <div class="group-asset-type-pill{{#if isLegacy}} group-asset-type-pill--legacy{{/if}}">
+                <span class="group-asset-type-pill__name">{{name}}</span>
+                <span class="group-asset-type-pill__meta">
+                  {{#if count}}
+                    {{count}} {{#if (eq count 1)}}asset{{else}}assets{{/if}}
+                  {{else}}
+                    No Asset Pool entries yet
+                  {{/if}}
+                </span>
+                {{#if isLegacy}}
+                  <span class="group-asset-type-pill__tag">From group details</span>
+                {{/if}}
+              </div>
+            </li>
+          {{/each}}
+        </ul>
+      </section>
+    </div>
   </section>
+</div>
+
+<div class="modal" data-group-asset-type-modal hidden aria-hidden="true">
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="group-asset-type-modal-title">
+    <header class="modal-header">
+      <h2 id="group-asset-type-modal-title">Add asset type</h2>
+      <button
+        class="icon-button"
+        type="button"
+        aria-label="Close asset type selection"
+        data-close-group-asset-type-modal
+      >
+        &times;
+      </button>
+    </header>
+    <div class="modal-body">
+      <p class="modal-description">
+        Choose one of the available asset types to associate it with {{group.displayTitle}}.
+      </p>
+      <p class="helper-text" data-group-asset-type-loading>Loading available asset types…</p>
+      <p class="empty-state" data-group-asset-type-modal-empty hidden>
+        All asset types are currently assigned to other groups or marked to be ignored.
+      </p>
+      <p class="form-error" data-group-asset-type-error hidden></p>
+      <ul class="group-asset-type-modal__list" data-group-asset-type-options></ul>
+    </div>
+    <div class="modal-footer">
+      <button class="button button--ghost" type="button" data-close-group-asset-type-modal>Close</button>
+    </div>
+  </div>
 </div>
