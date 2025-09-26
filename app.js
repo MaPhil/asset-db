@@ -233,7 +233,7 @@ app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) =>
   });
 });
 
-app.get('/measurements', (req, res) => {
+app.get('/measures', (req, res) => {
   const assets = store.get('unified_assets').rows;
   const schema = store.get('schema').rows.map((row) => row.col_name);
   const sources = store.get('sources').rows;
@@ -264,7 +264,7 @@ app.get('/measurements', (req, res) => {
   }));
 
   res.render('measurements', {
-    nav: 'measurements',
+    nav: 'measures',
     metrics,
     sourceMetrics,
     latestUpdate
@@ -276,6 +276,8 @@ app.get('/implementation', (req, res) => {
     nav: 'implementation'
   });
 });
+
+app.get('/measurements', (req, res) => res.redirect(302, '/measures'));
 
 app.get('/assets', (req, res) => res.redirect('/asset-pool'));
 
