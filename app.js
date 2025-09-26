@@ -26,7 +26,7 @@ app.engine('hbs', exphbs.engine({
   extname: '.hbs',
   helpers: {
     eq: (a, b) => a === b,
-    json: (context) => JSON.stringify(context, null, 2)
+    json: (context) => JSON.stringify(context)
   }
 }));
 app.set('view engine', 'hbs');

@@ -1732,6 +1732,74 @@ function setupAssetTypeDecisionModal(root) {
   const saveButton = select(modal, '[data-save-asset-type-decision]');
   const cancelButton = select(modal, '[data-cancel-asset-type-decision]');
   const closeButton = select(modal, '[data-close-asset-type-decision]');
+  const groupListEl = select(modal, '[data-asset-type-group-list]');
+  const groupEmptyEl = select(modal, '[data-asset-type-group-empty]');
+  const ignoreWarningEl = select(modal, '[data-asset-type-ignore-warning]');
+
+  function readButtonGroups(button) {
+    if (!button) {
+      return [];
+    }
+    return selectAll(button, '[data-asset-type-group]').map((node) => ({
+      id: Number(node.dataset.groupId || '') || null,
+      title: node.dataset.groupTitle || '',
+      url: node.dataset.groupUrl || ''
+    }));
+  }
+
+  function renderGroupAssignments(groups) {
+    const entries = Array.isArray(groups) ? groups : [];
+    const hasGroups = entries.length > 0;
+
+    if (groupListEl) {
+      groupListEl.innerHTML = '';
+      groupListEl.hidden = !hasGroups;
+    }
+
+    if (groupEmptyEl) {
+      groupEmptyEl.hidden = hasGroups;
+    }
+
+    if (groupListEl && hasGroups) {
+      const sortedEntries = [...entries].sort((a, b) =>
+        (a?.title || '').localeCompare(b?.title || '', undefined, { numeric: true, sensitivity: 'base' })
+      );
+      sortedEntries.forEach((entry) => {
+        const item = document.createElement('li');
+        item.className = 'asset-type-groups__item';
+        const title = entry?.title || (Number.isInteger(entry?.id) ? `Group ${entry.id}` : 'Group');
+        if (entry?.url) {
+          const link = document.createElement('a');
+          link.href = entry.url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.className = 'asset-type-groups__link';
+          link.textContent = title;
+          item.appendChild(link);
+        } else {
+          const text = document.createElement('span');
+          text.className = 'asset-type-groups__text';
+          text.textContent = title;
+          item.appendChild(text);
+        }
+        groupListEl.appendChild(item);
+      });
+    }
+
+    if (ignoreWarningEl) {
+      ignoreWarningEl.hidden = !hasGroups;
+    }
+
+    if (selectEl) {
+      const ignoreOption = selectEl.querySelector('option[value="ignore"]');
+      if (ignoreOption) {
+        ignoreOption.disabled = hasGroups;
+      }
+      if (hasGroups && selectEl.value === 'ignore') {
+        selectEl.value = 'use';
+      }
+    }
+  }
 
   function open(button) {
     const name = button?.dataset.assetTypeName || '';
@@ -1753,6 +1821,8 @@ function setupAssetTypeDecisionModal(root) {
       errorEl.hidden = true;
       errorEl.textContent = '';
     }
+
+    renderGroupAssignments(readButtonGroups(button));
 
     modal.hidden = false;
     modal.removeAttribute('aria-hidden');
@@ -1783,6 +1853,8 @@ function setupAssetTypeDecisionModal(root) {
       errorEl.hidden = true;
       errorEl.textContent = '';
     }
+
+    renderGroupAssignments([]);
 
     const button = state.assetTypeDecisionModal.activeButton;
     state.assetTypeDecisionModal.activeButton = null;
