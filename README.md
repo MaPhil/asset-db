@@ -59,16 +59,6 @@ Jede JSON-Datei in `storage/` entspricht dem folgenden Aufbau:
 
 ## API-Überblick
 
-| Ressource | Beschreibung | Wichtige Endpunkte |
-|-----------|--------------|--------------------|
-| Assets | Anzeige oder Neuaufbau der vereinheitlichten Asset-Tabelle | `GET /api/v1/assets`, `POST /api/v1/assets/rebuild` |
-| Quellen | Rohdatenquellen hochladen, einsehen oder löschen | `POST /api/v1/sources/upload`, `GET /api/v1/sources/:id`, `DELETE /api/v1/sources/:id` |
-| Zuordnungen | Verwaltung der Zuordnung von Quellen- zu Vereinheitlichten-Spalten | `POST /api/v1/mappings/schema/add`, `POST /api/v1/mappings/save` |
-| Kategorien | CRUD für Risikokategorien | `GET /api/v1/categories`, `POST /api/v1/categories`, `GET/PUT /api/v1/categories/:id` |
-| Gruppen | CRUD für Asset-Gruppen sowie das Verknüpfen von Kategorien | `GET /api/v1/groups`, `POST /api/v1/groups`, `PUT /api/v1/groups/:id`, `POST /api/v1/groups/:id/link-category` |
-
-Alle Controller befinden sich unter `api/v1/controllers/` und werden über die jeweilige `index.js` importiert.
-
 ### Middleware
 
 - `asyncHandler(fn)` – umschließt asynchrone Route-Handler und leitet Fehler an Express weiter.
@@ -77,20 +67,3 @@ Alle Controller befinden sich unter `api/v1/controllers/` und werden über die j
 ### Uploads
 
 `POST /api/v1/sources/upload` erwartet Multipart-Formdaten mit einem `file`-Feld. Hochgeladene Dateien werden vorübergehend in `uploads/` gespeichert und mit `xlsx` verarbeitet. Jede Zeile landet in `storage/source_rows.json`, und das Schema wird anhand der Kopfzeilen der ersten Zeile initialisiert.
-
-## UI-Routen
-
-Auch wenn die API für neue Integrationen bevorzugt wird, bietet die mitgelieferte Handlebars-Oberfläche:
-
-- `/assets` – Überblick über Schema, Quellen und vereinheitlichte Assets (inklusive Schaltfläche zum Neuaufbau über die API).
-- `/sources/:id` – schnelle Vorschau der gespeicherten Zeilen für eine bestimmte Quelle.
-
-Die Oberfläche greift direkt über `store.get()` auf den JSON-Speicher zu und bleibt dadurch mit den API-Antworten synchron.
-
-## Entwicklungs-Checkliste
-
-1. Controller unter `api/v1/controllers/` aktualisieren oder hinzufügen.
-2. Über die entsprechenden `index.js`-Dateien exportieren (Controller/Middleware/Routes).
-3. Routen unter `api/v1/routes/` definieren oder anpassen.
-4. Änderungen mit den `store.*`-Hilfsmethoden speichern und `rebuildUnified()` aufrufen, sobald vereinheitlichte Daten neu berechnet werden sollen.
-5. API-Erweiterungen hier oder in ergänzenden Dokumenten festhalten.
