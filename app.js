@@ -234,40 +234,8 @@ app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) =>
 });
 
 app.get('/measures', (req, res) => {
-  const assets = store.get('unified_assets').rows;
-  const schema = store.get('schema').rows.map((row) => row.col_name);
-  const sources = store.get('sources').rows;
-  const sourceRows = store.get('source_rows').rows;
-
-  const sourceRowCounts = sourceRows.reduce((acc, row) => {
-    acc[row.source_id] = (acc[row.source_id] || 0) + 1;
-    return acc;
-  }, {});
-
-  const metrics = [
-    { label: 'Summe vereinheitlichter Assets', value: assets.length },
-    { label: 'Schema-Spalten', value: schema.length },
-    { label: 'Aktive Quellen', value: sources.length },
-    { label: 'Übernommene Zeilen', value: sourceRows.length }
-  ];
-
-  const latestUpdate = sources
-    .map((source) => source.updated_at)
-    .filter(Boolean)
-    .sort()
-    .pop();
-
-  const sourceMetrics = sources.map((source) => ({
-    id: source.id,
-    name: source.name,
-    totalRows: sourceRowCounts[source.id] || 0
-  }));
-
   res.render('measures', {
-    nav: 'measures',
-    metrics,
-    sourceMetrics,
-    latestUpdate
+    nav: 'measures'
   });
 });
 
