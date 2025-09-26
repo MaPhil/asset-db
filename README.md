@@ -1,13 +1,13 @@
 # Assets Inventory API + JSON-Speicher
 
-Dieses Repository stellt einen JSON-gestützten Dienst zur Verwaltung eines Asset-Verzeichnisses bereit. Er bietet eine versionierte REST-API unter `/api/v1` und hält die vorhandene Handlebars-Oberfläche auf derselben Speicherbasis lauffähig. Die Anwendung verzichtet auf klassische Datenbanken, indem sie strukturierte JSON-Dateien auf der Festplatte persistiert.
+Dieses Repository stellt einen JSON-gestützten Dienst zur Verwaltung eines Asset-Verzeichnisses bereit. Der Service bietet eine versionierte REST-API unter `/api/v1` und hält die Handlebars-Oberfläche vor. Die Anwendung verzichtet auf klassische Datenbanken, indem sie strukturierte JSON-Dateien auf der Festplatte speichert.
 
 ## Funktionen
 
-- **Versionierte API** – sämtliche Anfragen laufen über `/api/v1/*` und sind nach Controller-, Middleware- und Routen-Ordnern mit Index-Dateien organisiert, die alles re-exportieren.
+- **Versionierte API** – sämtliche Anfragen laufen über `/api/v1/*` und sind nach Controller-, Middleware- und Routen-Ordnern.
 - **JSON-Persistenz** – Datensätze werden in Dateien `storage/*.json` gespeichert. Jede Datei enthält einen `meta`-Abschnitt für die Sequenzierung sowie das eigentliche `rows`-Array.
 - **Neuaufbau der vereinheitlichten Assets** – `lib/merge.js` stellt `rebuildUnified()` bereit, um die denormalisierte Asset-Tabelle neu zu erstellen, sobald Quellen oder Zuordnungen geändert werden.
-- **Schlanke Oberfläche** – `views/` enthält einfache Handlebars-Vorlagen zum Durchstöbern von Quellen und zusammengeführten Assets, während die API die Hauptarbeit übernimmt.
+- **Schlanke Oberfläche** – `views/` enthält einfache Handlebars-Vorlagen zum lesen der Quellen und zusammengeführten Assets, während die API die Hauptarbeit übernimmt.
 
 ## Projektstruktur
 
@@ -35,7 +35,7 @@ Dieses Repository stellt einen JSON-gestützten Dienst zur Verwaltung eines Asse
 ```bash
 npm install
 npm run dev
-# besuche http://localhost:3000
+# besuche http://localhost:5678
 ```
 
 Der Entwicklungsbefehl nutzt `nodemon` für automatische Neustarts. In Produktionsumgebungen `npm start` verwenden.
