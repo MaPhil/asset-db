@@ -364,6 +364,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  margin-top: 1.5rem;
 }
 
 .section-header {
@@ -919,6 +920,7 @@ main {
 
 .modal-footer {
   margin-top: 2rem;
+  padding: 0 1.5rem 1.75rem 2rem;
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;

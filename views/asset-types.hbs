@@ -19,14 +19,6 @@
     </header>
     <div class="structure-body">
       <section class="structure-section" aria-labelledby="asset-types-title">
-        <div class="section-header">
-          <h2 class="section-title" id="asset-types-title">Asset types</h2>
-        </div>
-        {{#if assetTypeField}}
-          <p class="structure-section__subtitle">
-            Asset types are derived from the <strong>{{assetTypeField}}</strong> field in your Asset Pool.
-          </p>
-        {{/if}}
         <div class="card structure-card">
           {{#if assetTypeField}}
             {{#if assetTypes.length}}
