@@ -94,7 +94,3 @@ Die Oberfläche greift direkt über `store.get()` auf den JSON-Speicher zu und b
 3. Routen unter `api/v1/routes/` definieren oder anpassen.
 4. Änderungen mit den `store.*`-Hilfsmethoden speichern und `rebuildUnified()` aufrufen, sobald vereinheitlichte Daten neu berechnet werden sollen.
 5. API-Erweiterungen hier oder in ergänzenden Dokumenten festhalten.
-
-## Lizenz
-
-MIT
