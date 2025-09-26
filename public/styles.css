@@ -169,6 +169,8 @@ main {
   color: #fff;
 }
 
+.measure-content,
+.implementation-content,
 .asset-pool-content,
 .asset-structure-content {
   padding: 2.5rem 3rem;

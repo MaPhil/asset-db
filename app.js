@@ -263,7 +263,7 @@ app.get('/measures', (req, res) => {
     totalRows: sourceRowCounts[source.id] || 0
   }));
 
-  res.render('measurements', {
+  res.render('measures', {
     nav: 'measures',
     metrics,
     sourceMetrics,
@@ -276,8 +276,6 @@ app.get('/implementation', (req, res) => {
     nav: 'implementation'
   });
 });
-
-app.get('/measurements', (req, res) => res.redirect(302, '/measures'));
 
 app.get('/assets', (req, res) => res.redirect('/asset-pool'));
 
