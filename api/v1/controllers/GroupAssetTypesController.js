@@ -25,7 +25,7 @@ export const GroupAssetTypesController = {
       }
       res
         .status(statusCode)
-        .json({ error: error?.message || 'Failed to load group asset types.' });
+        .json({ error: error?.message || 'Gruppen-Asset-Typen konnten nicht geladen werden.' });
     }
   },
 
@@ -50,7 +50,7 @@ export const GroupAssetTypesController = {
       }
       res
         .status(statusCode)
-        .json({ error: error?.message || 'Failed to load available asset types.' });
+        .json({ error: error?.message || 'Verfügbare Asset-Typen konnten nicht geladen werden.' });
     }
   },
 
@@ -72,7 +72,7 @@ export const GroupAssetTypesController = {
       }
       res
         .status(statusCode)
-        .json({ error: error?.message || 'Failed to assign asset type to group.' });
+        .json({ error: error?.message || 'Asset-Typ konnte der Gruppe nicht zugewiesen werden.' });
     }
   },
 
@@ -100,7 +100,7 @@ export const GroupAssetTypesController = {
       }
       res
         .status(statusCode)
-        .json({ error: error?.message || 'Failed to remove asset type from group.' });
+        .json({ error: error?.message || 'Asset-Typ konnte nicht aus der Gruppe entfernt werden.' });
     }
   }
 };

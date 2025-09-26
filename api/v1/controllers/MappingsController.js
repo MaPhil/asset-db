@@ -9,7 +9,7 @@ export const MappingsController = {
       logger.warn('Versuch, Schema-Spalte ohne Namen hinzuzufügen', {
         path: req.originalUrl
       });
-      return res.status(400).json({ error: 'col required' });
+      return res.status(400).json({ error: 'Spaltenname ist erforderlich.' });
     }
     logger.info('Schema-Spalte wird hinzugefügt', { column });
     store.upsertSchemaCol(column);

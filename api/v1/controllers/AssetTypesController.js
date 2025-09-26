@@ -21,7 +21,9 @@ export const AssetTypesController = {
           name
         });
       }
-      res.status(statusCode).json({ error: error?.message || 'Failed to save asset type decision.' });
+      res
+        .status(statusCode)
+        .json({ error: error?.message || 'Asset-Typ-Entscheidung konnte nicht gespeichert werden.' });
     }
   }
 };

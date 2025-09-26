@@ -29,7 +29,7 @@ export const GroupsController = {
     const ok = store.update('groups', id, patch);
     if (!ok) {
       logger.warn('Versuch, fehlende Gruppe zu aktualisieren', { groupId: id });
-      return res.status(404).json({ error: 'Not found' });
+      return res.status(404).json({ error: 'Nicht gefunden.' });
     }
     logger.info('Gruppe aktualisiert', { groupId: id });
     res.json({ ok: true });

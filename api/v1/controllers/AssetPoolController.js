@@ -19,7 +19,7 @@ export const AssetPoolController = {
       logger.warn('Versuch, Asset-Pool-Feld ohne Feldnamen zu entfernen', {
         path: req.originalUrl
       });
-      return res.status(400).json({ error: 'Field name is required.' });
+      return res.status(400).json({ error: 'Feldname ist erforderlich.' });
     }
 
     const mappingStore = store.get('raw_mappings');
@@ -72,7 +72,7 @@ export const AssetPoolController = {
       logger.warn('Versuch, Asset-Typ-Feld auf nicht verfügbares Feld zu setzen', { field });
       return res
         .status(400)
-        .json({ error: 'Selected field is not available in the Asset Pool.' });
+        .json({ error: 'Das ausgewählte Feld ist im Asset-Pool nicht verfügbar.' });
     }
 
     const storedField = setStoredAssetTypeField(field);

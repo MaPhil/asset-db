@@ -56,7 +56,7 @@ function buildRecords(headers, rows) {
 
 function validateHeaders(headers) {
   if (!headers.length) {
-    return { ok: false, message: 'Worksheet has no headers.' };
+    return { ok: false, message: 'Arbeitsblatt enthält keine Kopfzeilen.' };
   }
 
   const seen = new Map();
@@ -65,7 +65,7 @@ function validateHeaders(headers) {
     if (seen.has(key)) {
       return {
         ok: false,
-        message: `Duplicate header detected: "${header}". Please rename columns to be unique.`
+        message: `Doppelte Kopfzeile erkannt: "${header}". Bitte benennen Sie die Spalten eindeutig um.`
       };
     }
     seen.set(key, true);
@@ -102,7 +102,7 @@ function processRows({ records, idColumn, duplicatePolicy }) {
   if (duplicates.size > 0) {
     return {
       ok: false,
-      message: `Duplicate IDs found: ${Array.from(duplicates).join(', ')}.`
+      message: `Doppelte IDs gefunden: ${Array.from(duplicates).join(', ')}.`
     };
   }
 
@@ -145,7 +145,7 @@ export const RawTablesController = {
     const table = store.get('raw_tables').rows.find((entry) => entry.id === id);
     if (!table) {
       logger.warn('Roh-Tabelle nicht gefunden', { rawTableId: id });
-      return res.status(404).json({ error: 'Not found' });
+      return res.status(404).json({ error: 'Nicht gefunden.' });
     }
 
     const normalizedTable = {
@@ -179,7 +179,7 @@ export const RawTablesController = {
     const file = req.file;
     if (!file) {
       logger.warn('Vorschau der Roh-Tabelle ohne Dateiupload versucht');
-      return res.status(400).json({ error: 'File is required.' });
+      return res.status(400).json({ error: 'Datei ist erforderlich.' });
     }
 
     const { title, idColumn } = req.body;
@@ -189,7 +189,7 @@ export const RawTablesController = {
     if (!trimmedTitle) {
       removeTempFile(file.path);
       logger.warn('Vorschau der Roh-Tabelle ohne Titel');
-      return res.status(400).json({ fieldErrors: { title: 'Title is required.' } });
+      return res.status(400).json({ fieldErrors: { title: 'Titel ist erforderlich.' } });
     }
 
     if (!isExcelFile(file.originalname)) {
@@ -199,7 +199,7 @@ export const RawTablesController = {
       });
       return res
         .status(400)
-        .json({ fieldErrors: { file: 'Please upload an Excel file (.xlsx).' } });
+        .json({ fieldErrors: { file: 'Bitte laden Sie eine Excel-Datei (.xlsx) hoch.' } });
     }
 
     try {
@@ -208,7 +208,7 @@ export const RawTablesController = {
       if (!sheetName) {
         removeTempFile(file.path);
         logger.warn('Vorschau der Roh-Tabelle wegen leerer Arbeitsmappe fehlgeschlagen');
-        return res.status(400).json({ error: 'Workbook contains no worksheets.' });
+        return res.status(400).json({ error: 'Arbeitsmappe enthält keine Arbeitsblätter.' });
       }
 
       const worksheet = workbook.Sheets[sheetName];
@@ -217,7 +217,7 @@ export const RawTablesController = {
       if (!rows.length) {
         removeTempFile(file.path);
         logger.warn('Vorschau der Roh-Tabelle wegen fehlender Zeilen fehlgeschlagen');
-        return res.status(400).json({ error: 'Worksheet has no headers.' });
+        return res.status(400).json({ error: 'Arbeitsblatt enthält keine Kopfzeilen.' });
       }
 
       const rawHeaders = rows[0].map((value, index) => sanitizeHeader(value, index));
@@ -238,7 +238,7 @@ export const RawTablesController = {
         });
         return res.status(400).json({
           fieldErrors: {
-            idColumn: `ID column "${normalizedIdColumn}" not found in headers.`
+            idColumn: `ID-Spalte "${normalizedIdColumn}" wurde in den Kopfzeilen nicht gefunden.`
           }
         });
       }
@@ -296,7 +296,9 @@ export const RawTablesController = {
       logger.error('Verarbeitung der Roh-Tabellen-Vorschau fehlgeschlagen', err, {
         filename: file?.originalname
       });
-      res.status(400).json({ error: 'Could not read the file. Please upload a valid Excel (.xlsx).' });
+      res
+        .status(400)
+        .json({ error: 'Datei konnte nicht gelesen werden. Bitte laden Sie eine gültige Excel-Datei (.xlsx) hoch.' });
     }
   },
 
@@ -305,7 +307,7 @@ export const RawTablesController = {
     const { previewId, mappings } = body;
     if (!previewId) {
       logger.warn('Import der Roh-Tabelle ohne Vorschau-ID versucht');
-      return res.status(400).json({ error: 'Preview ID is required.' });
+      return res.status(400).json({ error: 'Vorschau-ID ist erforderlich.' });
     }
 
     const preview = readPreview(previewId);
@@ -313,7 +315,9 @@ export const RawTablesController = {
       logger.warn('Import der Roh-Tabelle fehlgeschlagen, weil Vorschau nicht gefunden wurde', {
         previewId
       });
-      return res.status(404).json({ error: 'Preview not found. Please restart the import.' });
+      return res
+        .status(404)
+        .json({ error: 'Vorschau nicht gefunden. Bitte starten Sie den Import neu.' });
     }
 
     const pairs = Array.isArray(mappings)
@@ -327,14 +331,14 @@ export const RawTablesController = {
 
     if (!pairs.length) {
       logger.warn('Import der Roh-Tabelle wegen fehlender Zuordnungen abgelehnt', { previewId });
-      return res.status(400).json({ error: 'Please map at least one column.' });
+      return res.status(400).json({ error: 'Bitte ordnen Sie mindestens eine Spalte zu.' });
     }
 
     const validPairs = pairs.filter((pair) => preview.headers.includes(pair.rawHeader));
 
     if (!validPairs.length) {
       logger.warn('Import der Roh-Tabelle wegen ungültiger Kopfzeilen abgelehnt', { previewId });
-      return res.status(400).json({ error: 'Mappings reference unknown headers.' });
+      return res.status(400).json({ error: 'Zuordnungen verweisen auf unbekannte Kopfzeilen.' });
     }
 
     const tableId = store.insert('raw_tables', {
@@ -379,7 +383,7 @@ export const RawTablesController = {
       logger.warn('Versuch, Zuordnung für fehlende Roh-Tabelle zu aktualisieren', {
         rawTableId: id
       });
-      return res.status(404).json({ error: 'Raw table not found.' });
+      return res.status(404).json({ error: 'Roh-Tabelle nicht gefunden.' });
     }
 
     const pairs = Array.isArray(req.body?.mappings)
@@ -395,7 +399,7 @@ export const RawTablesController = {
       logger.warn('Aktualisierung der Roh-Tabellen-Zuordnung wegen fehlender Zuordnungen abgelehnt', {
         rawTableId: id
       });
-      return res.status(400).json({ error: 'Please map at least one column.' });
+      return res.status(400).json({ error: 'Bitte ordnen Sie mindestens eine Spalte zu.' });
     }
 
     const invalidHeaders = pairs.filter((pair) => !table.headers.includes(pair.rawHeader));
@@ -404,7 +408,7 @@ export const RawTablesController = {
         rawTableId: id,
         invalidHeaders: invalidHeaders.map((pair) => pair.rawHeader)
       });
-      return res.status(400).json({ error: 'Mappings reference unknown headers.' });
+      return res.status(400).json({ error: 'Zuordnungen verweisen auf unbekannte Kopfzeilen.' });
     }
 
     const mappingStore = store.get('raw_mappings');
@@ -428,7 +432,7 @@ export const RawTablesController = {
     const table = tables.rows.find((entry) => entry.id === id);
     if (!table) {
       logger.warn('Versuch, Details für fehlende Roh-Tabelle zu aktualisieren', { rawTableId: id });
-      return res.status(404).json({ error: 'Raw table not found.' });
+      return res.status(404).json({ error: 'Roh-Tabelle nicht gefunden.' });
     }
 
     const title = (req.body?.title || '').trim();
@@ -438,7 +442,7 @@ export const RawTablesController = {
       logger.warn('Aktualisierung der Roh-Tabellen-Details wegen fehlendem Titel abgelehnt', {
         rawTableId: id
       });
-      return res.status(400).json({ fieldErrors: { title: 'Name is required.' } });
+      return res.status(400).json({ fieldErrors: { title: 'Name ist erforderlich.' } });
     }
 
     table.title = title;
@@ -462,7 +466,7 @@ export const RawTablesController = {
     const exists = tables.rows.some((entry) => entry.id === id);
     if (!exists) {
       logger.warn('Versuch, fehlende Roh-Tabelle zu löschen', { rawTableId: id });
-      return res.status(404).json({ error: 'Raw table not found.' });
+      return res.status(404).json({ error: 'Roh-Tabelle nicht gefunden.' });
     }
 
     store.remove('raw_tables', id);

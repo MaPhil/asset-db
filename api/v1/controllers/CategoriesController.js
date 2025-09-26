@@ -51,7 +51,7 @@ export const CategoriesController = {
     const category = store.get('categories').rows.find((row) => row.id === id);
     if (!category) {
       logger.warn('Kategorie nicht gefunden', { categoryId: id });
-      return res.status(404).json({ error: 'Not found' });
+      return res.status(404).json({ error: 'Nicht gefunden.' });
     }
 
     const links = store.get('group_categories').rows.filter((row) => row.category_id === id);
@@ -68,7 +68,7 @@ export const CategoriesController = {
     const ok = store.update('categories', id, req.body);
     if (!ok) {
       logger.warn('Versuch, fehlende Kategorie zu aktualisieren', { categoryId: id });
-      return res.status(404).json({ error: 'Not found' });
+      return res.status(404).json({ error: 'Nicht gefunden.' });
     }
     logger.info('Kategorie aktualisiert', { categoryId: id });
     res.json({ ok: true });
