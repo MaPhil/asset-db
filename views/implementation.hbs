@@ -1,18 +1,19 @@
-{{#> card title="Implementation"}}
+{{#> card title="Implementierung"}}
   <p>
-    Use the HTTP API to automate ingestion, configure mappings, and rebuild the unified asset pool.
-    The UI provides a read-only snapshot of the stored data to help validate your integrations.
+    Nutzen Sie die HTTP-API, um die Datenübernahme zu automatisieren, Zuordnungen zu konfigurieren und den
+    vereinheitlichten Asset-Pool neu aufzubauen. Die Oberfläche zeigt einen schreibgeschützten Schnappschuss
+    der gespeicherten Daten, um Ihre Integrationen zu validieren.
   </p>
   <ul>
-    <li>POST new data sources to <code>/api/v1/sources</code>.</li>
-    <li>Manage schema mappings through <code>/api/v1/mappings</code>.</li>
-    <li>Trigger asset rebuilds via <code>/api/v1/assets/rebuild</code>.</li>
+    <li>POST neue Datenquellen an <code>/api/v1/sources</code>.</li>
+    <li>Verwalten Sie Schema-Zuordnungen über <code>/api/v1/mappings</code>.</li>
+    <li>Lösen Sie Asset-Neuaufbauten über <code>/api/v1/assets/rebuild</code> aus.</li>
   </ul>
 {{/card}}
 
-{{#> card title="Next steps" headingTag="h3"}}
+{{#> card title="Nächste Schritte" headingTag="h3"}}
   <p>
-    Extend the API or swap out the storage layer to suit your environment. The modular architecture of the
-    application keeps the ingestion pipeline, normalization logic, and presentation concerns separated.
+    Erweitern Sie die API oder tauschen Sie die Speicherschicht aus, um sie an Ihre Umgebung anzupassen. Die
+    modulare Architektur der Anwendung trennt Erfassungspipeline, Normalisierungslogik und Darstellung.
   </p>
 {{/card}}

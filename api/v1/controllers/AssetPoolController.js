@@ -8,7 +8,7 @@ import { logger } from '../../../lib/logger.js';
 
 export const AssetPoolController = {
   view: (req, res) => {
-    logger.debug('Fetching asset pool view');
+    logger.debug('Asset-Pool-Ansicht wird abgerufen');
     const view = getAssetPoolView();
     const assetTypeField = getStoredAssetTypeField();
     res.json({ ...view, assetTypeField });
@@ -16,7 +16,7 @@ export const AssetPoolController = {
   removeField: (req, res) => {
     const field = (req.params.field || '').trim();
     if (!field) {
-      logger.warn('Attempted to remove asset pool field without providing a field name', {
+      logger.warn('Versuch, Asset-Pool-Feld ohne Feldnamen zu entfernen', {
         path: req.originalUrl
       });
       return res.status(400).json({ error: 'Field name is required.' });
@@ -38,7 +38,7 @@ export const AssetPoolController = {
       store.set('raw_mappings', mappingStore);
     }
 
-    logger.info('Removed field from raw mappings', {
+    logger.info('Feld aus Roh-Zuordnungen entfernt', {
       field,
       removed
     });
@@ -69,7 +69,7 @@ export const AssetPoolController = {
     );
 
     if (!available.has(field)) {
-      logger.warn('Attempted to set asset type field to unavailable field', { field });
+      logger.warn('Versuch, Asset-Typ-Feld auf nicht verfügbares Feld zu setzen', { field });
       return res
         .status(400)
         .json({ error: 'Selected field is not available in the Asset Pool.' });

@@ -3,7 +3,7 @@ import { logger } from '../../../lib/logger.js';
 
 export const CategoriesController = {
   list: (req, res) => {
-    logger.debug('Listing categories');
+    logger.debug('Kategorien werden aufgelistet');
     res.json(store.get('categories').rows);
   },
 
@@ -40,9 +40,9 @@ export const CategoriesController = {
       Object.entries(payload).filter(([, value]) => value !== undefined)
     );
 
-    logger.info('Creating category', sanitized);
+    logger.info('Kategorie wird erstellt', sanitized);
     const id = store.insert('categories', sanitized);
-    logger.info('Category created', { categoryId: id });
+    logger.info('Kategorie erstellt', { categoryId: id });
     res.json({ ok: true, id });
   },
 
@@ -50,7 +50,7 @@ export const CategoriesController = {
     const id = Number(req.params.id);
     const category = store.get('categories').rows.find((row) => row.id === id);
     if (!category) {
-      logger.warn('Category not found', { categoryId: id });
+      logger.warn('Kategorie nicht gefunden', { categoryId: id });
       return res.status(404).json({ error: 'Not found' });
     }
 
@@ -59,7 +59,7 @@ export const CategoriesController = {
       .get('groups')
       .rows.filter((group) => links.some((link) => link.group_id === group.id));
 
-    logger.debug('Category retrieved', { categoryId: id, groupCount: groups.length });
+    logger.debug('Kategorie abgerufen', { categoryId: id, groupCount: groups.length });
     res.json({ category, groups });
   },
 
@@ -67,10 +67,10 @@ export const CategoriesController = {
     const id = Number(req.params.id);
     const ok = store.update('categories', id, req.body);
     if (!ok) {
-      logger.warn('Attempted to update missing category', { categoryId: id });
+      logger.warn('Versuch, fehlende Kategorie zu aktualisieren', { categoryId: id });
       return res.status(404).json({ error: 'Not found' });
     }
-    logger.info('Category updated', { categoryId: id });
+    logger.info('Kategorie aktualisiert', { categoryId: id });
     res.json({ ok: true });
   }
 };

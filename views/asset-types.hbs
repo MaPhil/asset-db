@@ -1,20 +1,20 @@
 <div class="asset-structure-app" data-app="asset-structure">
-  <aside class="asset-structure-sidebar" aria-label="Asset structure navigation">
+  <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
-      <a href="/asset-structure" class="sidebar-link">Categories</a>
-      <a href="/asset-types" class="sidebar-link sidebar-link--active">Asset types</a>
+      <a href="/asset-structure" class="sidebar-link">Kategorien</a>
+      <a href="/asset-types" class="sidebar-link sidebar-link--active">Asset-Typen</a>
     </div>
   </aside>
   <section class="asset-structure-content">
     <header class="page-header">
       <div>
-        <h1 class="page-title">Asset types</h1>
+        <h1 class="page-title">Asset-Typen</h1>
         <p class="page-subtitle">
-          Review and curate the asset types sourced from your Asset Pool mappings.
+          Prüfen und kuratieren Sie die Asset-Typen, die aus Ihren Asset-Pool-Zuordnungen stammen.
         </p>
       </div>
       <div class="page-actions">
-        <a class="button button--ghost" href="/asset-structure">Back to categories</a>
+        <a class="button button--ghost" href="/asset-structure">Zurück zu den Kategorien</a>
       </div>
     </header>
     <div class="structure-body">
@@ -33,9 +33,9 @@
                     data-asset-type-comment="{{comment}}"
                   >
                     <span class="asset-type-pill__name">{{name}}</span>
-                    <span class="asset-type-pill__meta">{{count}} {{#if (eq count 1)}}asset{{else}}assets{{/if}}</span>
+                    <span class="asset-type-pill__meta">{{count}} {{#if (eq count 1)}}Asset{{else}}Assets{{/if}}</span>
                     <span class="asset-type-pill__status" data-asset-type-status data-status="{{decision}}">
-                      {{#if (eq decision "ignore")}}Ignore{{else}}Use{{/if}}
+                      {{#if (eq decision "ignore")}}Ignorieren{{else}}Verwenden{{/if}}
                     </span>
                     {{#if groups.length}}
                       {{#each groups}}
@@ -52,10 +52,10 @@
                 {{/each}}
               </div>
             {{else}}
-              <p class="empty-state">No asset pool entries matched the field "{{assetTypeField}}".</p>
+              <p class="empty-state">Keine Asset-Pool-Einträge stimmen mit dem Feld „{{assetTypeField}}“ überein.</p>
             {{/if}}
           {{else}}
-            <p class="empty-state">Choose an asset type field in the Asset Pool overview to populate this list.</p>
+            <p class="empty-state">Wählen Sie im Asset-Pool eine Spalte für Asset-Typen, um diese Liste zu füllen.</p>
           {{/if}}
         </div>
       </section>
@@ -66,40 +66,40 @@
 <div class="modal" data-asset-type-decision-modal hidden aria-hidden="true">
   <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-type-decision-title">
     <header class="modal-header">
-      <h2 id="asset-type-decision-title" data-asset-type-modal-title>Asset type options</h2>
-      <button class="icon-button" type="button" data-close-asset-type-decision aria-label="Close asset type settings">&times;</button>
+      <h2 id="asset-type-decision-title" data-asset-type-modal-title>Optionen für Asset-Typ</h2>
+      <button class="icon-button" type="button" data-close-asset-type-decision aria-label="Einstellungen für Asset-Typ schließen">&times;</button>
     </header>
     <div class="modal-body">
       <div class="form-field">
-        <label for="asset-type-decision-select">Decision</label>
+        <label for="asset-type-decision-select">Entscheidung</label>
         <select id="asset-type-decision-select" name="decision" data-asset-type-decision-select>
-          <option value="use">Use</option>
-          <option value="ignore">Ignore</option>
+          <option value="use">Verwenden</option>
+          <option value="ignore">Ignorieren</option>
         </select>
       </div>
       <div class="form-field">
-        <label for="asset-type-comment">Comment</label>
+        <label for="asset-type-comment">Kommentar</label>
         <textarea
           id="asset-type-comment"
           name="comment"
           rows="3"
-          placeholder="Add an optional comment"
+          placeholder="Optionalen Kommentar hinzufügen"
           data-asset-type-comment
         ></textarea>
       </div>
       <div class="form-field asset-type-groups">
-        <p class="form-field__label">Used in groups</p>
-        <p class="helper-text" data-asset-type-group-empty>No groups are using this asset type yet.</p>
+        <p class="form-field__label">In Gruppen verwendet</p>
+        <p class="helper-text" data-asset-type-group-empty>Keine Gruppen verwenden diesen Asset-Typ.</p>
         <ul class="asset-type-groups__list" data-asset-type-group-list hidden></ul>
       </div>
       <p class="helper-text asset-type-groups__warning" data-asset-type-ignore-warning hidden>
-        This asset type is assigned to at least one group and cannot be ignored.
+        Dieser Asset-Typ ist mindestens einer Gruppe zugeordnet und kann nicht ignoriert werden.
       </p>
       <p class="form-error" data-asset-type-decision-error hidden></p>
     </div>
     <div class="modal-footer">
-      <button class="button button--ghost" type="button" data-cancel-asset-type-decision>Cancel</button>
-      <button class="button" type="button" data-save-asset-type-decision>Save</button>
+      <button class="button button--ghost" type="button" data-cancel-asset-type-decision>Abbrechen</button>
+      <button class="button" type="button" data-save-asset-type-decision>Speichern</button>
     </div>
   </div>
 </div>

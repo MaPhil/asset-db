@@ -1,48 +1,48 @@
-# Assets Inventory API + JSON Storage
+# Assets Inventory API + JSON-Speicher
 
-This repository bootstraps a JSON-backed asset inventory service. It exposes a versioned REST API under `/api/v1` and keeps the existing Handlebars UI running on top of the same storage layer. The application avoids traditional databases by persisting data in structured JSON files on disk.
+Dieses Repository stellt einen JSON-gestützten Dienst zur Verwaltung eines Asset-Verzeichnisses bereit. Er bietet eine versionierte REST-API unter `/api/v1` und hält die vorhandene Handlebars-Oberfläche auf derselben Speicherbasis lauffähig. Die Anwendung verzichtet auf klassische Datenbanken, indem sie strukturierte JSON-Dateien auf der Festplatte persistiert.
 
-## Features
+## Funktionen
 
-- **Versioned API** – all requests flow through `/api/v1/*`, organized by controller, middleware, and route folders with index files that re-export everything.
-- **JSON persistence** – records are stored in `storage/*.json` files. Each file contains a `meta` section for sequencing plus the actual `rows` array.
-- **Unified asset rebuild** – `lib/merge.js` exposes `rebuildUnified()` which regenerates the denormalized asset table whenever sources or mappings change.
-- **Lightweight UI** – `views/` includes simple Handlebars templates for browsing sources and merged assets while the heavy lifting is handled by the API.
+- **Versionierte API** – sämtliche Anfragen laufen über `/api/v1/*` und sind nach Controller-, Middleware- und Routen-Ordnern mit Index-Dateien organisiert, die alles re-exportieren.
+- **JSON-Persistenz** – Datensätze werden in Dateien `storage/*.json` gespeichert. Jede Datei enthält einen `meta`-Abschnitt für die Sequenzierung sowie das eigentliche `rows`-Array.
+- **Neuaufbau der vereinheitlichten Assets** – `lib/merge.js` stellt `rebuildUnified()` bereit, um die denormalisierte Asset-Tabelle neu zu erstellen, sobald Quellen oder Zuordnungen geändert werden.
+- **Schlanke Oberfläche** – `views/` enthält einfache Handlebars-Vorlagen zum Durchstöbern von Quellen und zusammengeführten Assets, während die API die Hauptarbeit übernimmt.
 
-## Project layout
+## Projektstruktur
 
 ```
 .
 ├─ api/
 │  └─ v1/
-│     ├─ controllers/        # Business logic per resource
-│     ├─ middleware/         # Shared HTTP helpers
-│     ├─ routes/             # Express routers grouped per resource
-│     └─ index.js            # Mounts the v1 router
-├─ app.js                    # Express bootstrapper + UI routes
+│     ├─ controllers/        # Fachlogik je Ressource
+│     ├─ middleware/         # Gemeinsame HTTP-Helfer
+│     ├─ routes/             # Express-Router gruppiert nach Ressourcen
+│     └─ index.js            # Bindet den v1-Router ein
+├─ app.js                    # Express-Startpunkt + UI-Routen
 ├─ lib/
-│  ├─ merge.js               # rebuildUnified() using JSON data
-│  └─ storage.js             # Minimal JSON data access layer
-├─ public/                   # Static assets (CSS/JS)
-├─ storage/                  # JSON "database" files
-├─ uploads/                  # Multer upload destination (gitignored)
-├─ views/                    # Handlebars UI templates
+│  ├─ merge.js               # rebuildUnified() mit JSON-Daten
+│  └─ storage.js             # Minimalistische Zugriffsschicht auf JSON-Daten
+├─ public/                   # Statische Assets (CSS/JS)
+├─ storage/                  # JSON-„Datenbank“-Dateien
+├─ uploads/                  # Multer-Zwischenspeicher für Uploads (per .gitignore ausgeschlossen)
+├─ views/                    # Handlebars-Vorlagen
 └─ README.md
 ```
 
-## Getting started
+## Erste Schritte
 
 ```bash
 npm install
 npm run dev
-# visit http://localhost:3000
+# besuche http://localhost:3000
 ```
 
-The development command uses `nodemon` for auto-restarts. Use `npm start` in production environments.
+Der Entwicklungsbefehl nutzt `nodemon` für automatische Neustarts. In Produktionsumgebungen `npm start` verwenden.
 
-## Storage format
+## Speicherformat
 
-Every JSON file in `storage/` matches the following shape:
+Jede JSON-Datei in `storage/` entspricht dem folgenden Aufbau:
 
 ```json
 {
@@ -51,50 +51,50 @@ Every JSON file in `storage/` matches the following shape:
 }
 ```
 
-- `meta.seq` – last issued auto-incrementing identifier.
-- `meta.updatedAt` – timestamp refreshed on each write.
-- `rows` – plain objects representing table rows (e.g. sources, mappings, categories).
+- `meta.seq` – zuletzt vergebener, automatisch erhöhter Bezeichner.
+- `meta.updatedAt` – Zeitstempel, der bei jedem Schreiben aktualisiert wird.
+- `rows` – einfache Objekte, die Tabellenzeilen repräsentieren (z. B. Quellen, Zuordnungen, Kategorien).
 
-`lib/storage.js` provides helper methods: `get`, `set`, `insert`, `update`, `remove`, and `upsertSchemaCol`. Writes are performed atomically by writing to a temporary file then renaming it.
+`lib/storage.js` stellt Hilfsmethoden bereit: `get`, `set`, `insert`, `update`, `remove` und `upsertSchemaCol`. Schreibvorgänge erfolgen atomar, indem zunächst in eine temporäre Datei geschrieben und diese anschließend umbenannt wird.
 
-## API overview
+## API-Überblick
 
-| Resource | Description | Key endpoints |
-|----------|-------------|---------------|
-| Assets | View or rebuild the unified asset table | `GET /api/v1/assets`, `POST /api/v1/assets/rebuild` |
-| Sources | Upload, inspect, or delete raw data sources | `POST /api/v1/sources/upload`, `GET /api/v1/sources/:id`, `DELETE /api/v1/sources/:id` |
-| Mappings | Manage source→unified column mappings | `POST /api/v1/mappings/schema/add`, `POST /api/v1/mappings/save` |
-| Categories | CRUD for risk categories | `GET /api/v1/categories`, `POST /api/v1/categories`, `GET/PUT /api/v1/categories/:id` |
-| Groups | CRUD for asset groups and linking categories | `GET /api/v1/groups`, `POST /api/v1/groups`, `PUT /api/v1/groups/:id`, `POST /api/v1/groups/:id/link-category` |
+| Ressource | Beschreibung | Wichtige Endpunkte |
+|-----------|--------------|--------------------|
+| Assets | Anzeige oder Neuaufbau der vereinheitlichten Asset-Tabelle | `GET /api/v1/assets`, `POST /api/v1/assets/rebuild` |
+| Quellen | Rohdatenquellen hochladen, einsehen oder löschen | `POST /api/v1/sources/upload`, `GET /api/v1/sources/:id`, `DELETE /api/v1/sources/:id` |
+| Zuordnungen | Verwaltung der Zuordnung von Quellen- zu Vereinheitlichten-Spalten | `POST /api/v1/mappings/schema/add`, `POST /api/v1/mappings/save` |
+| Kategorien | CRUD für Risikokategorien | `GET /api/v1/categories`, `POST /api/v1/categories`, `GET/PUT /api/v1/categories/:id` |
+| Gruppen | CRUD für Asset-Gruppen sowie das Verknüpfen von Kategorien | `GET /api/v1/groups`, `POST /api/v1/groups`, `PUT /api/v1/groups/:id`, `POST /api/v1/groups/:id/link-category` |
 
-All controllers live under `api/v1/controllers/` and are imported via the folder's `index.js`.
+Alle Controller befinden sich unter `api/v1/controllers/` und werden über die jeweilige `index.js` importiert.
 
 ### Middleware
 
-- `asyncHandler(fn)` – wraps async route handlers and forwards errors to Express.
-- `validateId(param?)` – validates integer route params and returns `400` when invalid.
+- `asyncHandler(fn)` – umschließt asynchrone Route-Handler und leitet Fehler an Express weiter.
+- `validateId(param?)` – validiert Integer-Routenparameter und liefert bei Ungültigkeit `400`.
 
 ### Uploads
 
-`POST /api/v1/sources/upload` expects multipart form data with a `file` field. Uploaded files are temporarily stored in `uploads/` and parsed with `xlsx`. Each row is captured in `storage/source_rows.json` and the schema is seeded with the first row's headers.
+`POST /api/v1/sources/upload` erwartet Multipart-Formdaten mit einem `file`-Feld. Hochgeladene Dateien werden vorübergehend in `uploads/` gespeichert und mit `xlsx` verarbeitet. Jede Zeile landet in `storage/source_rows.json`, und das Schema wird anhand der Kopfzeilen der ersten Zeile initialisiert.
 
-## UI routes
+## UI-Routen
 
-Although the API is preferred for new integrations, the bundled Handlebars UI offers:
+Auch wenn die API für neue Integrationen bevorzugt wird, bietet die mitgelieferte Handlebars-Oberfläche:
 
-- `/assets` – overview of schema, sources, and unified assets (with a rebuild button that calls the API).
-- `/sources/:id` – quick preview of the stored rows for a given source.
+- `/assets` – Überblick über Schema, Quellen und vereinheitlichte Assets (inklusive Schaltfläche zum Neuaufbau über die API).
+- `/sources/:id` – schnelle Vorschau der gespeicherten Zeilen für eine bestimmte Quelle.
 
-The UI reads directly from the JSON storage through `store.get()` so it remains in sync with the API responses.
+Die Oberfläche greift direkt über `store.get()` auf den JSON-Speicher zu und bleibt dadurch mit den API-Antworten synchron.
 
-## Development checklist
+## Entwicklungs-Checkliste
 
-1. Update or add controllers under `api/v1/controllers/`.
-2. Export them via the corresponding `index.js` files (controller/middleware/routes).
-3. Define or adjust routes under `api/v1/routes/`.
-4. Persist changes with `store.*` helpers and call `rebuildUnified()` whenever unified data should be recomputed.
-5. Document API additions here or in supplementary docs.
+1. Controller unter `api/v1/controllers/` aktualisieren oder hinzufügen.
+2. Über die entsprechenden `index.js`-Dateien exportieren (Controller/Middleware/Routes).
+3. Routen unter `api/v1/routes/` definieren oder anpassen.
+4. Änderungen mit den `store.*`-Hilfsmethoden speichern und `rebuildUnified()` aufrufen, sobald vereinheitlichte Daten neu berechnet werden sollen.
+5. API-Erweiterungen hier oder in ergänzenden Dokumenten festhalten.
 
-## License
+## Lizenz
 
 MIT

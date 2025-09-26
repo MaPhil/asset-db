@@ -16,9 +16,9 @@ export const GroupAssetTypesController = {
       const statusCode =
         error?.statusCode && Number.isInteger(error.statusCode) ? error.statusCode : 400;
       if (statusCode >= 500) {
-        logger.error('Failed to list group asset types', { error, groupId });
+        logger.error('Gruppen-Asset-Typen konnten nicht aufgelistet werden', { error, groupId });
       } else {
-        logger.warn('Validation error while listing group asset types', {
+        logger.warn('Validierungsfehler beim Auflisten der Gruppen-Asset-Typen', {
           error: error?.message,
           groupId
         });
@@ -38,9 +38,12 @@ export const GroupAssetTypesController = {
       const statusCode =
         error?.statusCode && Number.isInteger(error.statusCode) ? error.statusCode : 400;
       if (statusCode >= 500) {
-        logger.error('Failed to load available asset types for group', { error, groupId });
+        logger.error('Verfügbare Asset-Typen für Gruppe konnten nicht geladen werden', {
+          error,
+          groupId
+        });
       } else {
-        logger.warn('Validation error while loading available asset types for group', {
+        logger.warn('Validierungsfehler beim Laden verfügbarer Asset-Typen für Gruppe', {
           error: error?.message,
           groupId
         });
@@ -60,9 +63,9 @@ export const GroupAssetTypesController = {
       const statusCode =
         error?.statusCode && Number.isInteger(error.statusCode) ? error.statusCode : 400;
       if (statusCode >= 500) {
-        logger.error('Failed to assign asset type to group', { error, groupId });
+        logger.error('Asset-Typ konnte Gruppe nicht zugewiesen werden', { error, groupId });
       } else {
-        logger.warn('Validation error while assigning asset type to group', {
+        logger.warn('Validierungsfehler bei der Zuweisung eines Asset-Typs zur Gruppe', {
           error: error?.message,
           groupId
         });
@@ -83,9 +86,13 @@ export const GroupAssetTypesController = {
       const statusCode =
         error?.statusCode && Number.isInteger(error.statusCode) ? error.statusCode : 400;
       if (statusCode >= 500) {
-        logger.error('Failed to remove asset type from group', { error, groupId, assetTypeId });
+        logger.error('Asset-Typ konnte nicht aus Gruppe entfernt werden', {
+          error,
+          groupId,
+          assetTypeId
+        });
       } else {
-        logger.warn('Validation error while removing asset type from group', {
+        logger.warn('Validierungsfehler beim Entfernen eines Asset-Typs aus der Gruppe', {
           error: error?.message,
           groupId,
           assetTypeId

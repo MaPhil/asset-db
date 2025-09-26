@@ -1,5 +1,5 @@
-{{#> card title="Key measurements"}}
-  <p>Keep track of how much data has been ingested into the platform.</p>
+{{#> card title="Wichtige Messwerte"}}
+  <p>Behalten Sie im Blick, wie viele Daten bereits in die Plattform übernommen wurden.</p>
   {{#if metrics.length}}
     <ul>
       {{#each metrics}}
@@ -7,20 +7,20 @@
       {{/each}}
     </ul>
   {{else}}
-    <p>No measurements available.</p>
+    <p>Keine Messwerte verfügbar.</p>
   {{/if}}
   {{#if latestUpdate}}
-    <p>Latest source update: {{latestUpdate}}</p>
+    <p>Letztes Quellen-Update: {{latestUpdate}}</p>
   {{/if}}
 {{/card}}
 
-{{#> card title="Rows by source" headingTag="h3"}}
+{{#> card title="Zeilen nach Quelle" headingTag="h3"}}
   {{#if sourceMetrics.length}}
     <table class="table">
       <thead>
         <tr>
-          <th>Source</th>
-          <th>Total rows</th>
+          <th>Quelle</th>
+          <th>Gesamtzeilen</th>
         </tr>
       </thead>
       <tbody>
@@ -33,6 +33,6 @@
       </tbody>
     </table>
   {{else}}
-    <p>No source rows have been captured yet.</p>
+    <p>Es wurden noch keine Quellenzeilen erfasst.</p>
   {{/if}}
 {{/card}}

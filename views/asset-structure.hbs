@@ -1,35 +1,35 @@
 <div class="asset-structure-app" data-app="asset-structure">
-  <aside class="asset-structure-sidebar" aria-label="Asset structure navigation">
+  <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
-      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Categories</a>
-      <a href="/asset-types" class="sidebar-link">Asset types</a>
+      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Kategorien</a>
+      <a href="/asset-types" class="sidebar-link">Asset-Typen</a>
     </div>
   </aside>
   <section class="asset-structure-content">
     <header class="page-header">
       <div>
-        <h1 class="page-title">Asset structure</h1>
-        <p class="page-subtitle">Manage the categories and asset types that organise your asset inventory.</p>
+        <h1 class="page-title">Asset-Struktur</h1>
+        <p class="page-subtitle">Verwalten Sie die Kategorien und Asset-Typen, die Ihr Asset-Inventar strukturieren.</p>
       </div>
       <div class="page-actions">
-        <button class="button" type="button" data-open-structure-modal="category">Add category</button>
+        <button class="button" type="button" data-open-structure-modal="category">Kategorie hinzufügen</button>
       </div>
     </header>
     <div class="structure-body">
       <section class="structure-section" aria-labelledby="categories-title">
-        <h2 class="section-title" id="categories-title">Categories</h2>
+        <h2 class="section-title" id="categories-title">Kategorien</h2>
         <div class="card structure-card">
           {{#if categories.length}}
             <div class="table-wrapper">
               <table class="table table--interactive" aria-describedby="categories-title">
                 <thead>
                   <tr>
-                    <th scope="col">Category</th>
-                    <th scope="col">Governing category</th>
-                    <th scope="col">Owner</th>
-                    <th scope="col">Integrity</th>
-                    <th scope="col">Availability</th>
-                    <th scope="col">Confidentiality</th>
+                    <th scope="col">Kategorie</th>
+                    <th scope="col">Übergeordnete Kategorie</th>
+                    <th scope="col">Verantwortlich</th>
+                    <th scope="col">Integrität</th>
+                    <th scope="col">Verfügbarkeit</th>
+                    <th scope="col">Vertraulichkeit</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -47,7 +47,7 @@
               </table>
             </div>
           {{else}}
-            <p class="empty-state">No categories recorded yet. Start by creating your first category.</p>
+            <p class="empty-state">Noch keine Kategorien erfasst. Legen Sie Ihre erste Kategorie an.</p>
           {{/if}}
         </div>
       </section>
@@ -59,54 +59,54 @@
 <div class="modal" data-structure-modal="category" hidden aria-hidden="true">
   <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="category-modal-title">
     <header class="modal-header">
-      <h2 id="category-modal-title">Add category</h2>
-      <button class="icon-button" type="button" aria-label="Close category form" data-close-structure-modal>&times;</button>
+      <h2 id="category-modal-title">Kategorie hinzufügen</h2>
+      <button class="icon-button" type="button" aria-label="Kategorieformular schließen" data-close-structure-modal>&times;</button>
     </header>
     <div class="modal-body">
       <form class="form-grid form-grid--two">
         <div class="form-field">
-          <label for="category-title">Category title</label>
-          <input id="category-title" name="title" type="text" placeholder="e.g. Business critical services" />
+          <label for="category-title">Kategorietitel</label>
+          <input id="category-title" name="title" type="text" placeholder="z. B. Geschäftskritische Services" />
         </div>
         <div class="form-field">
-          <label for="category-governing">Governing category</label>
-          <input id="category-governing" name="governing_category" type="text" placeholder="e.g. Operational" />
+          <label for="category-governing">Übergeordnete Kategorie</label>
+          <input id="category-governing" name="governing_category" type="text" placeholder="z. B. Operativ" />
         </div>
         <div class="form-field">
-          <label for="category-owner">Owner</label>
-          <input id="category-owner" name="owner" type="text" placeholder="e.g. Asset governance" />
+          <label for="category-owner">Verantwortlich</label>
+          <input id="category-owner" name="owner" type="text" placeholder="z. B. Asset-Governance" />
         </div>
         <div class="form-field">
-          <label for="category-integrity">Integrity</label>
+          <label for="category-integrity">Integrität</label>
           <select id="category-integrity" name="integrity">
-            <option value="">Select rating</option>
-            <option>Low</option>
-            <option>Moderate</option>
-            <option>High</option>
+            <option value="">Bewertung auswählen</option>
+            <option>Niedrig</option>
+            <option>Mittel</option>
+            <option>Hoch</option>
           </select>
         </div>
         <div class="form-field">
-          <label for="category-availability">Availability</label>
+          <label for="category-availability">Verfügbarkeit</label>
           <select id="category-availability" name="availability">
-            <option value="">Select rating</option>
-            <option>Low</option>
-            <option>Moderate</option>
-            <option>High</option>
+            <option value="">Bewertung auswählen</option>
+            <option>Niedrig</option>
+            <option>Mittel</option>
+            <option>Hoch</option>
           </select>
         </div>
         <div class="form-field">
-          <label for="category-confidentiality">Confidentiality</label>
+          <label for="category-confidentiality">Vertraulichkeit</label>
           <select id="category-confidentiality" name="confidentiality">
-            <option value="">Select rating</option>
-            <option>Low</option>
-            <option>Moderate</option>
-            <option>High</option>
+            <option value="">Bewertung auswählen</option>
+            <option>Niedrig</option>
+            <option>Mittel</option>
+            <option>Hoch</option>
           </select>
         </div>
       </form>
       <div class="modal-footer">
-        <button class="button button--ghost" type="button" data-close-structure-modal>Cancel</button>
-        <button class="button" type="button" data-save-category>Save category</button>
+        <button class="button button--ghost" type="button" data-close-structure-modal>Abbrechen</button>
+        <button class="button" type="button" data-save-category>Kategorie speichern</button>
       </div>
     </div>
   </div>
