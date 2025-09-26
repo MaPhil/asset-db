@@ -7,6 +7,10 @@ import apiV1 from './api/v1/index.js';
 import { store } from './lib/storage.js';
 import { logger } from './lib/logger.js';
 import { getAssetTypeSummary } from './lib/assetTypes.js';
+import {
+  getAvailableAssetTypesForGroup,
+  listGroupAssetTypes
+} from './lib/groupAssetTypes.js';
 
 const app = express();
 
@@ -213,6 +217,9 @@ app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) =>
     updatedAt: formatDateTime(group.updated_at) || '—'
   };
 
+  const groupAssetTypes = listGroupAssetTypes(group.id);
+  const availableGroupAssetTypes = getAvailableAssetTypesForGroup(group.id);
+
   res.render('asset-structure-group', {
     nav: 'assetStructure',
     category: {
@@ -220,7 +227,9 @@ app.get('/asset-structure/categories/:categoryId/groups/:groupId', (req, res) =>
       title: category.title || category.name || 'Untitled category'
     },
     group: detail,
-    categoryOptions
+    categoryOptions,
+    groupAssetTypes,
+    availableGroupAssetTypesCount: availableGroupAssetTypes.length
   });
 });
 
