@@ -37,6 +37,17 @@
                     <span class="asset-type-pill__status" data-asset-type-status data-status="{{decision}}">
                       {{#if (eq decision "ignore")}}Ignore{{else}}Use{{/if}}
                     </span>
+                    {{#if groups.length}}
+                      {{#each groups}}
+                        <span
+                          hidden
+                          data-asset-type-group
+                          data-group-id="{{id}}"
+                          data-group-title="{{title}}"
+                          data-group-url="{{url}}"
+                        ></span>
+                      {{/each}}
+                    {{/if}}
                   </button>
                 {{/each}}
               </div>
@@ -76,6 +87,14 @@
           data-asset-type-comment
         ></textarea>
       </div>
+      <div class="form-field asset-type-groups">
+        <p class="form-field__label">Used in groups</p>
+        <p class="helper-text" data-asset-type-group-empty>No groups are using this asset type yet.</p>
+        <ul class="asset-type-groups__list" data-asset-type-group-list hidden></ul>
+      </div>
+      <p class="helper-text asset-type-groups__warning" data-asset-type-ignore-warning hidden>
+        This asset type is assigned to at least one group and cannot be ignored.
+      </p>
       <p class="form-error" data-asset-type-decision-error hidden></p>
     </div>
     <div class="modal-footer">

@@ -11,15 +11,13 @@
         <h1 class="page-title">Asset structure</h1>
         <p class="page-subtitle">Manage the categories and asset types that organise your asset inventory.</p>
       </div>
+      <div class="page-actions">
+        <button class="button" type="button" data-open-structure-modal="category">Add category</button>
+      </div>
     </header>
     <div class="structure-body">
       <section class="structure-section" aria-labelledby="categories-title">
-        <div class="section-header">
-          <h2 class="section-title" id="categories-title">Categories</h2>
-          <div class="page-actions">
-            <button class="button" type="button" data-open-structure-modal="category">Add category</button>
-          </div>
-        </div>
+        <h2 class="section-title" id="categories-title">Categories</h2>
         <div class="card structure-card">
           {{#if categories.length}}
             <div class="table-wrapper">
