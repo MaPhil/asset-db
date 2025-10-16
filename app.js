@@ -3,7 +3,7 @@ import exphbs from 'express-handlebars';
 import bodyParser from 'body-parser';
 import path from 'path';
 
-import apiV1 from './api/v1/index.js';
+import api from './api/index.js';
 import { store } from './lib/storage.js';
 import { logger } from './lib/logger.js';
 import { getAssetTypeSummary } from './lib/assetTypes.js';
@@ -65,8 +65,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Mount API v1
-app.use('/api/v1', apiV1);
+// Mount API
+app.use('/api', api);
 
 // UI routes (read-only bootstrap)
 app.get('/', (req, res) => res.redirect('/asset-pool'));
