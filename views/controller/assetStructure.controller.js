@@ -22,32 +22,6 @@ const formatDateTime = (value) => {
   }
 };
 
-export const redirectToAssetPool = (req, res) => {
-  res.redirect('/asset-pool');
-};
-
-export const renderAssetPool = (req, res) => {
-  res.render('asset-pool', {
-    nav: 'assetPool'
-  });
-};
-
-export const renderRawTable = (req, res) => {
-  const rawTableId = Number(req.params.id);
-  const rawTable = store.get('raw_tables').rows.find((row) => row.id === rawTableId);
-  const status = rawTable ? 200 : 404;
-  const hasRows =
-    rawTable && store.get('raw_rows').rows.some((row) => row.raw_table_id === rawTableId);
-
-  res.status(status).render('raw-table', {
-    nav: 'assetPool',
-    rawTableId,
-    rawTableTitle: rawTable?.title || null,
-    missing: !rawTable,
-    hasRows: Boolean(hasRows)
-  });
-};
-
 export const renderAssetStructure = (req, res) => {
   const categoriesRaw = store.get('categories').rows;
 
@@ -173,45 +147,5 @@ export const renderAssetStructureGroup = (req, res) => {
     categoryOptions,
     groupAssetTypes,
     availableGroupAssetTypesCount: availableGroupAssetTypes.length
-  });
-};
-
-export const renderMeasures = (req, res) => {
-  res.render('measures', {
-    nav: 'measures'
-  });
-};
-
-export const renderImplementation = (req, res) => {
-  res.render('implementation', {
-    nav: 'implementation'
-  });
-};
-
-export const redirectAssets = (req, res) => {
-  res.redirect('/asset-pool');
-};
-
-export const renderSource = (req, res) => {
-  const id = Number(req.params.id);
-  const source = store.get('sources').rows.find((row) => row.id === id);
-
-  if (!source) {
-    logger.warn('Quelle für UI-Route nicht gefunden', { sourceId: id });
-    return res.status(404).send('Quelle nicht gefunden');
-  }
-
-  const rows = store
-    .get('source_rows')
-    .rows.filter((row) => row.source_id === id)
-    .sort((a, b) => a.row_index - b.row_index)
-    .map((row) => row.data);
-  const headers = rows[0] ? Object.keys(rows[0]) : [];
-
-  res.render('assets/source', {
-    nav: 'assetStructure',
-    source,
-    rows,
-    headers
   });
 };

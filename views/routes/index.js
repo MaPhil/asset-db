@@ -3,15 +3,17 @@ import {
   redirectToAssetPool,
   redirectAssets,
   renderAssetPool,
+  renderRawTable
+} from '../controller/assetPool.controller.js';
+import {
   renderAssetStructure,
   renderAssetStructureCategory,
   renderAssetStructureGroup,
-  renderAssetTypes,
-  renderImplementation,
-  renderMeasures,
-  renderRawTable,
-  renderSource
-} from '../controller/home.controller.js';
+  renderAssetTypes
+} from '../controller/assetStructure.controller.js';
+import { renderImplementation } from '../controller/implementation.controller.js';
+import { renderMeasures } from '../controller/measures.controller.js';
+import { renderSource } from '../controller/sources.controller.js';
 
 const router = Router();
 
