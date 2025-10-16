@@ -3,7 +3,8 @@ import exphbs from 'express-handlebars';
 import bodyParser from 'body-parser';
 import path from 'path';
 
-import apiV1 from './api/v1/index.js';
+
+import api from './api/index.js';
 import { logger } from './lib/logger.js';
 import viewRoutes from './views/routes/index.js';
 
@@ -67,8 +68,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Mount API v1
-app.use('/api/v1', apiV1);
+// Mount API
+app.use('/api', api);
 
 // UI routes
 app.use('/', viewRoutes);
