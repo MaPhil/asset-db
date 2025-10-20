@@ -4,6 +4,8 @@
   data-group-id="{{group.id}}"
   data-group-name="{{group.displayTitle}}"
   data-available-group-asset-types="{{availableGroupAssetTypesCount}}"
+  data-category-id="{{category.id}}"
+  data-group-asset-type-count="{{groupAssetTypeCount}}"
 >
   <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
@@ -19,6 +21,20 @@
       </div>
       <div class="page-actions">
         <a class="button button--ghost" href="/asset-structure/categories/{{category.id}}">Zur Kategorie zurück</a>
+        <button
+          class="button button--danger"
+          type="button"
+          data-delete-group
+          data-confirm="Diese Gruppe löschen? Dieser Vorgang kann nicht rückgängig gemacht werden."
+          data-disabled-title="Gruppe kann nicht gelöscht werden, solange Asset-Typen zugeordnet sind."
+          {{#if groupAssetTypeCount}}
+            disabled
+            aria-disabled="true"
+            title="Gruppe kann nicht gelöscht werden, solange Asset-Typen zugeordnet sind."
+          {{/if}}
+        >
+          Gruppe löschen
+        </button>
       </div>
     </header>
 

@@ -7,6 +7,7 @@ const router = Router();
 router.get('/', asyncHandler(GroupsController.list));
 router.post('/', asyncHandler(GroupsController.create));
 router.put('/:id', validateId(), asyncHandler(GroupsController.update));
+router.delete('/:id', validateId(), asyncHandler(GroupsController.destroy));
 router.post('/:id/link-category', validateId(), asyncHandler(GroupsController.linkCategory));
 router.get(
   '/:id/asset-types',

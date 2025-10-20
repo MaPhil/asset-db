@@ -87,6 +87,79 @@ function selectAll(root, selector) {
   return root ? Array.from(root.querySelectorAll(selector)) : [];
 }
 
+function readNonNegativeInteger(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) {
+    return 0;
+  }
+  return Math.floor(number);
+}
+
+function getGroupAssetTypeCount(root) {
+  if (!root?.dataset) {
+    return 0;
+  }
+  return readNonNegativeInteger(root.dataset.groupAssetTypeCount);
+}
+
+function syncDeleteGroupButtonState(root) {
+  const button = select(root, '[data-delete-group]');
+  if (!button) {
+    return;
+  }
+
+  const shouldDisable = getGroupAssetTypeCount(root) > 0;
+  button.disabled = shouldDisable;
+  if (shouldDisable) {
+    button.setAttribute('aria-disabled', 'true');
+    if (button.dataset.disabledTitle) {
+      button.title = button.dataset.disabledTitle;
+    }
+  } else {
+    button.removeAttribute('aria-disabled');
+    if (button.dataset.disabledTitle && button.title === button.dataset.disabledTitle) {
+      button.removeAttribute('title');
+    }
+  }
+}
+
+function setGroupAssetTypeCount(root, count) {
+  if (!root?.dataset) {
+    return;
+  }
+  const safeCount = readNonNegativeInteger(count);
+  root.dataset.groupAssetTypeCount = String(safeCount);
+  syncDeleteGroupButtonState(root);
+}
+
+function getCategoryGroupCount(root) {
+  if (!root?.dataset) {
+    return 0;
+  }
+  return readNonNegativeInteger(root.dataset.categoryGroupCount);
+}
+
+function syncDeleteCategoryButtonState(root) {
+  const button = select(root, '[data-delete-category]');
+  if (!button) {
+    return;
+  }
+
+  const shouldDisable = getCategoryGroupCount(root) > 0;
+  button.disabled = shouldDisable;
+  if (shouldDisable) {
+    button.setAttribute('aria-disabled', 'true');
+    if (button.dataset.disabledTitle) {
+      button.title = button.dataset.disabledTitle;
+    }
+  } else {
+    button.removeAttribute('aria-disabled');
+    if (button.dataset.disabledTitle && button.title === button.dataset.disabledTitle) {
+      button.removeAttribute('title');
+    }
+  }
+}
+
 function escapeHtml(value) {
   if (value === undefined || value === null) {
     return '';
@@ -1716,6 +1789,99 @@ function setupCreateGroupForm(root) {
   });
 }
 
+function setupDeleteCategoryButton(root) {
+  const button = select(root, '[data-delete-category]');
+  if (!button) {
+    return;
+  }
+
+  const categoryId = Number(root?.dataset?.categoryId || '');
+  if (!Number.isInteger(categoryId) || categoryId <= 0) {
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+    return;
+  }
+
+  syncDeleteCategoryButtonState(root);
+
+  button.addEventListener('click', async () => {
+    if (button.disabled) {
+      return;
+    }
+
+    const confirmMessage =
+      button.dataset.confirm ||
+      'Diese Kategorie löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.';
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    button.disabled = true;
+    button.dataset.loading = 'true';
+
+    try {
+      await fetchJson(`${API.categories}/${categoryId}`, { method: 'DELETE' });
+      window.location.assign('/asset-structure');
+    } catch (error) {
+      const message =
+        error?.payload?.error || error?.message || 'Kategorie konnte nicht gelöscht werden.';
+      showToast(message);
+      syncDeleteCategoryButtonState(root);
+    } finally {
+      delete button.dataset.loading;
+    }
+  });
+}
+
+function setupDeleteGroupButton(root) {
+  const button = select(root, '[data-delete-group]');
+  if (!button) {
+    return;
+  }
+
+  const groupId = Number(root?.dataset?.groupId || '');
+  if (!Number.isInteger(groupId) || groupId <= 0) {
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+    return;
+  }
+
+  syncDeleteGroupButtonState(root);
+
+  button.addEventListener('click', async () => {
+    if (button.disabled) {
+      return;
+    }
+
+    const confirmMessage =
+      button.dataset.confirm ||
+      'Diese Gruppe löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.';
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    button.disabled = true;
+    button.dataset.loading = 'true';
+
+    try {
+      await fetchJson(`${API.groups}/${groupId}`, { method: 'DELETE' });
+      const categoryId = Number(root?.dataset?.categoryId || '');
+      if (Number.isInteger(categoryId) && categoryId > 0) {
+        window.location.assign(`/asset-structure/categories/${categoryId}`);
+      } else {
+        window.location.assign('/asset-structure');
+      }
+    } catch (error) {
+      const message =
+        error?.payload?.error || error?.message || 'Gruppe konnte nicht gelöscht werden.';
+      showToast(message);
+      syncDeleteGroupButtonState(root);
+    } finally {
+      delete button.dataset.loading;
+    }
+  });
+}
+
 function setupAssetTypeDecisionModal(root) {
   const modal = document.querySelector('[data-asset-type-decision-modal]');
   if (!modal) {
@@ -2027,6 +2193,9 @@ function appendGroupAssetTypePill(root, entry) {
     emptyEl.hidden = true;
   }
 
+  const count = list.querySelectorAll('[data-group-asset-type-item]').length;
+  setGroupAssetTypeCount(root, count);
+
   if (root?.dataset) {
     const available = Number(root.dataset.availableGroupAssetTypes || '0');
     if (Number.isFinite(available) && available > 0) {
@@ -2076,6 +2245,7 @@ function setupGroupAssetTypeList(root) {
       item?.remove();
 
       const remainingItems = list.querySelectorAll('[data-group-asset-type-item]').length;
+      setGroupAssetTypeCount(root, remainingItems);
       if (remainingItems === 0) {
         list.hidden = true;
         if (emptyEl) {
@@ -2328,6 +2498,8 @@ function initAssetStructureApp() {
   setupStructureModals(root);
   setupCreateCategoryForm(root);
   setupCreateGroupForm(root);
+  setupDeleteCategoryButton(root);
+  setupDeleteGroupButton(root);
   setupAssetTypeDecisionModal(root);
   setupGroupAssetTypeList(root);
   setupGroupAssetTypeModal(root);
