@@ -268,6 +268,8 @@ main {
   gap: 0.75rem;
   font-size: 0.9rem;
   color: var(--color-subtle);
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .field-manager__count {
@@ -283,6 +285,48 @@ main {
   margin: 0;
   font-size: 0.9rem;
   color: var(--color-subtle);
+}
+
+.field-manager__actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.field-manager__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.field-manager__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.field-manager__editable {
+  white-space: nowrap;
+}
+
+.field-manager__editable.is-active,
+.field-manager__editable[aria-pressed='true'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.field-manager__editable.is-active:hover,
+.field-manager__editable.is-active:focus,
+.field-manager__editable[aria-pressed='true']:hover,
+.field-manager__editable[aria-pressed='true']:focus {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: #fff;
 }
 
 .page-meta {
@@ -756,6 +800,32 @@ main {
 
 .table tbody tr:last-child td {
   border-bottom: none;
+}
+
+.editable-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.editable-cell__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.editable-cell__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.editable-cell__button {
+  white-space: nowrap;
 }
 
 .table-empty {
