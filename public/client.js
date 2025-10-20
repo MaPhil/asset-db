@@ -2,6 +2,10 @@ const API = {
   rawTables: '/api/v1/raw-tables',
   assetPool: '/api/v1/asset-pool',
   assetPoolFields: '/api/v1/asset-pool/fields',
+  assetPoolFieldEditable: (field) =>
+    `/api/v1/asset-pool/fields/${encodeURIComponent(field)}/editable`,
+  assetPoolFieldValue: (rowId, field) =>
+    `/api/v1/asset-pool/rows/${encodeURIComponent(rowId)}/fields/${encodeURIComponent(field)}`,
   assetTypeField: '/api/v1/asset-pool/settings/asset-type-field',
   assetTypes: '/api/v1/asset-types',
   categories: '/api/v1/categories',
@@ -35,8 +39,11 @@ const state = {
   fieldManager: {
     isOpen: false,
     busyField: null,
+    busyAction: null,
     error: null,
-    trigger: null
+    trigger: null,
+    isAdding: false,
+    newFieldValue: ''
   },
   assetTypeFieldModal: {
     isOpen: false,
@@ -254,18 +261,21 @@ function renderFieldManager(root) {
 
   const list = select(panel, '[data-field-list]');
   const error = select(panel, '[data-field-error]');
+  const addInput = select(panel, '[data-field-input]');
+  const addButton = select(panel, '[data-add-field]');
   if (!list || !error) return;
 
   const fieldStats = Array.isArray(state.assetPool?.fieldStats) ? state.assetPool.fieldStats : [];
+  const fieldSettings = state.assetPool?.fieldSettings || {};
+  const isBusy = state.fieldManager.busyField !== null;
   list.innerHTML = '';
 
   if (!fieldStats.length) {
     const empty = document.createElement('p');
     empty.className = 'field-manager__empty';
-    empty.textContent = 'Keine Zuordnungsfelder verfügbar.';
+    empty.textContent = 'Keine Felder verfügbar.';
     list.appendChild(empty);
   } else {
-    const isBusy = state.fieldManager.busyField !== null;
     fieldStats.forEach((stat) => {
       if (!stat?.field) {
         return;
@@ -291,17 +301,46 @@ function renderFieldManager(root) {
       count.textContent = formatEntryCount(stat.count);
       meta.appendChild(count);
 
+      const config = fieldSettings[stat.field] || {};
+      const isEditable = !!config.editable;
+      const isToggleTarget =
+        isBusy && state.fieldManager.busyField === stat.field && state.fieldManager.busyAction === 'toggle';
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'button button--ghost field-manager__editable';
+      toggle.textContent = isToggleTarget ? 'Aktualisieren…' : 'Editable';
+      toggle.disabled = isBusy || state.fieldManager.isAdding;
+      toggle.setAttribute('aria-pressed', isEditable ? 'true' : 'false');
+      toggle.classList.toggle('is-active', isEditable);
+      toggle.addEventListener('click', () =>
+        handleToggleFieldEditable(stat.field, !isEditable, root)
+      );
+      meta.appendChild(toggle);
+
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'button button--ghost field-manager__remove';
-      remove.textContent = state.fieldManager.busyField === stat.field ? 'Wird entfernt…' : 'Entfernen';
-      remove.disabled = isBusy;
+      const isRemoving =
+        isBusy && state.fieldManager.busyField === stat.field && state.fieldManager.busyAction === 'remove';
+      remove.textContent = isRemoving ? 'Wird entfernt…' : 'Entfernen';
+      remove.disabled = isBusy || state.fieldManager.isAdding;
       remove.addEventListener('click', () => handleRemoveField(stat.field, root));
       meta.appendChild(remove);
 
       item.appendChild(meta);
       list.appendChild(item);
     });
+  }
+
+  if (addInput) {
+    addInput.value = state.fieldManager.newFieldValue || '';
+    addInput.disabled = state.fieldManager.isAdding;
+  }
+
+  if (addButton) {
+    const trimmedValue = (state.fieldManager.newFieldValue || '').trim();
+    addButton.disabled =
+      state.fieldManager.isAdding || isBusy || trimmedValue.length === 0;
   }
 
   if (state.fieldManager.error) {
@@ -350,6 +389,10 @@ function closeFieldManager(root) {
 
   state.fieldManager.isOpen = false;
   state.fieldManager.error = null;
+  state.fieldManager.busyField = null;
+  state.fieldManager.busyAction = null;
+  state.fieldManager.isAdding = false;
+  state.fieldManager.newFieldValue = '';
   renderFieldManager(root);
 
   const trigger = state.fieldManager.trigger;
@@ -365,6 +408,7 @@ async function handleRemoveField(field, root) {
   if (!field) return;
   state.fieldManager.error = null;
   state.fieldManager.busyField = field;
+  state.fieldManager.busyAction = 'remove';
   renderFieldManager(root);
 
   try {
@@ -373,14 +417,81 @@ async function handleRemoveField(field, root) {
     });
     await Promise.all([refreshAssetPool(), refreshRawTables()]);
     const message = result?.removed
-      ? `Zuordnungsfeld „${field}“ wurde entfernt.`
+      ? `Feld „${field}“ wurde entfernt.`
       : `Keine Zuordnungen nutzten „${field}“.`;
     showToast(message);
     state.fieldManager.busyField = null;
+    state.fieldManager.busyAction = null;
     renderFieldManager(root);
   } catch (err) {
     state.fieldManager.error = err.payload?.error || err.message;
     state.fieldManager.busyField = null;
+    state.fieldManager.busyAction = null;
+    renderFieldManager(root);
+  }
+}
+
+async function handleAddField(root) {
+  const modal = document.querySelector('[data-field-manager-modal]');
+  const panel = select(modal, '[data-field-manager]');
+  const input = select(panel, '[data-field-input]');
+  const rawValue = input ? input.value : state.fieldManager.newFieldValue;
+  const field = (rawValue || '').trim();
+  if (!field || state.fieldManager.isAdding) {
+    return;
+  }
+
+  state.fieldManager.error = null;
+  state.fieldManager.isAdding = true;
+  state.fieldManager.newFieldValue = field;
+  renderFieldManager(root);
+
+  try {
+    await fetchJson(API.assetPoolFields, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field })
+    });
+    state.fieldManager.isAdding = false;
+    state.fieldManager.newFieldValue = '';
+    if (input) {
+      input.value = '';
+    }
+    showToast(`Feld „${field}“ wurde hinzugefügt.`);
+    renderFieldManager(root);
+    await refreshAssetPool();
+  } catch (err) {
+    state.fieldManager.error = err.payload?.error || err.message;
+    state.fieldManager.isAdding = false;
+    renderFieldManager(root);
+  }
+}
+
+async function handleToggleFieldEditable(field, nextEditable, root) {
+  if (!field) return;
+  state.fieldManager.error = null;
+  state.fieldManager.busyField = field;
+  state.fieldManager.busyAction = 'toggle';
+  renderFieldManager(root);
+
+  try {
+    await fetchJson(API.assetPoolFieldEditable(field), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ editable: nextEditable })
+    });
+    state.fieldManager.busyField = null;
+    state.fieldManager.busyAction = null;
+    renderFieldManager(root);
+    await refreshAssetPool();
+    const message = nextEditable
+      ? `Feld „${field}“ ist jetzt bearbeitbar.`
+      : `Feld „${field}“ ist nicht mehr bearbeitbar.`;
+    showToast(message);
+  } catch (err) {
+    state.fieldManager.error = err.payload?.error || err.message;
+    state.fieldManager.busyField = null;
+    state.fieldManager.busyAction = null;
     renderFieldManager(root);
   }
 }
@@ -419,6 +530,29 @@ function setupFieldManager(root) {
       closeFieldManager(root);
     }
   });
+
+  const addInput = select(panel, '[data-field-input]');
+  const addButton = select(panel, '[data-add-field]');
+  if (addInput) {
+    addInput.addEventListener('input', (event) => {
+      state.fieldManager.newFieldValue = event.target.value;
+      if (addButton) {
+        const trimmed = event.target.value.trim();
+        addButton.disabled =
+          state.fieldManager.isAdding || state.fieldManager.busyField !== null || trimmed.length === 0;
+      }
+    });
+    addInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleAddField(root);
+      }
+    });
+  }
+
+  if (addButton) {
+    addButton.addEventListener('click', () => handleAddField(root));
+  }
 }
 
 function populateAssetTypeFieldSelect(modal) {
@@ -471,7 +605,7 @@ function populateAssetTypeFieldSelect(modal) {
 
   helper.textContent = options.length
     ? 'Nur zugeordnete Felder mit Daten erscheinen in dieser Liste.'
-    : 'Fügen Sie Zuordnungsfelder hinzu, um einen Asset-Typ auszuwählen.';
+    : 'Fügen Sie Felder hinzu, um einen Asset-Typ auszuwählen.';
 
   if (errorEl) {
     if (state.assetTypeFieldModal.error) {
@@ -690,6 +824,7 @@ function renderAssetPool(root) {
   const view = state.assetPool;
   const columns = Array.isArray(view?.columns) ? view.columns : [];
   const rows = Array.isArray(view?.rows) ? view.rows : [];
+  const fieldSettings = view?.fieldSettings || {};
 
   emptyState.hidden = true;
   container.hidden = false;
@@ -773,7 +908,37 @@ function renderAssetPool(root) {
       columns.forEach((column) => {
         const cell = document.createElement('td');
         const value = row.values?.[column];
-        cell.textContent = value === null || value === undefined ? '' : String(value);
+        const config = fieldSettings[column] || {};
+        if (config.editable) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'editable-cell';
+
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'editable-cell__input';
+          input.value = value === null || value === undefined ? '' : String(value);
+          input.placeholder = 'Wert eingeben';
+
+          const save = document.createElement('button');
+          save.type = 'button';
+          save.className = 'button button--ghost editable-cell__button';
+          save.textContent = 'Speichern';
+          save.addEventListener('click', () =>
+            handleEditableCellSave(row.id, column, input, save)
+          );
+          input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              handleEditableCellSave(row.id, column, input, save);
+            }
+          });
+
+          wrapper.appendChild(input);
+          wrapper.appendChild(save);
+          cell.appendChild(wrapper);
+        } else {
+          cell.textContent = value === null || value === undefined ? '' : String(value);
+        }
         tr.appendChild(cell);
       });
       tbody.appendChild(tr);
@@ -833,6 +998,34 @@ function renderAssetPool(root) {
       renderAssetPool(root);
     });
   });
+}
+
+async function handleEditableCellSave(rowId, field, input, button) {
+  if (!rowId || !field || !input || !button) {
+    return;
+  }
+
+  const value = input.value;
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Speichern…';
+
+  try {
+    await fetchJson(API.assetPoolFieldValue(rowId, field), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value })
+    });
+    await refreshAssetPool();
+    showToast('Wert gespeichert.');
+  } catch (err) {
+    const message = err.payload?.error || err.message;
+    showToast(message);
+    if (button.isConnected) {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+  }
 }
 
 function renderRawTable(root) {
@@ -1506,7 +1699,6 @@ async function refreshAssetPool() {
     const statSet = new Set(statNames);
     const preserved = state.assetFieldSuggestions.filter((field) => statSet.has(field));
     state.assetFieldSuggestions = Array.from(new Set([...preserved, ...statNames]));
-    state.assetPoolPage = 1;
     const root = document.querySelector('[data-app="asset-pool"]');
     if (root) {
       if (root.dataset.view === 'overview') {
