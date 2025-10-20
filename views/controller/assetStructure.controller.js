@@ -91,7 +91,8 @@ export const renderAssetStructureCategory = (req, res) => {
   res.render('asset-structure-category', {
     nav: 'assetStructure',
     category: viewModel,
-    groups: groupRows
+    groups: groupRows,
+    groupCount: groupRows.length
   });
 };
 
@@ -146,6 +147,7 @@ export const renderAssetStructureGroup = (req, res) => {
     group: detail,
     categoryOptions,
     groupAssetTypes,
-    availableGroupAssetTypesCount: availableGroupAssetTypes.length
+    availableGroupAssetTypesCount: availableGroupAssetTypes.length,
+    groupAssetTypeCount: groupAssetTypes.length
   });
 };

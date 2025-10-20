@@ -72,5 +72,38 @@ export const CategoriesController = {
     }
     logger.info('Kategorie aktualisiert', { categoryId: id });
     res.json({ ok: true });
+  },
+
+  destroy: (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      logger.warn('Ungültiger Kategorienbezeichner für Löschvorgang', { categoryId: req.params.id });
+      return res.status(400).json({ error: 'Ungültiger Kategorienbezeichner.' });
+    }
+
+    const categoriesTable = store.get('categories');
+    const category = categoriesTable.rows.find((row) => row.id === id);
+    if (!category) {
+      logger.warn('Versuch, fehlende Kategorie zu löschen', { categoryId: id });
+      return res.status(404).json({ error: 'Nicht gefunden.' });
+    }
+
+    const groupCategoryTable = store.get('group_categories');
+    const hasLinkedGroups = groupCategoryTable.rows.some(
+      (row) => Number(row?.category_id) === id
+    );
+
+    if (hasLinkedGroups) {
+      logger.warn('Kategorie mit verknüpften Gruppen kann nicht gelöscht werden', {
+        categoryId: id
+      });
+      return res
+        .status(409)
+        .json({ error: 'Kategorie kann nicht gelöscht werden, solange Gruppen zugeordnet sind.' });
+    }
+
+    store.remove('categories', id);
+    logger.info('Kategorie gelöscht', { categoryId: id });
+    res.json({ ok: true });
   }
 };
