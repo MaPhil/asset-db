@@ -2193,8 +2193,8 @@ function appendGroupAssetTypePill(root, entry) {
     emptyEl.hidden = true;
   }
 
-  const count = list.querySelectorAll('[data-group-asset-type-item]').length;
-  setGroupAssetTypeCount(root, count);
+  const totalItems = list.querySelectorAll('[data-group-asset-type-item]').length;
+  setGroupAssetTypeCount(root, totalItems);
 
   if (root?.dataset) {
     const available = Number(root.dataset.availableGroupAssetTypes || '0');
