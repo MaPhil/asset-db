@@ -1,0 +1,66 @@
+<div class="asset-structure-app" data-app="asset-structure" data-topic-id="{{topic.id}}">
+  <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
+    <div class="sidebar-section">
+      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Themengebiete</a>
+      <a href="/asset-types" class="sidebar-link">Asset-Typen</a>
+    </div>
+  </aside>
+  <section class="asset-structure-content">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">{{#if topic.displayTitle}}{{topic.displayTitle}}{{else}}Unbenanntes Themengebiet{{/if}}</h1>
+        <p class="page-subtitle">Überblick über die Sub-Themengebiete und Asset Kategorien innerhalb dieses Themengebiets.</p>
+      </div>
+      <div class="page-actions">
+        <a class="button button--ghost" href="/asset-structure">Zur Themengebietsübersicht</a>
+      </div>
+    </header>
+
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/asset-structure">Asset-Struktur</a>
+      <span aria-hidden="true">›</span>
+      <span aria-current="page">{{#if topic.displayTitle}}{{topic.displayTitle}}{{else}}Unbenanntes Themengebiet{{/if}}</span>
+    </nav>
+
+    <div class="structure-body">
+      <section class="structure-section" aria-labelledby="sub-topics-title">
+        <div class="section-header">
+          <h2 class="section-title" id="sub-topics-title">Sub-Themengebiete</h2>
+        </div>
+        <p class="helper-text">{{subTopicCount}} Sub-Themengebiete verfügbar. Wählen Sie eines aus, um dessen Asset Kategorien zu verwalten.</p>
+        <div class="card structure-card">
+          {{#if subTopics.length}}
+            <div class="table-wrapper">
+              <table class="table table--interactive" aria-describedby="sub-topics-title">
+                <thead>
+                  <tr>
+                    <th scope="col">Sub-Themengebiet</th>
+                    <th scope="col">Asset Kategorien</th>
+                    <th scope="col">Verantwortlich</th>
+                    <th scope="col">Integrität</th>
+                    <th scope="col">Verfügbarkeit</th>
+                    <th scope="col">Vertraulichkeit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each subTopics}}
+                    <tr>
+                      <td><a class="table-link" href="/asset-structure/asset-kategorien/{{id}}">{{title}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/asset-kategorien/{{id}}">{{assetCategoryCount}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/asset-kategorien/{{id}}">{{owner}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/asset-kategorien/{{id}}">{{integrity}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/asset-kategorien/{{id}}">{{availability}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/asset-kategorien/{{id}}">{{confidentiality}}</a></td>
+                    </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+          {{else}}
+            <p class="empty-state">Für dieses Themengebiet wurden noch keine Sub-Themengebiete erfasst.</p>
+          {{/if}}
+        </div>
+      </section>
+    </div>
+  </section>
+</div>

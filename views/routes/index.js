@@ -7,8 +7,9 @@ import {
 } from '../controller/assetPool.controller.js';
 import {
   renderAssetStructure,
-  renderAssetStructureCategory,
+  renderAssetStructureAssetCategory,
   renderAssetStructureGroup,
+  renderAssetStructureSubTopic,
   renderAssetTypes
 } from '../controller/assetStructure.controller.js';
 import { renderImplementation } from '../controller/implementation.controller.js';
@@ -22,9 +23,13 @@ router.get('/assets', redirectAssets);
 router.get('/asset-pool', renderAssetPool);
 router.get('/asset-pool/raw/:id', renderRawTable);
 router.get('/asset-structure', renderAssetStructure);
-router.get('/asset-structure/categories/:id', renderAssetStructureCategory);
+router.get('/asset-structure/themengebiete/:topicId', renderAssetStructureSubTopic);
 router.get(
-  '/asset-structure/categories/:categoryId/groups/:groupId',
+  '/asset-structure/asset-kategorien/:id',
+  renderAssetStructureAssetCategory
+);
+router.get(
+  '/asset-structure/asset-kategorien/:categoryId/groups/:groupId',
   renderAssetStructureGroup
 );
 router.get('/asset-types', renderAssetTypes);

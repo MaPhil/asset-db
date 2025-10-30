@@ -1987,7 +1987,7 @@ function setupDeleteGroupButton(root) {
       await fetchJson(`${API.groups}/${groupId}`, { method: 'DELETE' });
       const categoryId = Number(root?.dataset?.categoryId || '');
       if (Number.isInteger(categoryId) && categoryId > 0) {
-        window.location.assign(`/asset-structure/categories/${categoryId}`);
+        window.location.assign(`/asset-structure/asset-kategorien/${categoryId}`);
       } else {
         window.location.assign('/asset-structure');
       }

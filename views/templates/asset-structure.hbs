@@ -1,7 +1,7 @@
 <div class="asset-structure-app" data-app="asset-structure">
   <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
-      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Kategorien</a>
+      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Themengebiete</a>
       <a href="/asset-types" class="sidebar-link">Asset-Typen</a>
     </div>
   </aside>
@@ -9,42 +9,38 @@
     <header class="page-header">
       <div>
         <h1 class="page-title">Asset-Struktur</h1>
-        <p class="page-subtitle">Verwalten Sie die Kategorien und Asset-Typen, die Ihr Asset-Inventar strukturieren.</p>
+        <p class="page-subtitle">Steuern Sie die Themengebiete, Sub-Themengebiete und Asset Kategorien Ihres Asset-Inventars.</p>
       </div>
     </header>
     <div class="structure-body">
-      <section class="structure-section" aria-labelledby="categories-title">
-        <h2 class="section-title" id="categories-title">Kategorien</h2>
+      <section class="structure-section" aria-labelledby="topics-title">
+        <h2 class="section-title" id="topics-title">Themengebiete</h2>
         <div class="card structure-card">
-          {{#if categories.length}}
+          {{#if topics.length}}
             <div class="table-wrapper">
-              <table class="table table--interactive" aria-describedby="categories-title">
+              <table class="table table--interactive" aria-describedby="topics-title">
                 <thead>
                   <tr>
-                    <th scope="col">Kategorie</th>
-                    <th scope="col">Übergeordnete Kategorie</th>
+                    <th scope="col">Themengebiet</th>
+                    <th scope="col">Sub-Themengebiete</th>
+                    <th scope="col">Asset Kategorien</th>
                     <th scope="col">Verantwortlich</th>
-                    <th scope="col">Integrität</th>
-                    <th scope="col">Verfügbarkeit</th>
-                    <th scope="col">Vertraulichkeit</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {{#each categories}}
+                  {{#each topics}}
                     <tr>
-                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{title}}</a></td>
-                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{governingCategory}}</a></td>
-                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{owner}}</a></td>
-                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{integrity}}</a></td>
-                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{availability}}</a></td>
-                      <td><a class="table-link" href="/asset-structure/categories/{{id}}">{{confidentiality}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/themengebiete/{{id}}">{{title}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/themengebiete/{{id}}">{{subTopicCount}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/themengebiete/{{id}}">{{assetCategoryCount}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/themengebiete/{{id}}">{{owner}}</a></td>
                     </tr>
                   {{/each}}
                 </tbody>
               </table>
             </div>
           {{else}}
-            <p class="empty-state">Noch keine Kategorien erfasst. Legen Sie Ihre erste Kategorie an.</p>
+            <p class="empty-state">Noch keine Themengebiete erfasst. Legen Sie Ihr erstes Themengebiet an.</p>
           {{/if}}
         </div>
       </section>
