@@ -1,6 +1,8 @@
 <div
   class="asset-structure-app"
   data-app="asset-structure"
+  data-topic-id="{{topic.id}}"
+  data-sub-topic-id="{{subTopic.id}}"
   data-category-id="{{assetCategory.id}}"
 >
   <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
@@ -16,21 +18,18 @@
         <p class="page-subtitle">Aktualisieren Sie die Asset Kategorie und verwalten Sie die zugehörigen Gruppen.</p>
       </div>
       <div class="page-actions">
-        {{#if topic}}
-          <a class="button button--ghost" href="/asset-structure/themengebiete/{{topic.id}}">Zum Themengebiet zurück</a>
-        {{else}}
-          <a class="button button--ghost" href="/asset-structure">Zur Themengebietsübersicht</a>
-        {{/if}}
+        <a class="button button--ghost" href="/asset-structure/{{topic.id}}/{{subTopic.id}}">Zum Sub-Themengebiet</a>
+        <a class="button button--ghost" href="/asset-structure/{{topic.id}}">Zum Themengebiet</a>
       </div>
     </header>
 
     <nav class="breadcrumb" aria-label="Breadcrumb">
       <a href="/asset-structure">Asset-Struktur</a>
       <span aria-hidden="true">›</span>
-      {{#if topic}}
-        <a href="/asset-structure/themengebiete/{{topic.id}}">{{topic.displayTitle}}</a>
-        <span aria-hidden="true">›</span>
-      {{/if}}
+      <a href="/asset-structure/{{topic.id}}">{{topic.displayTitle}}</a>
+      <span aria-hidden="true">›</span>
+      <a href="/asset-structure/{{topic.id}}/{{subTopic.id}}">{{subTopic.displayTitle}}</a>
+      <span aria-hidden="true">›</span>
       <span aria-current="page">{{#if assetCategory.displayTitle}}{{assetCategory.displayTitle}}{{else}}Unbenannte Asset Kategorie{{/if}}</span>
     </nav>
 
@@ -41,24 +40,16 @@
           <button class="button" type="button">Änderungen speichern</button>
         </div>
         <form class="form-grid form-grid--two">
-          <div class="form-field">
+          <div class="form-field form-field--full">
             <label for="asset-category-name">Titel</label>
             <input
               id="asset-category-name"
               type="text"
               name="title"
               value="{{assetCategory.title}}"
-              placeholder="Titel der Asset Kategorie eingeben"
-            />
-          </div>
-          <div class="form-field">
-            <label for="asset-category-governing">Übergeordnetes Themengebiet</label>
-            <input
-              id="asset-category-governing"
-              type="text"
-              name="governing_category"
-              value="{{assetCategory.governingCategory}}"
-              placeholder="z. B. Operativ"
+              placeholder="Titel der Asset Kategorie"
+              readonly
+              aria-readonly="true"
             />
           </div>
           <div class="form-field">
@@ -130,16 +121,16 @@
                 {{#each groups}}
                   <tr>
                     <td>
-                      <a class="table-link" href="/asset-structure/asset-kategorien/{{../assetCategory.id}}/groups/{{id}}">{{title}}</a>
+                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetCategory.id}}/groups/{{id}}">{{title}}</a>
                     </td>
                     <td>
-                      <a class="table-link" href="/asset-structure/asset-kategorien/{{../assetCategory.id}}/groups/{{id}}">{{status}}</a>
+                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetCategory.id}}/groups/{{id}}">{{status}}</a>
                     </td>
                     <td>
-                      <a class="table-link" href="/asset-structure/asset-kategorien/{{../assetCategory.id}}/groups/{{id}}">{{assetType}}</a>
+                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetCategory.id}}/groups/{{id}}">{{assetType}}</a>
                     </td>
                     <td>
-                      <a class="table-link" href="/asset-structure/asset-kategorien/{{../assetCategory.id}}/groups/{{id}}">{{updatedAt}}</a>
+                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetCategory.id}}/groups/{{id}}">{{updatedAt}}</a>
                     </td>
                   </tr>
                 {{/each}}

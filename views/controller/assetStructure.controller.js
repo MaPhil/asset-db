@@ -5,89 +5,13 @@ import {
   getAvailableAssetTypesForGroup,
   listGroupAssetTypes
 } from '../../lib/groupAssetTypes.js';
-
-const FALLBACK_TOPIC_TITLE = 'Allgemein';
-
-const normaliseText = (value) => {
-  if (typeof value === 'string') {
-    return value.trim();
-  }
-
-  if (value == null) {
-    return '';
-  }
-
-  return String(value).trim();
-};
-
-const slugify = (value) =>
-  value
-    .toString()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-
-const resolveTopicTitle = (category) => {
-  const candidates = [
-    normaliseText(category.thematic_area),
-    normaliseText(category.topic),
-    normaliseText(category.governing_category)
-  ];
-
-  const title = candidates.find((candidate) => candidate.length > 0);
-
-  return title || FALLBACK_TOPIC_TITLE;
-};
-
-const buildTopicHierarchy = () => {
-  const categories = store.get('categories').rows;
-  const usedSlugs = new Set();
-  const topicsByTitle = new Map();
-
-  const ensureUniqueSlug = (title, fallbackSuffix) => {
-    const base = slugify(title) || `themengebiet-${fallbackSuffix}`;
-    let slug = base;
-    let attempt = 1;
-
-    while (usedSlugs.has(slug)) {
-      attempt += 1;
-      slug = `${base}-${attempt}`;
-    }
-
-    usedSlugs.add(slug);
-    return slug;
-  };
-
-  categories.forEach((category) => {
-    const topicTitle = resolveTopicTitle(category);
-    let topic = topicsByTitle.get(topicTitle);
-
-    if (!topic) {
-      const slug = ensureUniqueSlug(topicTitle, topicsByTitle.size + 1);
-      topic = { id: slug, title: topicTitle, categories: [] };
-      topicsByTitle.set(topicTitle, topic);
-    }
-
-    topic.categories.push(category);
-  });
-
-  const topics = Array.from(topicsByTitle.values()).sort((a, b) =>
-    a.title.localeCompare(b.title, 'de', { sensitivity: 'base' })
-  );
-
-  const topicById = new Map(topics.map((topic) => [topic.id, topic]));
-  const topicByCategoryId = new Map();
-
-  topics.forEach((topic) => {
-    topic.categories.forEach((category) => {
-      topicByCategoryId.set(category.id, topic);
-    });
-  });
-
-  return { topics, topicById, topicByCategoryId };
-};
+import {
+  buildAssetStructure,
+  getSubTopicKey,
+  normaliseText,
+  SUB_TOPIC_FALLBACK_TITLE,
+  TOPIC_FALLBACK_TITLE
+} from '../../lib/assetStructure.js';
 
 const formatDateTime = (value) => {
   if (!value) {
@@ -105,41 +29,70 @@ const formatDateTime = (value) => {
   }
 };
 
-export const renderAssetStructure = (req, res) => {
-  const { topics } = buildTopicHierarchy();
-  const links = store.get('group_categories').rows;
+const buildGroupCounts = () => {
+  const links = store.get('group_categories');
+  const rows = Array.isArray(links?.rows) ? links.rows : [];
 
-  const groupCounts = links.reduce((map, link) => {
-    const current = map.get(link.category_id) ?? 0;
-    map.set(link.category_id, current + 1);
+  return rows.reduce((map, link) => {
+    const categoryId = Number(link?.category_id);
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      return map;
+    }
+
+    const current = map.get(categoryId) ?? 0;
+    map.set(categoryId, current + 1);
     return map;
   }, new Map());
+};
+
+const collectOwners = (categories) => {
+  const owners = new Set();
+
+  categories.forEach((category) => {
+    const owner = normaliseText(category?.owner) || normaliseText(category?.group_owner);
+    if (owner) {
+      owners.add(owner);
+    }
+  });
+
+  if (owners.size === 0) {
+    return '—';
+  }
+
+  if (owners.size === 1) {
+    return owners.values().next().value;
+  }
+
+  return `${owners.size} Verantwortliche`;
+};
+
+export const renderAssetStructure = (req, res) => {
+  const { topics } = buildAssetStructure();
+  const groupCounts = buildGroupCounts();
 
   const topicRows = topics.map((topic) => {
-    const owners = new Set(
-      topic.categories
-        .map((category) => category.owner || category.group_owner)
-        .filter(Boolean)
-    );
-
-    const ownerDisplay =
-      owners.size === 0
-        ? '—'
-        : owners.size === 1
-        ? [...owners][0]
-        : `${owners.size} Verantwortliche`;
-
-    const assetCategoryCount = topic.categories.reduce(
-      (sum, category) => sum + (groupCounts.get(category.id) ?? 0),
+    const assetCategoryCount = topic.subTopics.reduce(
+      (sum, subTopic) => sum + subTopic.categories.length,
       0
     );
 
+    const groupCount = topic.subTopics.reduce((sum, subTopic) => {
+      return (
+        sum +
+        subTopic.categories.reduce(
+          (categorySum, category) => categorySum + (groupCounts.get(category.id) ?? 0),
+          0
+        )
+      );
+    }, 0);
+
     return {
       id: topic.id,
-      title: topic.title,
-      subTopicCount: topic.categories.length,
+      title: topic.displayTitle,
+      subTopicCount: topic.subTopics.length,
       assetCategoryCount,
-      owner: ownerDisplay
+      groupCount,
+      owner: collectOwners(topic.categories)
     };
   });
 
@@ -150,9 +103,9 @@ export const renderAssetStructure = (req, res) => {
   });
 };
 
-export const renderAssetStructureSubTopic = (req, res) => {
-  const topicId = req.params.topicId;
-  const { topics, topicById } = buildTopicHierarchy();
+export const renderAssetStructureTopic = (req, res) => {
+  const { topicId } = req.params;
+  const { topicById } = buildAssetStructure();
   const topic = topicById.get(topicId);
 
   if (!topic) {
@@ -160,75 +113,134 @@ export const renderAssetStructureSubTopic = (req, res) => {
     return res.status(404).send('Themengebiet nicht gefunden');
   }
 
-  const links = store.get('group_categories').rows;
-  const groupCounts = links.reduce((map, link) => {
-    const current = map.get(link.category_id) ?? 0;
-    map.set(link.category_id, current + 1);
-    return map;
-  }, new Map());
+  const groupCounts = buildGroupCounts();
 
-  const subTopics = topic.categories
-    .map((category) => ({
-      id: category.id,
-      title:
-        category.title || category.name || `Sub-Themengebiet ${category.id}`,
-      owner: category.owner || category.group_owner || '—',
-      assetCategoryCount: groupCounts.get(category.id) ?? 0,
-      integrity: category.integrity || '—',
-      availability: category.availability || '—',
-      confidentiality: category.confidentiality || '—'
-    }))
-    .sort((a, b) => a.title.localeCompare(b.title, 'de', { sensitivity: 'base' }));
+  const subTopics = topic.subTopics.map((subTopic) => {
+    const assetCategoryCount = subTopic.categories.length;
+    const groupCount = subTopic.categories.reduce(
+      (sum, category) => sum + (groupCounts.get(category.id) ?? 0),
+      0
+    );
 
-  res.render('asset-structure-sub-topic', {
+    return {
+      id: subTopic.id,
+      title: subTopic.displayTitle,
+      topicId: topic.id,
+      assetCategoryCount,
+      groupCount,
+      owner: collectOwners(subTopic.categories)
+    };
+  });
+
+  res.render('asset-structure-topic', {
     nav: 'assetStructure',
     topic: {
       id: topic.id,
-      title: topic.title,
-      displayTitle: topic.title || FALLBACK_TOPIC_TITLE
+      title: topic.displayTitle,
+      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE
     },
+    notes: '',
     subTopics,
     subTopicCount: subTopics.length
   });
 };
 
-export const renderAssetTypes = (req, res) => {
-  const summary = getAssetTypeSummary();
+export const renderAssetStructureSubTopic = (req, res) => {
+  const { topicId, subTopicId } = req.params;
+  const { topicById, subTopicById } = buildAssetStructure();
+  const topic = topicById.get(topicId);
 
-  res.render('asset-types', {
+  if (!topic) {
+    logger.warn('Themengebiet für UI-Route nicht gefunden', { topicId, subTopicId });
+    return res.status(404).send('Themengebiet nicht gefunden');
+  }
+
+  const key = getSubTopicKey(topicId, subTopicId);
+  const subTopic = subTopicById.get(key);
+
+  if (!subTopic) {
+    logger.warn('Sub-Themengebiet für UI-Route nicht gefunden', { topicId, subTopicId });
+    return res.status(404).send('Sub-Themengebiet nicht gefunden');
+  }
+
+  const groupCounts = buildGroupCounts();
+
+  const assetCategories = subTopic.categories.map((category) => ({
+    id: category.id,
+    title: category.title || category.name || `Asset Kategorie ${category.id}`,
+    owner: normaliseText(category.owner) || normaliseText(category.group_owner) || '—',
+    integrity: normaliseText(category.integrity) || '—',
+    availability: normaliseText(category.availability) || '—',
+    confidentiality: normaliseText(category.confidentiality) || '—',
+    groupCount: groupCounts.get(category.id) ?? 0
+  }));
+
+  res.render('asset-structure-sub-topic', {
     nav: 'assetStructure',
-    assetTypes: summary.entries,
-    assetTypeField: summary.field
+    topic: {
+      id: topic.id,
+      title: topic.displayTitle,
+      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE
+    },
+    subTopic: {
+      id: subTopic.id,
+      title: subTopic.displayTitle,
+      displayTitle: subTopic.displayTitle || SUB_TOPIC_FALLBACK_TITLE
+    },
+    notes: '',
+    assetCategories,
+    assetCategoryCount: assetCategories.length
   });
 };
 
 export const renderAssetStructureAssetCategory = (req, res) => {
-  const categoryId = Number(req.params.id);
-  const categories = store.get('categories').rows;
-  const category = categories.find((row) => row.id === categoryId);
+  const { topicId, subTopicId } = req.params;
+  const categoryId = Number(req.params.categoryId);
 
-  if (!category) {
-    logger.warn('Asset-Kategorie für UI-Route nicht gefunden', { categoryId });
+  if (!Number.isInteger(categoryId) || categoryId <= 0) {
+    logger.warn('Ungültige Asset-Kategorie-ID angefordert', { categoryId, topicId, subTopicId });
     return res.status(404).send('Asset-Kategorie nicht gefunden');
   }
 
-  const { topicByCategoryId } = buildTopicHierarchy();
-  const topic = topicByCategoryId.get(category.id);
+  const { topicById, subTopicById } = buildAssetStructure();
+  const topic = topicById.get(topicId);
+
+  if (!topic) {
+    logger.warn('Themengebiet für Asset-Kategorie nicht gefunden', { topicId, categoryId });
+    return res.status(404).send('Themengebiet nicht gefunden');
+  }
+
+  const key = getSubTopicKey(topicId, subTopicId);
+  const subTopic = subTopicById.get(key);
+
+  if (!subTopic) {
+    logger.warn('Sub-Themengebiet für Asset-Kategorie nicht gefunden', {
+      topicId,
+      subTopicId,
+      categoryId
+    });
+    return res.status(404).send('Sub-Themengebiet nicht gefunden');
+  }
+
+  const category = subTopic.categories.find((entry) => entry.id === categoryId);
+
+  if (!category) {
+    logger.warn('Asset-Kategorie für UI-Route nicht gefunden', { categoryId, topicId, subTopicId });
+    return res.status(404).send('Asset-Kategorie nicht gefunden');
+  }
 
   const links = store
     .get('group_categories')
-    .rows.filter((row) => row.category_id === categoryId);
+    .rows.filter((row) => Number(row.category_id) === categoryId);
   const groups = store
     .get('groups')
-    .rows.filter((group) => links.some((link) => link.group_id === group.id));
+    .rows.filter((group) => links.some((link) => Number(link.group_id) === group.id));
 
   const viewModel = {
     id: category.id,
     title: category.title || category.name || '',
-    displayTitle:
-      category.title || category.name || 'Unbenannte Asset Kategorie',
+    displayTitle: category.title || category.name || 'Unbenannte Asset Kategorie',
     description: category.description || '',
-    governingCategory: category.governing_category || '',
     owner: category.owner || category.group_owner || '',
     integrity: category.integrity || '',
     availability: category.availability || '',
@@ -245,13 +257,16 @@ export const renderAssetStructureAssetCategory = (req, res) => {
 
   res.render('asset-structure-asset-category', {
     nav: 'assetStructure',
-    topic: topic
-      ? {
-          id: topic.id,
-          title: topic.title,
-          displayTitle: topic.title || FALLBACK_TOPIC_TITLE
-        }
-      : null,
+    topic: {
+      id: topic.id,
+      title: topic.displayTitle,
+      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE
+    },
+    subTopic: {
+      id: subTopic.id,
+      title: subTopic.displayTitle,
+      displayTitle: subTopic.displayTitle || SUB_TOPIC_FALLBACK_TITLE
+    },
     assetCategory: viewModel,
     groups: groupRows,
     groupCount: groupRows.length
@@ -261,24 +276,62 @@ export const renderAssetStructureAssetCategory = (req, res) => {
 export const renderAssetStructureGroup = (req, res) => {
   const categoryId = Number(req.params.categoryId);
   const groupId = Number(req.params.groupId);
+  const { topicId, subTopicId } = req.params;
 
-  const categories = store.get('categories').rows;
-  const category = categories.find((row) => row.id === categoryId);
-
-  if (!category) {
-    logger.warn('Kategorie für Gruppen-UI-Route nicht gefunden', { categoryId, groupId });
+  if (!Number.isInteger(categoryId) || categoryId <= 0) {
+    logger.warn('Ungültige Kategorie-ID für Gruppen-UI-Route', {
+      categoryId,
+      groupId,
+      topicId,
+      subTopicId
+    });
     return res.status(404).send('Kategorie nicht gefunden');
   }
 
-  const { topicByCategoryId } = buildTopicHierarchy();
-  const topic = topicByCategoryId.get(category.id);
+  const { topicById, subTopicById } = buildAssetStructure();
+  const topic = topicById.get(topicId);
 
-  const categoryOptions = categories
-    .map((row) => ({
+  if (!topic) {
+    logger.warn('Themengebiet für Gruppen-UI-Route nicht gefunden', {
+      topicId,
+      categoryId,
+      groupId
+    });
+    return res.status(404).send('Themengebiet nicht gefunden');
+  }
+
+  const key = getSubTopicKey(topicId, subTopicId);
+  const subTopic = subTopicById.get(key);
+
+  if (!subTopic) {
+    logger.warn('Sub-Themengebiet für Gruppen-UI-Route nicht gefunden', {
+      topicId,
+      subTopicId,
+      categoryId,
+      groupId
+    });
+    return res.status(404).send('Sub-Themengebiet nicht gefunden');
+  }
+
+  const category = subTopic.categories.find((entry) => entry.id === categoryId);
+
+  if (!category) {
+    logger.warn('Kategorie für Gruppen-UI-Route nicht gefunden', {
+      topicId,
+      subTopicId,
+      categoryId,
+      groupId
+    });
+    return res.status(404).send('Kategorie nicht gefunden');
+  }
+
+  const categoryOptions = store
+    .get('categories')
+    .rows.map((row) => ({
       id: row.id,
       title: row.title || row.name || `Kategorie ${row.id}`
     }))
-    .sort((a, b) => a.title.localeCompare(b.title));
+    .sort((a, b) => a.title.localeCompare(b.title, 'de', { sensitivity: 'base' }));
 
   const group = store
     .get('groups')
@@ -305,21 +358,34 @@ export const renderAssetStructureGroup = (req, res) => {
 
   res.render('asset-structure-group', {
     nav: 'assetStructure',
+    topic: {
+      id: topic.id,
+      title: topic.displayTitle,
+      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE
+    },
+    subTopic: {
+      id: subTopic.id,
+      title: subTopic.displayTitle,
+      displayTitle: subTopic.displayTitle || SUB_TOPIC_FALLBACK_TITLE
+    },
     category: {
       id: category.id,
       title: category.title || category.name || 'Unbenannte Asset Kategorie'
     },
-    topic: topic
-      ? {
-          id: topic.id,
-          title: topic.title,
-          displayTitle: topic.title || FALLBACK_TOPIC_TITLE
-        }
-      : null,
     group: detail,
     categoryOptions,
     groupAssetTypes,
     availableGroupAssetTypesCount: availableGroupAssetTypes.length,
     groupAssetTypeCount: groupAssetTypes.length
+  });
+};
+
+export const renderAssetTypes = (req, res) => {
+  const summary = getAssetTypeSummary();
+
+  res.render('asset-types', {
+    nav: 'assetStructure',
+    assetTypes: summary.entries,
+    assetTypeField: summary.field
   });
 };

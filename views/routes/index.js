@@ -10,6 +10,7 @@ import {
   renderAssetStructureAssetCategory,
   renderAssetStructureGroup,
   renderAssetStructureSubTopic,
+  renderAssetStructureTopic,
   renderAssetTypes
 } from '../controller/assetStructure.controller.js';
 import { renderImplementation } from '../controller/implementation.controller.js';
@@ -23,15 +24,16 @@ router.get('/assets', redirectAssets);
 router.get('/asset-pool', renderAssetPool);
 router.get('/asset-pool/raw/:id', renderRawTable);
 router.get('/asset-structure', renderAssetStructure);
-router.get('/asset-structure/themengebiete/:topicId', renderAssetStructureSubTopic);
 router.get(
-  '/asset-structure/asset-kategorien/:id',
-  renderAssetStructureAssetCategory
-);
-router.get(
-  '/asset-structure/asset-kategorien/:categoryId/groups/:groupId',
+  '/asset-structure/:topicId/:subTopicId/:categoryId/groups/:groupId',
   renderAssetStructureGroup
 );
+router.get(
+  '/asset-structure/:topicId/:subTopicId/:categoryId',
+  renderAssetStructureAssetCategory
+);
+router.get('/asset-structure/:topicId/:subTopicId', renderAssetStructureSubTopic);
+router.get('/asset-structure/:topicId', renderAssetStructureTopic);
 router.get('/asset-types', renderAssetTypes);
 router.get('/implementation', renderImplementation);
 router.get('/measures', renderMeasures);

@@ -1986,8 +1986,20 @@ function setupDeleteGroupButton(root) {
     try {
       await fetchJson(`${API.groups}/${groupId}`, { method: 'DELETE' });
       const categoryId = Number(root?.dataset?.categoryId || '');
-      if (Number.isInteger(categoryId) && categoryId > 0) {
-        window.location.assign(`/asset-structure/asset-kategorien/${categoryId}`);
+      const topicId = root?.dataset?.topicId || '';
+      const subTopicId = root?.dataset?.subTopicId || '';
+
+      if (
+        Number.isInteger(categoryId) &&
+        categoryId > 0 &&
+        typeof topicId === 'string' &&
+        topicId &&
+        typeof subTopicId === 'string' &&
+        subTopicId
+      ) {
+        window.location.assign(`/asset-structure/${topicId}/${subTopicId}/${categoryId}`);
+      } else if (typeof topicId === 'string' && topicId) {
+        window.location.assign(`/asset-structure/${topicId}`);
       } else {
         window.location.assign('/asset-structure');
       }

@@ -4,6 +4,8 @@
   data-group-id="{{group.id}}"
   data-group-name="{{group.displayTitle}}"
   data-available-group-asset-types="{{availableGroupAssetTypesCount}}"
+  data-topic-id="{{topic.id}}"
+  data-sub-topic-id="{{subTopic.id}}"
   data-category-id="{{category.id}}"
   data-group-asset-type-count="{{groupAssetTypeCount}}"
 >
@@ -20,7 +22,7 @@
         <p class="page-subtitle">Überprüfen und bearbeiten Sie die Gruppendetails, ohne Ihren Arbeitsablauf zu verlassen.</p>
       </div>
       <div class="page-actions">
-        <a class="button button--ghost" href="/asset-structure/asset-kategorien/{{category.id}}">Zur Asset Kategorie zurück</a>
+        <a class="button button--ghost" href="/asset-structure/{{topic.id}}/{{subTopic.id}}/{{category.id}}">Zur Asset Kategorie zurück</a>
         <button
           class="button button--danger"
           type="button"
@@ -41,11 +43,11 @@
     <nav class="breadcrumb" aria-label="Breadcrumb">
       <a href="/asset-structure">Asset-Struktur</a>
       <span aria-hidden="true">›</span>
-      {{#if topic}}
-        <a href="/asset-structure/themengebiete/{{topic.id}}">{{topic.displayTitle}}</a>
-        <span aria-hidden="true">›</span>
-      {{/if}}
-      <a href="/asset-structure/asset-kategorien/{{category.id}}">{{category.title}}</a>
+      <a href="/asset-structure/{{topic.id}}">{{topic.displayTitle}}</a>
+      <span aria-hidden="true">›</span>
+      <a href="/asset-structure/{{topic.id}}/{{subTopic.id}}">{{subTopic.displayTitle}}</a>
+      <span aria-hidden="true">›</span>
+      <a href="/asset-structure/{{topic.id}}/{{subTopic.id}}/{{category.id}}">{{category.title}}</a>
       <span aria-hidden="true">›</span>
       <span aria-current="page">{{group.displayTitle}}</span>
     </nav>
