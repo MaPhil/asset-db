@@ -215,6 +215,42 @@ main {
   align-items: center;
 }
 
+.measure-meta {
+  margin: 1rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.measure-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  align-items: flex-end;
+  margin: 1.75rem 0 1.25rem;
+}
+
+.measure-filter select {
+  min-width: 220px;
+}
+
+.measure-filter-bar > .button {
+  align-self: flex-end;
+  margin-bottom: 0.15rem;
+}
+
+.measure-loading {
+  margin: 0 0 1rem;
+  color: var(--color-muted);
+}
+
+.measure-header-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  list-style: disc;
+}
+
 .field-manager__description {
   margin: 0 0 1rem;
 }
@@ -800,6 +836,18 @@ main {
 
 .table tbody tr:last-child td {
   border-bottom: none;
+}
+
+.measure-table-container {
+  margin-top: 1.25rem;
+}
+
+.measure-table__cell {
+  vertical-align: top;
+}
+
+.measure-table__cell--wrap {
+  white-space: normal;
 }
 
 .editable-cell {

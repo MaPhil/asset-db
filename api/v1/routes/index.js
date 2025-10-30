@@ -7,6 +7,7 @@ import groupsRouter from './groups.routes.js';
 import rawTablesRouter from './rawTables.routes.js';
 import assetPoolRouter from './assetPool.routes.js';
 import assetTypesRouter from './assetTypes.routes.js';
+import measuresRouter from './measures.routes.js';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use('/groups', groupsRouter);
 router.use('/raw-tables', rawTablesRouter);
 router.use('/asset-pool', assetPoolRouter);
 router.use('/asset-types', assetTypesRouter);
+router.use('/measures', measuresRouter);
 
 export default router;
