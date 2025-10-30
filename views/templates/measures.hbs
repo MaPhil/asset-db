@@ -1,7 +1,118 @@
 <div class="measures-app" data-app="measures">
   <section class="measure-content" data-region="content">
-    {{#> card title="Maßnahmen"}}
-      <p>Nicht umgesetzt.</p>
-    {{/card}}
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Maßnahmen</h1>
+        <p class="page-subtitle">
+          Importieren Sie Maßnahmen aus einer Excel-Datei und filtern Sie die aktuelle Version nach Themengebiet,
+          Sub-Themengebiet und Asset-Kategorie.
+        </p>
+      </div>
+      <div class="page-actions">
+        <button type="button" class="button button--primary" data-measure-upload-trigger>
+          Maßnahmen importieren
+        </button>
+      </div>
+    </div>
+
+    <p class="measure-meta" data-measure-meta>Es wurde noch keine Maßnahmen-Version importiert.</p>
+
+    <div class="measure-filter-bar" data-measure-filters>
+      <div class="form-field measure-filter">
+        <label for="measure-filter-topic">Themengebiet</label>
+        <select id="measure-filter-topic" data-measure-filter="topic">
+          <option value="">Alle</option>
+        </select>
+      </div>
+      <div class="form-field measure-filter">
+        <label for="measure-filter-sub-topic">Sub-Themengebiet</label>
+        <select id="measure-filter-sub-topic" data-measure-filter="subTopic">
+          <option value="">Alle</option>
+        </select>
+      </div>
+      <div class="form-field measure-filter">
+        <label for="measure-filter-category">Asset-Kategorie</label>
+        <select id="measure-filter-category" data-measure-filter="category">
+          <option value="">Alle</option>
+        </select>
+      </div>
+      <button type="button" class="button button--ghost" data-measure-reset>Filter zurücksetzen</button>
+    </div>
+
+    <p class="measure-loading" data-measure-loading hidden>Maßnahmen werden geladen …</p>
+    <p class="error-text" data-measure-error hidden></p>
+
+    <div class="card card--empty" data-measure-empty hidden>
+      <p>Es sind keine Maßnahmen vorhanden, die den aktuellen Filtern entsprechen.</p>
+    </div>
+
+    <div class="table-container measure-table-container" data-measure-table-container hidden>
+      <div class="table-wrapper">
+        <div class="table-scroller">
+          <table class="table measure-table">
+            <thead>
+              <tr>
+                <th>Themengebiet</th>
+                <th>Sub-Themengebiet</th>
+                <th>Asset-Kategorie</th>
+                <th>ID</th>
+                <th>Vertraulichkeit niedrig</th>
+                <th>Vertraulichkeit mittel</th>
+                <th>Vertraulichkeit hoch</th>
+                <th>Vertraulichkeit sehr hoch</th>
+                <th>Integrität niedrig</th>
+                <th>Integrität mittel</th>
+                <th>Integrität hoch</th>
+                <th>Integrität sehr hoch</th>
+                <th>Verfügbarkeit niedrig</th>
+                <th>Verfügbarkeit mittel</th>
+                <th>Verfügbarkeit hoch</th>
+                <th>Verfügbarkeit sehr hoch</th>
+                <th>Anforderungen</th>
+                <th>Erläuterung</th>
+                <th>Dokumentation</th>
+                <th>Standard Antwort</th>
+              </tr>
+            </thead>
+            <tbody data-measure-table-body></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </section>
+
+  <div class="modal" data-measure-upload-modal hidden aria-hidden="true">
+    <div class="modal-dialog">
+      <header class="modal-header">
+        <h2>Maßnahmen importieren</h2>
+        <button type="button" class="icon-button" data-close-measure-upload aria-label="Import schließen">
+          &times;
+        </button>
+      </header>
+      <div class="modal-body">
+        <form data-measure-upload-form>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="measure-upload-file">Excel-Datei (.xlsx)</label>
+              <input id="measure-upload-file" name="file" type="file" accept=".xlsx" required />
+              <p class="helper-text">
+                Die Datei muss alle folgenden Spalten enthalten. Mehrere Themen, Sub-Themen oder Asset-Kategorien können durch
+                ein Semikolon (;) getrennt werden.
+              </p>
+              <ul class="measure-header-list">
+                {{#each expectedHeaders}}
+                  <li>{{this}}</li>
+                {{/each}}
+              </ul>
+            </div>
+            <p class="error-text" data-measure-upload-error hidden></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="button button--ghost" data-close-measure-upload>Abbrechen</button>
+            <button type="submit" class="button button--primary" data-measure-upload-submit>Import starten</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>

@@ -14,7 +14,9 @@ const API = {
   groupAssetType: (groupId, assetTypeId) =>
     `/api/v1/groups/${groupId}/asset-types/${assetTypeId}`,
   groupAssetTypesAvailable: (groupId) =>
-    `/api/v1/groups/${groupId}/asset-types/available`
+    `/api/v1/groups/${groupId}/asset-types/available`,
+  measures: '/api/v1/measures',
+  measuresUpload: '/api/v1/measures/upload'
 };
 
 const PAGE_SIZE = 25;
@@ -64,7 +66,20 @@ const state = {
     trigger: null,
     options: [],
     error: null
+  },
+  measures: {
+    isUploadOpen: false
   }
+};
+
+const measuresState = {
+  entries: [],
+  filters: { topic: '', subTopic: '', category: '' },
+  options: { topics: [], subTopics: [], categories: [] },
+  version: null,
+  isLoading: false,
+  error: null,
+  isUploading: false
 };
 
 let structureModalOpenCount = 0;
@@ -80,6 +95,7 @@ function unlockBodyScrollIfIdle() {
     state.assetTypeFieldModal.isOpen ||
     state.assetTypeDecisionModal.isOpen ||
     state.groupAssetTypeModal.isOpen ||
+    state.measures.isUploadOpen ||
     structureModalOpenCount > 0;
   if (!anyModalOpen) {
     document.body.style.overflow = '';
@@ -2624,6 +2640,439 @@ function setupGroupAssetTypeModal(root) {
   });
 }
 
+const measureCellReaders = [
+  (entry) => joinMeasureList(entry?.topics),
+  (entry) => joinMeasureList(entry?.subTopics),
+  (entry) => joinMeasureList(entry?.categories),
+  (entry) => safeMeasureValue(entry?.identifier),
+  (entry) => safeMeasureValue(entry?.confidentiality?.low),
+  (entry) => safeMeasureValue(entry?.confidentiality?.medium),
+  (entry) => safeMeasureValue(entry?.confidentiality?.high),
+  (entry) => safeMeasureValue(entry?.confidentiality?.veryHigh),
+  (entry) => safeMeasureValue(entry?.integrity?.low),
+  (entry) => safeMeasureValue(entry?.integrity?.medium),
+  (entry) => safeMeasureValue(entry?.integrity?.high),
+  (entry) => safeMeasureValue(entry?.integrity?.veryHigh),
+  (entry) => safeMeasureValue(entry?.availability?.low),
+  (entry) => safeMeasureValue(entry?.availability?.medium),
+  (entry) => safeMeasureValue(entry?.availability?.high),
+  (entry) => safeMeasureValue(entry?.availability?.veryHigh),
+  (entry) => safeMeasureValue(entry?.requirements),
+  (entry) => safeMeasureValue(entry?.explanation),
+  (entry) => safeMeasureValue(entry?.documentation),
+  (entry) => safeMeasureValue(entry?.standardAnswer)
+];
+
+function joinMeasureList(values) {
+  if (!Array.isArray(values)) {
+    return '';
+  }
+  return values
+    .map((value) => safeMeasureValue(value))
+    .filter((value) => value.length > 0)
+    .join(', ');
+}
+
+function safeMeasureValue(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  return String(value).trim();
+}
+
+function createMeasureRow(entry) {
+  const row = document.createElement('tr');
+  measureCellReaders.forEach((reader, index) => {
+    const cell = document.createElement('td');
+    cell.className = 'measure-table__cell';
+    if (index <= 2 || index >= 16) {
+      cell.classList.add('measure-table__cell--wrap');
+    }
+    cell.textContent = safeMeasureValue(reader(entry));
+    row.appendChild(cell);
+  });
+  return row;
+}
+
+function syncMeasureSelect(selectEl, options, selectedValue) {
+  if (!selectEl) {
+    return;
+  }
+
+  const value = selectedValue != null ? String(selectedValue) : '';
+  const entries = Array.isArray(options) ? options : [];
+  const fragment = document.createDocumentFragment();
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.textContent = 'Alle';
+  fragment.appendChild(defaultOption);
+
+  entries.forEach((option) => {
+    const opt = document.createElement('option');
+    opt.value = option?.id != null ? String(option.id) : '';
+    opt.textContent = option?.title || '';
+    fragment.appendChild(opt);
+  });
+
+  selectEl.innerHTML = '';
+  selectEl.appendChild(fragment);
+  selectEl.value = value;
+  if (selectEl.value !== value) {
+    selectEl.value = '';
+  }
+  selectEl.disabled = measuresState.isLoading;
+}
+
+function renderMeasuresFilters(root) {
+  const topicSelect = select(root, '[data-measure-filter="topic"]');
+  const subTopicSelect = select(root, '[data-measure-filter="subTopic"]');
+  const categorySelect = select(root, '[data-measure-filter="category"]');
+  syncMeasureSelect(topicSelect, measuresState.options.topics, measuresState.filters.topic);
+  syncMeasureSelect(subTopicSelect, measuresState.options.subTopics, measuresState.filters.subTopic);
+  syncMeasureSelect(categorySelect, measuresState.options.categories, measuresState.filters.category);
+
+  const resetButton = select(root, '[data-measure-reset]');
+  if (resetButton) {
+    const hasFilters =
+      Boolean(measuresState.filters.topic) ||
+      Boolean(measuresState.filters.subTopic) ||
+      Boolean(measuresState.filters.category);
+    resetButton.disabled = measuresState.isLoading || !hasFilters;
+  }
+}
+
+function formatMeasureDateTime(value) {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const datePart = date.toLocaleDateString('de-DE');
+  const timePart = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  return `${datePart} ${timePart}`;
+}
+
+function renderMeasuresMeta(root) {
+  const metaEl = select(root, '[data-measure-meta]');
+  if (!metaEl) {
+    return;
+  }
+
+  if (measuresState.isLoading) {
+    metaEl.textContent = 'Maßnahmen werden geladen …';
+    return;
+  }
+
+  if (measuresState.error) {
+    metaEl.textContent = measuresState.error;
+    return;
+  }
+
+  const version = measuresState.version;
+  if (!version || !version.versionDate) {
+    metaEl.textContent = 'Es wurde noch keine Maßnahmen-Version importiert.';
+    return;
+  }
+
+  const parts = [];
+  const formattedDate = formatMeasureDateTime(version.versionDate);
+  if (formattedDate) {
+    parts.push(`Version vom ${formattedDate}`);
+  }
+
+  let measureCount = Number(version.measureCount);
+  if (!Number.isFinite(measureCount)) {
+    measureCount = Array.isArray(measuresState.entries) ? measuresState.entries.length : 0;
+  }
+  if (Number.isFinite(measureCount)) {
+    parts.push(`${measureCount} Maßnahme${measureCount === 1 ? '' : 'n'}`);
+  }
+
+  const changeCount = Number(version.changeCount);
+  if (Number.isFinite(changeCount)) {
+    parts.push(`Änderungen: ${changeCount}`);
+  }
+
+  if (version.sourceFilename) {
+    parts.push(`Datei: ${version.sourceFilename}`);
+  }
+
+  metaEl.textContent = parts.join(' • ');
+}
+
+function renderMeasuresTable(root) {
+  const container = select(root, '[data-measure-table-container]');
+  const tbody = select(root, '[data-measure-table-body]');
+  const loadingEl = select(root, '[data-measure-loading]');
+  const errorEl = select(root, '[data-measure-error]');
+  const emptyEl = select(root, '[data-measure-empty]');
+
+  if (loadingEl) {
+    loadingEl.hidden = !measuresState.isLoading;
+  }
+
+  if (errorEl) {
+    if (measuresState.error) {
+      errorEl.hidden = false;
+      errorEl.textContent = measuresState.error;
+    } else {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+  }
+
+  if (measuresState.isLoading) {
+    if (container) {
+      container.hidden = true;
+    }
+    if (emptyEl) {
+      emptyEl.hidden = true;
+    }
+    if (tbody) {
+      tbody.innerHTML = '';
+    }
+    return;
+  }
+
+  if (measuresState.error) {
+    if (container) {
+      container.hidden = true;
+    }
+    if (emptyEl) {
+      emptyEl.hidden = true;
+    }
+    if (tbody) {
+      tbody.innerHTML = '';
+    }
+    return;
+  }
+
+  const entries = Array.isArray(measuresState.entries) ? measuresState.entries : [];
+
+  if (!entries.length) {
+    if (container) {
+      container.hidden = true;
+    }
+    if (emptyEl) {
+      emptyEl.hidden = false;
+    }
+    if (tbody) {
+      tbody.innerHTML = '';
+    }
+    return;
+  }
+
+  if (container) {
+    container.hidden = false;
+  }
+  if (emptyEl) {
+    emptyEl.hidden = true;
+  }
+  if (tbody) {
+    tbody.innerHTML = '';
+    entries.forEach((entry) => {
+      tbody.appendChild(createMeasureRow(entry));
+    });
+  }
+}
+
+function renderMeasuresView(root) {
+  renderMeasuresMeta(root);
+  renderMeasuresFilters(root);
+  renderMeasuresTable(root);
+}
+
+async function refreshMeasures(root) {
+  const previousVersion = measuresState.version;
+  measuresState.isLoading = true;
+  measuresState.error = null;
+  renderMeasuresView(root);
+
+  const params = new URLSearchParams();
+  if (measuresState.filters.topic) {
+    params.set('topic', measuresState.filters.topic);
+  }
+  if (measuresState.filters.subTopic) {
+    params.set('subTopic', measuresState.filters.subTopic);
+  }
+  if (measuresState.filters.category) {
+    params.set('category', measuresState.filters.category);
+  }
+
+  const query = params.toString();
+  const url = query ? `${API.measures}?${query}` : API.measures;
+
+  try {
+    const payload = await fetchJson(url);
+    measuresState.entries = Array.isArray(payload?.measures) ? payload.measures : [];
+    measuresState.options = {
+      topics: Array.isArray(payload?.filters?.topics) ? payload.filters.topics : [],
+      subTopics: Array.isArray(payload?.filters?.subTopics) ? payload.filters.subTopics : [],
+      categories: Array.isArray(payload?.filters?.categories) ? payload.filters.categories : []
+    };
+    measuresState.version = payload?.version || null;
+  } catch (error) {
+    measuresState.entries = [];
+    measuresState.options = { topics: [], subTopics: [], categories: [] };
+    measuresState.version = previousVersion;
+    measuresState.error = error?.payload?.error || error.message;
+  } finally {
+    measuresState.isLoading = false;
+    renderMeasuresView(root);
+  }
+}
+
+function setupMeasureFilters(root) {
+  selectAll(root, '[data-measure-filter]').forEach((selectEl) => {
+    selectEl.addEventListener('change', () => {
+      const key = selectEl.dataset.measureFilter;
+      if (!key) {
+        return;
+      }
+      measuresState.filters[key] = selectEl.value;
+      refreshMeasures(root).catch((error) => {
+        measuresState.error = error?.message || 'Maßnahmen konnten nicht geladen werden.';
+        renderMeasuresView(root);
+      });
+    });
+  });
+
+  const resetButton = select(root, '[data-measure-reset]');
+  if (resetButton) {
+    resetButton.addEventListener('click', () => {
+      measuresState.filters = { topic: '', subTopic: '', category: '' };
+      refreshMeasures(root).catch((error) => {
+        measuresState.error = error?.message || 'Maßnahmen konnten nicht geladen werden.';
+        renderMeasuresView(root);
+      });
+    });
+  }
+}
+
+function setupMeasureUpload(root) {
+  const modal = select(root, '[data-measure-upload-modal]');
+  const form = modal ? select(modal, '[data-measure-upload-form]') : null;
+  const trigger = select(root, '[data-measure-upload-trigger]');
+  if (!modal || !form || !trigger) {
+    return;
+  }
+
+  const fileInput = select(form, '#measure-upload-file');
+  const errorEl = select(form, '[data-measure-upload-error]');
+  const submitButton = select(form, '[data-measure-upload-submit]');
+
+  function resetForm() {
+    form.reset();
+    delete form.dataset.loading;
+    submitButton?.removeAttribute('disabled');
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+    measuresState.isUploading = false;
+  }
+
+  function open() {
+    if (state.measures.isUploadOpen) {
+      return;
+    }
+    state.measures.isUploadOpen = true;
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    lockBodyScroll();
+    fileInput?.focus();
+  }
+
+  function close() {
+    if (!state.measures.isUploadOpen) {
+      return;
+    }
+    state.measures.isUploadOpen = false;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    resetForm();
+    unlockBodyScrollIfIdle();
+  }
+
+  trigger.addEventListener('click', () => open());
+  selectAll(root, '[data-close-measure-upload]').forEach((button) => {
+    button.addEventListener('click', () => close());
+  });
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      close();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.measures.isUploadOpen) {
+      close();
+    }
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (measuresState.isUploading) {
+      return;
+    }
+
+    if (!fileInput?.files?.length) {
+      if (errorEl) {
+        errorEl.hidden = false;
+        errorEl.textContent = 'Bitte wählen Sie eine Datei aus.';
+      }
+      return;
+    }
+
+    measuresState.isUploading = true;
+    submitButton?.setAttribute('disabled', 'disabled');
+    form.dataset.loading = 'true';
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+
+    const formData = new FormData(form);
+    try {
+      await fetchJson(API.measuresUpload, { method: 'POST', body: formData });
+      close();
+      showToast('Maßnahmen wurden erfolgreich importiert.');
+      await refreshMeasures(root);
+    } catch (error) {
+      const message = error?.payload?.error || error.message;
+      if (errorEl) {
+        errorEl.hidden = false;
+        errorEl.textContent = message;
+      }
+    } finally {
+      measuresState.isUploading = false;
+      if (state.measures.isUploadOpen) {
+        submitButton?.removeAttribute('disabled');
+        delete form.dataset.loading;
+      }
+    }
+  });
+}
+
+function initMeasuresApp() {
+  const root = document.querySelector('[data-app="measures"]');
+  if (!root) {
+    return;
+  }
+
+  setupMeasureFilters(root);
+  setupMeasureUpload(root);
+  renderMeasuresView(root);
+  refreshMeasures(root).catch((error) => {
+    measuresState.error = error?.message || 'Maßnahmen konnten nicht geladen werden.';
+    renderMeasuresView(root);
+  });
+}
+
 function initAssetStructureApp() {
   const root = document.querySelector('[data-app="asset-structure"]');
   if (!root) return;
@@ -2661,4 +3110,5 @@ async function initAssetPoolApp() {
 document.addEventListener('DOMContentLoaded', () => {
   initAssetPoolApp();
   initAssetStructureApp();
+  initMeasuresApp();
 });
