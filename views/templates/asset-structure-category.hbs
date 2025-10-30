@@ -2,7 +2,6 @@
   class="asset-structure-app"
   data-app="asset-structure"
   data-category-id="{{category.id}}"
-  data-category-group-count="{{groupCount}}"
 >
   <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
@@ -18,20 +17,6 @@
       </div>
       <div class="page-actions">
         <a class="button button--ghost" href="/asset-structure">Zur Übersicht</a>
-        <button
-          class="button button--danger"
-          type="button"
-          data-delete-category
-          data-confirm="Diese Kategorie löschen? Dieser Vorgang kann nicht rückgängig gemacht werden."
-          data-disabled-title="Kategorie kann nicht gelöscht werden, solange Gruppen zugeordnet sind."
-          {{#if groupCount}}
-            disabled
-            aria-disabled="true"
-            title="Kategorie kann nicht gelöscht werden, solange Gruppen zugeordnet sind."
-          {{/if}}
-        >
-          Kategorie löschen
-        </button>
       </div>
     </header>
 

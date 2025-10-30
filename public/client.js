@@ -139,34 +139,6 @@ function setGroupAssetTypeCount(root, count) {
   syncDeleteGroupButtonState(root);
 }
 
-function getCategoryGroupCount(root) {
-  if (!root?.dataset) {
-    return 0;
-  }
-  return readNonNegativeInteger(root.dataset.categoryGroupCount);
-}
-
-function syncDeleteCategoryButtonState(root) {
-  const button = select(root, '[data-delete-category]');
-  if (!button) {
-    return;
-  }
-
-  const shouldDisable = getCategoryGroupCount(root) > 0;
-  button.disabled = shouldDisable;
-  if (shouldDisable) {
-    button.setAttribute('aria-disabled', 'true');
-    if (button.dataset.disabledTitle) {
-      button.title = button.dataset.disabledTitle;
-    }
-  } else {
-    button.removeAttribute('aria-disabled');
-    if (button.dataset.disabledTitle && button.title === button.dataset.disabledTitle) {
-      button.removeAttribute('title');
-    }
-  }
-}
-
 function escapeHtml(value) {
   if (value === undefined || value === null) {
     return '';
@@ -1981,50 +1953,6 @@ function setupCreateGroupForm(root) {
   });
 }
 
-function setupDeleteCategoryButton(root) {
-  const button = select(root, '[data-delete-category]');
-  if (!button) {
-    return;
-  }
-
-  const categoryId = Number(root?.dataset?.categoryId || '');
-  if (!Number.isInteger(categoryId) || categoryId <= 0) {
-    button.disabled = true;
-    button.setAttribute('aria-disabled', 'true');
-    return;
-  }
-
-  syncDeleteCategoryButtonState(root);
-
-  button.addEventListener('click', async () => {
-    if (button.disabled) {
-      return;
-    }
-
-    const confirmMessage =
-      button.dataset.confirm ||
-      'Diese Kategorie löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.';
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
-
-    button.disabled = true;
-    button.dataset.loading = 'true';
-
-    try {
-      await fetchJson(`${API.categories}/${categoryId}`, { method: 'DELETE' });
-      window.location.assign('/asset-structure');
-    } catch (error) {
-      const message =
-        error?.payload?.error || error?.message || 'Kategorie konnte nicht gelöscht werden.';
-      showToast(message);
-      syncDeleteCategoryButtonState(root);
-    } finally {
-      delete button.dataset.loading;
-    }
-  });
-}
-
 function setupDeleteGroupButton(root) {
   const button = select(root, '[data-delete-group]');
   if (!button) {
@@ -2690,7 +2618,6 @@ function initAssetStructureApp() {
   setupStructureModals(root);
   setupCreateCategoryForm(root);
   setupCreateGroupForm(root);
-  setupDeleteCategoryButton(root);
   setupDeleteGroupButton(root);
   setupAssetTypeDecisionModal(root);
   setupGroupAssetTypeList(root);
