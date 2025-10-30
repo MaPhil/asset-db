@@ -8,6 +8,4 @@ router.get('/', asyncHandler(CategoriesController.list));
 router.post('/', asyncHandler(CategoriesController.create));
 router.get('/:id', validateId(), asyncHandler(CategoriesController.get));
 router.put('/:id', validateId(), asyncHandler(CategoriesController.update));
-router.delete('/:id', validateId(), asyncHandler(CategoriesController.destroy));
-
 export default router;
