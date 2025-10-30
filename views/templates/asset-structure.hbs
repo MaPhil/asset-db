@@ -24,16 +24,18 @@
                     <th scope="col">Themengebiet</th>
                     <th scope="col">Sub-Themengebiete</th>
                     <th scope="col">Asset Kategorien</th>
+                    <th scope="col">Gruppen</th>
                     <th scope="col">Verantwortlich</th>
                   </tr>
                 </thead>
                 <tbody>
                   {{#each topics}}
                     <tr>
-                      <td><a class="table-link" href="/asset-structure/themengebiete/{{id}}">{{title}}</a></td>
-                      <td><a class="table-link" href="/asset-structure/themengebiete/{{id}}">{{subTopicCount}}</a></td>
-                      <td><a class="table-link" href="/asset-structure/themengebiete/{{id}}">{{assetCategoryCount}}</a></td>
-                      <td><a class="table-link" href="/asset-structure/themengebiete/{{id}}">{{owner}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/{{id}}">{{title}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/{{id}}">{{subTopicCount}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/{{id}}">{{assetCategoryCount}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/{{id}}">{{groupCount}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/{{id}}">{{owner}}</a></td>
                     </tr>
                   {{/each}}
                 </tbody>
