@@ -1,0 +1,191 @@
+<div
+  class="asset-structure-app"
+  data-app="asset-structure"
+  data-category-id="{{assetCategory.id}}"
+>
+  <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
+    <div class="sidebar-section">
+      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Themengebiete</a>
+      <a href="/asset-types" class="sidebar-link">Asset-Typen</a>
+    </div>
+  </aside>
+  <section class="asset-structure-content">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">{{#if assetCategory.displayTitle}}{{assetCategory.displayTitle}}{{else}}Unbenannte Asset Kategorie{{/if}}</h1>
+        <p class="page-subtitle">Aktualisieren Sie die Asset Kategorie und verwalten Sie die zugehörigen Gruppen.</p>
+      </div>
+      <div class="page-actions">
+        {{#if topic}}
+          <a class="button button--ghost" href="/asset-structure/themengebiete/{{topic.id}}">Zum Themengebiet zurück</a>
+        {{else}}
+          <a class="button button--ghost" href="/asset-structure">Zur Themengebietsübersicht</a>
+        {{/if}}
+      </div>
+    </header>
+
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/asset-structure">Asset-Struktur</a>
+      <span aria-hidden="true">›</span>
+      {{#if topic}}
+        <a href="/asset-structure/themengebiete/{{topic.id}}">{{topic.displayTitle}}</a>
+        <span aria-hidden="true">›</span>
+      {{/if}}
+      <span aria-current="page">{{#if assetCategory.displayTitle}}{{assetCategory.displayTitle}}{{else}}Unbenannte Asset Kategorie{{/if}}</span>
+    </nav>
+
+    <div class="structure-body">
+      <section class="card structure-card" aria-labelledby="asset-category-details-title">
+        <div class="section-header">
+          <h2 class="section-title" id="asset-category-details-title">Asset Kategorie Informationen</h2>
+          <button class="button" type="button">Änderungen speichern</button>
+        </div>
+        <form class="form-grid form-grid--two">
+          <div class="form-field">
+            <label for="asset-category-name">Titel</label>
+            <input
+              id="asset-category-name"
+              type="text"
+              name="title"
+              value="{{assetCategory.title}}"
+              placeholder="Titel der Asset Kategorie eingeben"
+            />
+          </div>
+          <div class="form-field">
+            <label for="asset-category-governing">Übergeordnetes Themengebiet</label>
+            <input
+              id="asset-category-governing"
+              type="text"
+              name="governing_category"
+              value="{{assetCategory.governingCategory}}"
+              placeholder="z. B. Operativ"
+            />
+          </div>
+          <div class="form-field">
+            <label for="asset-category-owner">Verantwortlich</label>
+            <input
+              id="asset-category-owner"
+              type="text"
+              name="owner"
+              value="{{assetCategory.owner}}"
+              placeholder="z. B. Asset-Governance"
+            />
+          </div>
+          <div class="form-field">
+            <label for="asset-category-integrity">Integrität</label>
+            <select id="asset-category-integrity" name="integrity">
+              <option value="" {{#unless assetCategory.integrity}}selected{{/unless}}>Bewertung auswählen</option>
+              <option {{#if (eq assetCategory.integrity 'Low')}}selected{{/if}}>Niedrig</option>
+              <option {{#if (eq assetCategory.integrity 'Moderate')}}selected{{/if}}>Mittel</option>
+              <option {{#if (eq assetCategory.integrity 'High')}}selected{{/if}}>Hoch</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="asset-category-availability">Verfügbarkeit</label>
+            <select id="asset-category-availability" name="availability">
+              <option value="" {{#unless assetCategory.availability}}selected{{/unless}}>Bewertung auswählen</option>
+              <option {{#if (eq assetCategory.availability 'Low')}}selected{{/if}}>Niedrig</option>
+              <option {{#if (eq assetCategory.availability 'Moderate')}}selected{{/if}}>Mittel</option>
+              <option {{#if (eq assetCategory.availability 'High')}}selected{{/if}}>Hoch</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="asset-category-confidentiality">Vertraulichkeit</label>
+            <select id="asset-category-confidentiality" name="confidentiality">
+              <option value="" {{#unless assetCategory.confidentiality}}selected{{/unless}}>Bewertung auswählen</option>
+              <option {{#if (eq assetCategory.confidentiality 'Low')}}selected{{/if}}>Niedrig</option>
+              <option {{#if (eq assetCategory.confidentiality 'Moderate')}}selected{{/if}}>Mittel</option>
+              <option {{#if (eq assetCategory.confidentiality 'High')}}selected{{/if}}>Hoch</option>
+            </select>
+          </div>
+          <div class="form-field form-field--full">
+            <label for="asset-category-description">Beschreibung</label>
+            <textarea
+              id="asset-category-description"
+              name="description"
+              rows="4"
+              placeholder="Beschreiben Sie, wie diese Asset Kategorie verwendet wird"
+            >{{assetCategory.description}}</textarea>
+          </div>
+        </form>
+      </section>
+
+      <section class="card structure-card" aria-labelledby="asset-category-groups-title">
+        <div class="section-header">
+          <h2 class="section-title" id="asset-category-groups-title">Gruppen</h2>
+          <button class="button" type="button" data-open-structure-modal="group">Gruppe hinzufügen</button>
+        </div>
+        {{#if groups.length}}
+          <div class="table-wrapper">
+            <table class="table table--interactive" aria-describedby="asset-category-groups-title">
+              <thead>
+                <tr>
+                  <th scope="col">Gruppe</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Asset-Typ</th>
+                  <th scope="col">Zuletzt aktualisiert</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each groups}}
+                  <tr>
+                    <td>
+                      <a class="table-link" href="/asset-structure/asset-kategorien/{{../assetCategory.id}}/groups/{{id}}">{{title}}</a>
+                    </td>
+                    <td>
+                      <a class="table-link" href="/asset-structure/asset-kategorien/{{../assetCategory.id}}/groups/{{id}}">{{status}}</a>
+                    </td>
+                    <td>
+                      <a class="table-link" href="/asset-structure/asset-kategorien/{{../assetCategory.id}}/groups/{{id}}">{{assetType}}</a>
+                    </td>
+                    <td>
+                      <a class="table-link" href="/asset-structure/asset-kategorien/{{../assetCategory.id}}/groups/{{id}}">{{updatedAt}}</a>
+                    </td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        {{else}}
+          <p class="empty-state">Es sind noch keine Gruppen mit dieser Asset Kategorie verknüpft.</p>
+        {{/if}}
+      </section>
+    </div>
+  </section>
+</div>
+
+<div class="modal" data-structure-modal="group" hidden aria-hidden="true">
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="group-modal-title">
+    <header class="modal-header">
+      <h2 id="group-modal-title">Gruppe hinzufügen</h2>
+      <button class="icon-button" type="button" aria-label="Gruppenformular schließen" data-close-structure-modal>&times;</button>
+    </header>
+    <div class="modal-body">
+      <form class="form-grid">
+        <div class="form-field">
+          <label for="group-title">Titel</label>
+          <input
+            id="group-title"
+            type="text"
+            name="title"
+            placeholder="z. B. Kundenorientierte Anwendungen"
+            data-auto-focus
+          />
+        </div>
+        <div class="form-field">
+          <label for="group-description">Beschreibung</label>
+          <textarea
+            id="group-description"
+            name="description"
+            rows="4"
+            placeholder="Geben Sie eine kurze Zusammenfassung dieser Gruppe an"
+          ></textarea>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button class="button button--ghost" type="button" data-close-structure-modal>Abbrechen</button>
+        <button class="button" type="button" data-save-group>Gruppe speichern</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -9,7 +9,7 @@
 >
   <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
-      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Kategorien</a>
+      <a href="/asset-structure" class="sidebar-link sidebar-link--active">Themengebiete</a>
       <a href="/asset-types" class="sidebar-link">Asset-Typen</a>
     </div>
   </aside>
@@ -20,7 +20,7 @@
         <p class="page-subtitle">Überprüfen und bearbeiten Sie die Gruppendetails, ohne Ihren Arbeitsablauf zu verlassen.</p>
       </div>
       <div class="page-actions">
-        <a class="button button--ghost" href="/asset-structure/categories/{{category.id}}">Zur Kategorie zurück</a>
+        <a class="button button--ghost" href="/asset-structure/asset-kategorien/{{category.id}}">Zur Asset Kategorie zurück</a>
         <button
           class="button button--danger"
           type="button"
@@ -41,7 +41,11 @@
     <nav class="breadcrumb" aria-label="Breadcrumb">
       <a href="/asset-structure">Asset-Struktur</a>
       <span aria-hidden="true">›</span>
-      <a href="/asset-structure/categories/{{category.id}}">{{category.title}}</a>
+      {{#if topic}}
+        <a href="/asset-structure/themengebiete/{{topic.id}}">{{topic.displayTitle}}</a>
+        <span aria-hidden="true">›</span>
+      {{/if}}
+      <a href="/asset-structure/asset-kategorien/{{category.id}}">{{category.title}}</a>
       <span aria-hidden="true">›</span>
       <span aria-current="page">{{group.displayTitle}}</span>
     </nav>
@@ -64,14 +68,14 @@
             />
           </div>
           <div class="form-field">
-            <label for="group-parent-category">Übergeordnete Kategorie</label>
+            <label for="group-parent-category">Übergeordnete Asset Kategorie</label>
             <select id="group-parent-category" name="category_id">
               {{#if categoryOptions.length}}
                 {{#each categoryOptions}}
                   <option value="{{id}}" {{#if (eq ../category.id id)}}selected{{/if}}>{{title}}</option>
                 {{/each}}
               {{else}}
-                <option value="" disabled>Keine Kategorien verfügbar</option>
+                <option value="" disabled>Keine Asset Kategorien verfügbar</option>
               {{/if}}
             </select>
           </div>
