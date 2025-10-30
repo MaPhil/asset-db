@@ -11,9 +11,6 @@
         <h1 class="page-title">Asset-Struktur</h1>
         <p class="page-subtitle">Verwalten Sie die Kategorien und Asset-Typen, die Ihr Asset-Inventar strukturieren.</p>
       </div>
-      <div class="page-actions">
-        <button class="button" type="button" data-open-structure-modal="category">Kategorie hinzufügen</button>
-      </div>
     </header>
     <div class="structure-body">
       <section class="structure-section" aria-labelledby="categories-title">
@@ -56,58 +53,3 @@
   </section>
 </div>
 
-<div class="modal" data-structure-modal="category" hidden aria-hidden="true">
-  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="category-modal-title">
-    <header class="modal-header">
-      <h2 id="category-modal-title">Kategorie hinzufügen</h2>
-      <button class="icon-button" type="button" aria-label="Kategorieformular schließen" data-close-structure-modal>&times;</button>
-    </header>
-    <div class="modal-body">
-      <form class="form-grid form-grid--two">
-        <div class="form-field">
-          <label for="category-title">Kategorietitel</label>
-          <input id="category-title" name="title" type="text" placeholder="z. B. Geschäftskritische Services" />
-        </div>
-        <div class="form-field">
-          <label for="category-governing">Übergeordnete Kategorie</label>
-          <input id="category-governing" name="governing_category" type="text" placeholder="z. B. Operativ" />
-        </div>
-        <div class="form-field">
-          <label for="category-owner">Verantwortlich</label>
-          <input id="category-owner" name="owner" type="text" placeholder="z. B. Asset-Governance" />
-        </div>
-        <div class="form-field">
-          <label for="category-integrity">Integrität</label>
-          <select id="category-integrity" name="integrity">
-            <option value="">Bewertung auswählen</option>
-            <option>Niedrig</option>
-            <option>Mittel</option>
-            <option>Hoch</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <label for="category-availability">Verfügbarkeit</label>
-          <select id="category-availability" name="availability">
-            <option value="">Bewertung auswählen</option>
-            <option>Niedrig</option>
-            <option>Mittel</option>
-            <option>Hoch</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <label for="category-confidentiality">Vertraulichkeit</label>
-          <select id="category-confidentiality" name="confidentiality">
-            <option value="">Bewertung auswählen</option>
-            <option>Niedrig</option>
-            <option>Mittel</option>
-            <option>Hoch</option>
-          </select>
-        </div>
-      </form>
-      <div class="modal-footer">
-        <button class="button button--ghost" type="button" data-close-structure-modal>Abbrechen</button>
-        <button class="button" type="button" data-save-category>Kategorie speichern</button>
-      </div>
-    </div>
-  </div>
-</div>
