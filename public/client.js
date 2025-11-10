@@ -82,6 +82,42 @@ const measuresState = {
   isUploading: false
 };
 
+const MEASURE_FILTER_KEYS = ['topic', 'subTopic', 'category'];
+
+function normaliseMeasureFilterValue(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  return String(value).trim();
+}
+
+function applyMeasuresFiltersFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  MEASURE_FILTER_KEYS.forEach((key) => {
+    if (!params.has(key)) {
+      return;
+    }
+    const value = normaliseMeasureFilterValue(params.get(key));
+    measuresState.filters[key] = value;
+  });
+}
+
+function syncMeasuresQueryParams() {
+  const params = new URLSearchParams();
+  MEASURE_FILTER_KEYS.forEach((key) => {
+    const value = normaliseMeasureFilterValue(measuresState.filters[key]);
+    if (value) {
+      params.set(key, value);
+    }
+  });
+  const query = params.toString();
+  const url = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+  window.history.replaceState({}, '', url);
+}
+
 let structureModalOpenCount = 0;
 
 function lockBodyScroll() {
@@ -2935,6 +2971,7 @@ function setupMeasureFilters(root) {
         return;
       }
       measuresState.filters[key] = selectEl.value;
+      syncMeasuresQueryParams();
       refreshMeasures(root).catch((error) => {
         measuresState.error = error?.message || 'Maßnahmen konnten nicht geladen werden.';
         renderMeasuresView(root);
@@ -2946,6 +2983,7 @@ function setupMeasureFilters(root) {
   if (resetButton) {
     resetButton.addEventListener('click', () => {
       measuresState.filters = { topic: '', subTopic: '', category: '' };
+      syncMeasuresQueryParams();
       refreshMeasures(root).catch((error) => {
         measuresState.error = error?.message || 'Maßnahmen konnten nicht geladen werden.';
         renderMeasuresView(root);
@@ -3064,6 +3102,8 @@ function initMeasuresApp() {
     return;
   }
 
+  applyMeasuresFiltersFromQuery();
+  syncMeasuresQueryParams();
   setupMeasureFilters(root);
   setupMeasureUpload(root);
   renderMeasuresView(root);

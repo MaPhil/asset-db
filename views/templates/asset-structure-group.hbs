@@ -22,6 +22,9 @@
         <p class="page-subtitle">Überprüfen und bearbeiten Sie die Gruppendetails, ohne Ihren Arbeitsablauf zu verlassen.</p>
       </div>
       <div class="page-actions">
+        {{#if category.measuresUrl}}
+          <a class="button button--ghost" href="{{category.measuresUrl}}">Maßnahmen anzeigen</a>
+        {{/if}}
         <a class="button button--ghost" href="/asset-structure/{{topic.id}}/{{subTopic.id}}/{{category.id}}">Zur Asset Kategorie zurück</a>
         <button
           class="button button--danger"
