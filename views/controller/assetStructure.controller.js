@@ -66,11 +66,63 @@ const collectOwners = (categories) => {
   return `${owners.size} Verantwortliche`;
 };
 
+const normaliseMeasureFilterValue = (value) => {
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isInteger(value) || value <= 0) {
+      return '';
+    }
+    return String(value);
+  }
+
+  if (typeof value === 'string') {
+    const text = value.trim();
+    if (!text) {
+      return '';
+    }
+    const num = Number(text);
+    if (Number.isInteger(num) && num > 0) {
+      return String(num);
+    }
+    return text;
+  }
+
+  return '';
+};
+
+const buildMeasuresUrl = ({ topicId, subTopicId, categoryId }) => {
+  const params = new URLSearchParams();
+  const topicValue = normaliseMeasureFilterValue(topicId);
+  const subTopicValue = normaliseMeasureFilterValue(subTopicId);
+  const categoryValue = normaliseMeasureFilterValue(categoryId);
+
+  if (topicValue) {
+    params.set('topic', topicValue);
+  }
+  if (subTopicValue) {
+    params.set('subTopic', subTopicValue);
+  }
+  if (categoryValue) {
+    params.set('category', categoryValue);
+  }
+
+  if (!params.size) {
+    return null;
+  }
+
+  return `/measures?${params.toString()}`;
+};
+
 export const renderAssetStructure = (req, res) => {
   const { topics } = buildAssetStructure();
   const groupCounts = buildGroupCounts();
 
   const topicRows = topics.map((topic) => {
+    const topicMeasureId = topic?.measure?.id;
+    const measuresUrl = buildMeasuresUrl({ topicId: topicMeasureId });
     const assetCategoryCount = topic.subTopics.reduce(
       (sum, subTopic) => sum + subTopic.categories.length,
       0
@@ -92,7 +144,8 @@ export const renderAssetStructure = (req, res) => {
       subTopicCount: topic.subTopics.length,
       assetCategoryCount,
       groupCount,
-      owner: collectOwners(topic.categories)
+      owner: collectOwners(topic.categories),
+      measuresUrl
     };
   });
 
@@ -121,6 +174,10 @@ export const renderAssetStructureTopic = (req, res) => {
       (sum, category) => sum + (groupCounts.get(category.id) ?? 0),
       0
     );
+    const measuresUrl = buildMeasuresUrl({
+      topicId: topic?.measure?.id,
+      subTopicId: subTopic?.measure?.id
+    });
 
     return {
       id: subTopic.id,
@@ -128,7 +185,8 @@ export const renderAssetStructureTopic = (req, res) => {
       topicId: topic.id,
       assetCategoryCount,
       groupCount,
-      owner: collectOwners(subTopic.categories)
+      owner: collectOwners(subTopic.categories),
+      measuresUrl
     };
   });
 
@@ -137,7 +195,8 @@ export const renderAssetStructureTopic = (req, res) => {
     topic: {
       id: topic.id,
       title: topic.displayTitle,
-      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE
+      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE,
+      measuresUrl: buildMeasuresUrl({ topicId: topic?.measure?.id })
     },
     notes: '',
     subTopics,
@@ -172,7 +231,12 @@ export const renderAssetStructureSubTopic = (req, res) => {
     integrity: normaliseText(category.integrity) || '—',
     availability: normaliseText(category.availability) || '—',
     confidentiality: normaliseText(category.confidentiality) || '—',
-    groupCount: groupCounts.get(category.id) ?? 0
+    groupCount: groupCounts.get(category.id) ?? 0,
+    measuresUrl: buildMeasuresUrl({
+      topicId: topic?.measure?.id,
+      subTopicId: subTopic?.measure?.id,
+      categoryId: category?.measure?.id
+    })
   }));
 
   res.render('asset-structure-sub-topic', {
@@ -180,12 +244,17 @@ export const renderAssetStructureSubTopic = (req, res) => {
     topic: {
       id: topic.id,
       title: topic.displayTitle,
-      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE
+      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE,
+      measuresUrl: buildMeasuresUrl({ topicId: topic?.measure?.id })
     },
     subTopic: {
       id: subTopic.id,
       title: subTopic.displayTitle,
-      displayTitle: subTopic.displayTitle || SUB_TOPIC_FALLBACK_TITLE
+      displayTitle: subTopic.displayTitle || SUB_TOPIC_FALLBACK_TITLE,
+      measuresUrl: buildMeasuresUrl({
+        topicId: topic?.measure?.id,
+        subTopicId: subTopic?.measure?.id
+      })
     },
     notes: '',
     assetCategories,
@@ -244,7 +313,12 @@ export const renderAssetStructureAssetCategory = (req, res) => {
     owner: category.owner || category.group_owner || '',
     integrity: category.integrity || '',
     availability: category.availability || '',
-    confidentiality: category.confidentiality || ''
+    confidentiality: category.confidentiality || '',
+    measuresUrl: buildMeasuresUrl({
+      topicId: topic?.measure?.id,
+      subTopicId: subTopic?.measure?.id,
+      categoryId: category?.measure?.id
+    })
   };
 
   const groupRows = groups.map((group) => ({
@@ -260,12 +334,17 @@ export const renderAssetStructureAssetCategory = (req, res) => {
     topic: {
       id: topic.id,
       title: topic.displayTitle,
-      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE
+      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE,
+      measuresUrl: buildMeasuresUrl({ topicId: topic?.measure?.id })
     },
     subTopic: {
       id: subTopic.id,
       title: subTopic.displayTitle,
-      displayTitle: subTopic.displayTitle || SUB_TOPIC_FALLBACK_TITLE
+      displayTitle: subTopic.displayTitle || SUB_TOPIC_FALLBACK_TITLE,
+      measuresUrl: buildMeasuresUrl({
+        topicId: topic?.measure?.id,
+        subTopicId: subTopic?.measure?.id
+      })
     },
     assetCategory: viewModel,
     groups: groupRows,
@@ -361,16 +440,26 @@ export const renderAssetStructureGroup = (req, res) => {
     topic: {
       id: topic.id,
       title: topic.displayTitle,
-      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE
+      displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE,
+      measuresUrl: buildMeasuresUrl({ topicId: topic?.measure?.id })
     },
     subTopic: {
       id: subTopic.id,
       title: subTopic.displayTitle,
-      displayTitle: subTopic.displayTitle || SUB_TOPIC_FALLBACK_TITLE
+      displayTitle: subTopic.displayTitle || SUB_TOPIC_FALLBACK_TITLE,
+      measuresUrl: buildMeasuresUrl({
+        topicId: topic?.measure?.id,
+        subTopicId: subTopic?.measure?.id
+      })
     },
     category: {
       id: category.id,
-      title: category.title || category.name || 'Unbenannte Asset Kategorie'
+      title: category.title || category.name || 'Unbenannte Asset Kategorie',
+      measuresUrl: buildMeasuresUrl({
+        topicId: topic?.measure?.id,
+        subTopicId: subTopic?.measure?.id,
+        categoryId: category?.measure?.id
+      })
     },
     group: detail,
     categoryOptions,

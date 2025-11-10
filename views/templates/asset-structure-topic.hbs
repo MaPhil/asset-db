@@ -12,6 +12,9 @@
         <p class="page-subtitle">Verwalten Sie die Sub-Themengebiete und Asset Kategorien innerhalb dieses Themengebiets.</p>
       </div>
       <div class="page-actions">
+        {{#if topic.measuresUrl}}
+          <a class="button button--ghost" href="{{topic.measuresUrl}}">Maßnahmen anzeigen</a>
+        {{/if}}
         <a class="button button--ghost" href="/asset-structure">Zur Übersicht</a>
       </div>
     </header>
@@ -54,6 +57,7 @@
                     <th scope="col">Sub-Themengebiet</th>
                     <th scope="col">Asset Kategorien</th>
                     <th scope="col">Gruppen</th>
+                    <th scope="col">Maßnahmen</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -62,6 +66,13 @@
                       <td><a class="table-link" href="/asset-structure/{{topicId}}/{{id}}">{{title}}</a></td>
                       <td><a class="table-link" href="/asset-structure/{{topicId}}/{{id}}">{{assetCategoryCount}}</a></td>
                       <td><a class="table-link" href="/asset-structure/{{topicId}}/{{id}}">{{groupCount}}</a></td>
+                      <td>
+                        {{#if measuresUrl}}
+                          <a class="table-link table-link--muted" href="{{measuresUrl}}">In Maßnahmen öffnen</a>
+                        {{else}}
+                          —
+                        {{/if}}
+                      </td>
                     </tr>
                   {{/each}}
                 </tbody>

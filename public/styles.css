@@ -453,6 +453,16 @@ main {
   font-weight: 500;
 }
 
+.table-link--muted {
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.table-link--muted:hover,
+.table-link--muted:focus {
+  color: var(--color-primary);
+}
+
 .asset-type-grid {
   margin: 0;
   display: flex;
