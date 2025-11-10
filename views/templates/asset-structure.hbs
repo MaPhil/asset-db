@@ -25,6 +25,7 @@
                     <th scope="col">Sub-Themengebiete</th>
                     <th scope="col">Asset Kategorien</th>
                     <th scope="col">Gruppen</th>
+                    <th scope="col">Maßnahmen</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -34,6 +35,13 @@
                       <td><a class="table-link" href="/asset-structure/{{id}}">{{subTopicCount}}</a></td>
                       <td><a class="table-link" href="/asset-structure/{{id}}">{{assetCategoryCount}}</a></td>
                       <td><a class="table-link" href="/asset-structure/{{id}}">{{groupCount}}</a></td>
+                      <td>
+                        {{#if measuresUrl}}
+                          <a class="table-link table-link--muted" href="{{measuresUrl}}">In Maßnahmen öffnen</a>
+                        {{else}}
+                          —
+                        {{/if}}
+                      </td>
                     </tr>
                   {{/each}}
                 </tbody>

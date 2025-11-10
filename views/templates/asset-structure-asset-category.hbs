@@ -18,6 +18,9 @@
         <p class="page-subtitle">Aktualisieren Sie die Asset Kategorie und verwalten Sie die zugehörigen Gruppen.</p>
       </div>
       <div class="page-actions">
+        {{#if assetCategory.measuresUrl}}
+          <a class="button button--ghost" href="{{assetCategory.measuresUrl}}">Maßnahmen anzeigen</a>
+        {{/if}}
         <a class="button button--ghost" href="/asset-structure/{{topic.id}}/{{subTopic.id}}">Zum Sub-Themengebiet</a>
         <a class="button button--ghost" href="/asset-structure/{{topic.id}}">Zum Themengebiet</a>
       </div>

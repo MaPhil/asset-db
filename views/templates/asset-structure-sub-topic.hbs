@@ -17,6 +17,9 @@
         <p class="page-subtitle">Überblick über die Asset Kategorien, die diesem Sub-Themengebiet zugeordnet sind.</p>
       </div>
       <div class="page-actions">
+        {{#if subTopic.measuresUrl}}
+          <a class="button button--ghost" href="{{subTopic.measuresUrl}}">Maßnahmen anzeigen</a>
+        {{/if}}
         <a class="button button--ghost" href="/asset-structure/{{topic.id}}">Zum Themengebiet</a>
       </div>
     </header>
@@ -75,6 +78,7 @@
                     <th scope="col">Integrität</th>
                     <th scope="col">Verfügbarkeit</th>
                     <th scope="col">Vertraulichkeit</th>
+                    <th scope="col">Maßnahmen</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -97,6 +101,13 @@
                       </td>
                       <td>
                         <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}">{{confidentiality}}</a>
+                      </td>
+                      <td>
+                        {{#if measuresUrl}}
+                          <a class="table-link table-link--muted" href="{{measuresUrl}}">In Maßnahmen öffnen</a>
+                        {{else}}
+                          —
+                        {{/if}}
                       </td>
                     </tr>
                   {{/each}}
