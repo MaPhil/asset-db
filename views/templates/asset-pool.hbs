@@ -154,7 +154,7 @@
     aria-labelledby="manipulator-modal-title"
   >
     <header class="modal-header">
-      <h2 id="manipulator-modal-title">Manipulator erstellen</h2>
+      <h2 id="manipulator-modal-title" data-manipulator-modal-title>Manipulator erstellen</h2>
       <button
         class="icon-button"
         type="button"
@@ -186,6 +186,28 @@
             placeholder="Kurze Beschreibung hinzufügen"
             data-manipulator-description
           ></textarea>
+        </div>
+        <div class="form-field form-field--full">
+          <label for="manipulator-field-name">Feldname</label>
+          <input
+            id="manipulator-field-name"
+            type="text"
+            name="fieldName"
+            placeholder="Neues Feld im Asset-Pool"
+            data-manipulator-field-name
+            autocomplete="off"
+          />
+        </div>
+        <div class="form-field form-field--full">
+          <label for="manipulator-field-value">Wert</label>
+          <input
+            id="manipulator-field-value"
+            type="text"
+            name="fieldValue"
+            placeholder="Wert für passende Assets"
+            data-manipulator-field-value
+            autocomplete="off"
+          />
         </div>
         <div class="selector-builder" data-manipulator-builder>
           <p class="helper-text selector-builder__hint">Definieren Sie Regeln, um zu bestimmen, welche Assets zu diesem Manipulator gehören.</p>

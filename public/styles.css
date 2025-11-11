@@ -873,6 +873,16 @@ button.sidebar-link {
   background: rgba(59, 130, 246, 0.08);
 }
 
+.table-row--interactive {
+  cursor: pointer;
+}
+
+.table-row--interactive:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  background: rgba(59, 130, 246, 0.12);
+}
+
 .table tbody tr:last-child td {
   border-bottom: none;
 }

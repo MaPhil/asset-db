@@ -8,6 +8,7 @@ const API = {
     `/api/v1/asset-pool/rows/${encodeURIComponent(rowId)}/fields/${encodeURIComponent(field)}`,
   assetTypeField: '/api/v1/asset-pool/settings/asset-type-field',
   manipulators: '/api/v1/manipulators',
+  manipulator: (id) => `/api/v1/manipulators/${encodeURIComponent(id)}`,
   assetTypes: '/api/v1/asset-types',
   categories: '/api/v1/categories',
   assetCategories: '/api/v1/asset-categories',
@@ -73,6 +74,8 @@ const state = {
       isSaving: false,
       trigger: null,
       error: null,
+      mode: 'create',
+      manipulatorId: null,
       data: {
         mode: 'all',
         rules: []
@@ -405,7 +408,7 @@ function setAssetPoolView(root, view) {
   }
 }
 
-function renderManipulatorTable(entries) {
+function renderManipulatorTable(entries, root) {
   const wrapper = document.createElement('div');
   wrapper.className = 'table-wrapper';
   const scroller = document.createElement('div');
@@ -415,7 +418,7 @@ function renderManipulatorTable(entries) {
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  const headers = ['Titel', 'Beschreibung', 'Assets', 'Aktualisiert'];
+  const headers = ['Titel', 'Beschreibung', 'Feldname', 'Wert', 'Assets', 'Aktualisiert'];
   headers.forEach((label) => {
     const th = document.createElement('th');
     th.textContent = label;
@@ -427,6 +430,13 @@ function renderManipulatorTable(entries) {
   const tbody = document.createElement('tbody');
   entries.forEach((entry) => {
     const row = document.createElement('tr');
+    row.classList.add('table-row', 'table-row--interactive');
+    row.tabIndex = 0;
+    row.setAttribute('role', 'button');
+    row.dataset.manipulatorId = entry?.id;
+    if (entry?.title) {
+      row.setAttribute('aria-label', `Manipulator „${entry.title}” bearbeiten`);
+    }
 
     const titleCell = document.createElement('td');
     titleCell.textContent = entry?.title || 'Manipulator ohne Titel';
@@ -436,6 +446,14 @@ function renderManipulatorTable(entries) {
     descriptionCell.textContent = entry?.description || '';
     row.appendChild(descriptionCell);
 
+    const fieldCell = document.createElement('td');
+    fieldCell.textContent = entry?.fieldName || '';
+    row.appendChild(fieldCell);
+
+    const valueCell = document.createElement('td');
+    valueCell.textContent = entry?.fieldValue ?? '';
+    row.appendChild(valueCell);
+
     const assetsCell = document.createElement('td');
     assetsCell.textContent = formatAssetCount(entry?.assetCount);
     row.appendChild(assetsCell);
@@ -443,6 +461,18 @@ function renderManipulatorTable(entries) {
     const updatedCell = document.createElement('td');
     updatedCell.textContent = formatDate(entry?.updatedAt || entry?.createdAt);
     row.appendChild(updatedCell);
+
+    const handleOpen = () => {
+      openManipulatorModal(root, row, entry);
+    };
+
+    row.addEventListener('click', handleOpen);
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handleOpen();
+      }
+    });
 
     tbody.appendChild(row);
   });
@@ -500,7 +530,7 @@ function renderManipulatorView(root) {
   }
 
   if (tableContainer) {
-    const table = renderManipulatorTable(entries);
+    const table = renderManipulatorTable(entries, root);
     tableContainer.appendChild(table);
     tableContainer.hidden = false;
   }
@@ -543,6 +573,11 @@ function renderManipulatorModal() {
   const mode = data.mode === 'any' ? 'any' : 'all';
   data.mode = mode;
 
+  const titleEl = select(modal, '[data-manipulator-modal-title]');
+  if (titleEl) {
+    titleEl.textContent = modalState.mode === 'edit' ? 'Manipulator bearbeiten' : 'Manipulator erstellen';
+  }
+
   const modeSelect = select(modal, '[data-manipulator-mode]');
   if (modeSelect) {
     modeSelect.value = mode;
@@ -566,6 +601,7 @@ function renderManipulatorModal() {
   const saveButton = select(modal, '[data-save-manipulator]');
   if (saveButton && !modalState.isSaving) {
     saveButton.disabled = fields.length === 0;
+    saveButton.textContent = modalState.mode === 'edit' ? 'Speichern' : 'Erstellen';
     if (fields.length === 0) {
       delete saveButton.dataset.loading;
     }
@@ -692,7 +728,7 @@ function renderManipulatorModal() {
   });
 }
 
-function openManipulatorModal(root, trigger) {
+function openManipulatorModal(root, trigger, entry = null) {
   const modalState = state.manipulators.modal;
   if (!modalState.modal) {
     modalState.modal = document.querySelector('[data-manipulator-modal]');
@@ -706,24 +742,68 @@ function openManipulatorModal(root, trigger) {
   modalState.isSaving = false;
   modalState.trigger = trigger || null;
   modalState.error = null;
+  modalState.mode = entry ? 'edit' : 'create';
+  modalState.manipulatorId = entry?.id ?? null;
 
   const form = select(modal, '[data-manipulator-form]');
   form?.reset();
 
   const titleInput = select(modal, '[data-manipulator-title]');
   const descriptionInput = select(modal, '[data-manipulator-description]');
-  if (titleInput) {
-    titleInput.value = '';
-  }
-  if (descriptionInput) {
-    descriptionInput.value = '';
+  const fieldNameInput = select(modal, '[data-manipulator-field-name]');
+  const fieldValueInput = select(modal, '[data-manipulator-field-value]');
+  if (entry) {
+    if (titleInput) {
+      titleInput.value = entry.title || '';
+    }
+    if (descriptionInput) {
+      descriptionInput.value = entry.description || '';
+    }
+    if (fieldNameInput) {
+      fieldNameInput.value = entry.fieldName || '';
+    }
+    if (fieldValueInput) {
+      fieldValueInput.value = entry.fieldValue ?? '';
+    }
+  } else {
+    if (titleInput) {
+      titleInput.value = '';
+    }
+    if (descriptionInput) {
+      descriptionInput.value = '';
+    }
+    if (fieldNameInput) {
+      fieldNameInput.value = '';
+    }
+    if (fieldValueInput) {
+      fieldValueInput.value = '';
+    }
   }
 
   const fields = Array.isArray(state.manipulators.fields) ? state.manipulators.fields : [];
-  modalState.data = {
-    mode: 'all',
-    rules: fields.length ? [createManipulatorRule({ field: fields[0] || '' })] : []
-  };
+  if (entry?.definition) {
+    const definition = entry.definition;
+    const mode = definition?.mode === 'any' ? 'any' : 'all';
+    const rules = [];
+    const collectRules = (node) => {
+      if (!node || typeof node !== 'object') {
+        return;
+      }
+      if (node.type === 'rule') {
+        rules.push(createManipulatorRule(node));
+        return;
+      }
+      const children = Array.isArray(node.children) ? node.children : [];
+      children.forEach((child) => collectRules(child));
+    };
+    collectRules(definition);
+    modalState.data = { mode, rules };
+  } else {
+    modalState.data = {
+      mode: 'all',
+      rules: fields.length ? [createManipulatorRule({ field: fields[0] || '' })] : []
+    };
+  }
 
   clearManipulatorFormError();
   renderManipulatorModal();
@@ -760,6 +840,8 @@ function closeManipulatorModal({ focusTrigger = true } = {}) {
   modalState.isOpen = false;
   modalState.isSaving = false;
   modalState.error = null;
+  modalState.mode = 'create';
+  modalState.manipulatorId = null;
   modalState.data = { mode: 'all', rules: [] };
 
   clearManipulatorFormError();
@@ -784,6 +866,8 @@ async function handleManipulatorFormSubmit(root, event) {
 
   const titleInput = select(modal, '[data-manipulator-title]');
   const descriptionInput = select(modal, '[data-manipulator-description]');
+  const fieldNameInput = select(modal, '[data-manipulator-field-name]');
+  const fieldValueInput = select(modal, '[data-manipulator-field-value]');
   const saveButton = select(modal, '[data-save-manipulator]');
 
   const title = titleInput?.value.trim() || '';
@@ -792,6 +876,22 @@ async function handleManipulatorFormSubmit(root, event) {
     titleInput?.focus();
     return;
   }
+
+  const fieldName = fieldNameInput?.value.trim() || '';
+  if (!fieldName) {
+    setManipulatorFormError('Feldname ist erforderlich.');
+    fieldNameInput?.focus();
+    return;
+  }
+
+  const rawFieldValue = fieldValueInput?.value;
+  const hasFieldValue = typeof rawFieldValue === 'string' ? rawFieldValue.trim().length > 0 : false;
+  if (!hasFieldValue) {
+    setManipulatorFormError('Feldwert ist erforderlich.');
+    fieldValueInput?.focus();
+    return;
+  }
+  const fieldValue = typeof rawFieldValue === 'string' ? rawFieldValue : String(rawFieldValue ?? '');
 
   const fields = Array.isArray(state.manipulators.fields) ? state.manipulators.fields : [];
   if (!fields.length) {
@@ -819,6 +919,8 @@ async function handleManipulatorFormSubmit(root, event) {
   const payload = {
     title,
     description: descriptionInput?.value.trim() || '',
+    fieldName,
+    fieldValue,
     definition: {
       type: 'group',
       mode: modalState.data.mode === 'any' ? 'any' : 'all',
@@ -838,8 +940,10 @@ async function handleManipulatorFormSubmit(root, event) {
   }
 
   try {
-    const entry = await fetchJson(API.manipulators, {
-      method: 'POST',
+    const isEdit = modalState.mode === 'edit' && modalState.manipulatorId !== null;
+    const url = isEdit ? API.manipulator(modalState.manipulatorId) : API.manipulators;
+    const entry = await fetchJson(url, {
+      method: isEdit ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
@@ -847,15 +951,27 @@ async function handleManipulatorFormSubmit(root, event) {
     const entries = Array.isArray(state.manipulators.entries)
       ? state.manipulators.entries.slice()
       : [];
-    entries.push(entry);
+    const existingIndex = entries.findIndex((item) => item?.id === entry?.id);
+    if (existingIndex === -1) {
+      entries.push(entry);
+    } else {
+      entries[existingIndex] = entry;
+    }
     state.manipulators.entries = sortManipulators(entries);
     state.manipulators.error = null;
     state.manipulators.hasLoaded = true;
     renderManipulatorView(root);
     closeManipulatorModal();
-    showToast('Manipulator erstellt.');
+    await refreshAssetPool();
+    await refreshManipulators(root);
+    showToast(isEdit ? 'Manipulator aktualisiert.' : 'Manipulator erstellt.');
   } catch (error) {
-    const message = error?.payload?.error || error?.message || 'Manipulator konnte nicht erstellt werden.';
+    const message =
+      error?.payload?.error ||
+      error?.message ||
+      (modalState.mode === 'edit'
+        ? 'Manipulator konnte nicht aktualisiert werden.'
+        : 'Manipulator konnte nicht erstellt werden.');
     setManipulatorFormError(message);
   } finally {
     modalState.isSaving = false;
