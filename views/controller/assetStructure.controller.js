@@ -5,10 +5,7 @@ import {
   getAssetCategoryOverview,
   getIgnoredAssetSubCategoryIds
 } from '../../lib/assetCategories.js';
-import {
-  getAvailableAssetTypesForGroup,
-  listGroupAssetTypes
-} from '../../lib/groupAssetTypes.js';
+import { getGroupAssetSelectorOverview } from '../../lib/groupAssetSelectors.js';
 import {
   buildAssetStructure,
   getSubTopicKey,
@@ -494,8 +491,7 @@ export const renderAssetStructureGroup = (req, res) => {
     updatedAt: formatDateTime(group.updated_at) || '—'
   };
 
-  const groupAssetTypes = listGroupAssetTypes(group.id);
-  const availableGroupAssetTypes = getAvailableAssetTypesForGroup(group.id);
+  const selectorOverview = getGroupAssetSelectorOverview(group.id);
 
   res.render('asset-structure-group', {
     nav: 'assetStructure',
@@ -525,9 +521,8 @@ export const renderAssetStructureGroup = (req, res) => {
     },
     group: detail,
     assetSubCategoryOptions,
-    groupAssetTypes,
-    availableGroupAssetTypesCount: availableGroupAssetTypes.length,
-    groupAssetTypeCount: groupAssetTypes.length
+    groupSelectorState: selectorOverview,
+    groupSelectorCount: selectorOverview?.selectors?.length ?? 0
   });
 };
 
