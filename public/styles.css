@@ -144,6 +144,15 @@ main {
   transition: background var(--transition), color var(--transition);
 }
 
+button.sidebar-link {
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
 .sidebar-link:hover,
 .sidebar-link:focus {
   background: rgba(148, 163, 184, 0.25);

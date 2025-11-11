@@ -9,6 +9,7 @@ import assetPoolRouter from './assetPool.routes.js';
 import assetTypesRouter from './assetTypes.routes.js';
 import measuresRouter from './measures.routes.js';
 import assetCategoriesRouter from './assetCategories.routes.js';
+import manipulatorsRouter from './manipulators.routes.js';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/asset-pool', assetPoolRouter);
 router.use('/asset-types', assetTypesRouter);
 router.use('/asset-categories', assetCategoriesRouter);
 router.use('/measures', measuresRouter);
+router.use('/manipulators', manipulatorsRouter);
 
 export default router;

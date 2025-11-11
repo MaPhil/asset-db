@@ -1,7 +1,10 @@
 <div class="asset-pool-app" data-app="asset-pool" data-view="overview">
   <aside class="asset-pool-sidebar" aria-label="Navigation des Asset-Pools">
     <div class="sidebar-section">
-      <a href="/asset-pool" class="sidebar-link sidebar-link--active" data-sidebar-overview>Asset-Pool (Übersicht)</a>
+      <button type="button" class="sidebar-link sidebar-link--active" data-sidebar-link="overview">
+        Asset-Pool (Übersicht)
+      </button>
+      <button type="button" class="sidebar-link" data-sidebar-link="manipulators">Manipulators</button>
     </div>
     <div class="sidebar-section">
       <p class="sidebar-heading">Rohdaten</p>
@@ -12,40 +15,62 @@
     </div>
   </aside>
   <section class="asset-pool-content" data-region="content">
-    <header class="page-header">
-      <div>
-        <h1 class="page-title">Asset-Pool</h1>
-        <p class="page-subtitle">
-          Der Asset-Pool greift über Ihre Spaltenzuordnungen auf Daten aus den Rohtabellen zu.
-        </p>
+    <div class="asset-pool-view" data-asset-pool-panel="overview">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Asset-Pool</h1>
+          <p class="page-subtitle">
+            Der Asset-Pool greift über Ihre Spaltenzuordnungen auf Daten aus den Rohtabellen zu.
+          </p>
+        </div>
+        <div class="page-actions">
+          <button
+            class="button button--ghost"
+            type="button"
+            data-open-asset-type-modal
+            aria-haspopup="dialog"
+            aria-expanded="false"
+          >
+            Feld für Asset-Typ festlegen
+          </button>
+          <button
+            class="button button--ghost"
+            type="button"
+            data-open-field-manager
+            aria-haspopup="dialog"
+            aria-expanded="false"
+          >
+            Felder verwalten
+          </button>
+        </div>
+      </header>
+      <div class="asset-pool-body" data-overview-body>
+        <div class="card card--empty" data-empty-state hidden>
+          <h2>Keine Daten hinzugefügt</h2>
+          <p>Bitte importieren Sie eine Rohdatentabelle, um zu beginnen.</p>
+        </div>
+        <div class="table-container" data-asset-pool-table hidden></div>
       </div>
-      <div class="page-actions">
-        <button
-          class="button button--ghost"
-          type="button"
-          data-open-asset-type-modal
-          aria-haspopup="dialog"
-          aria-expanded="false"
-        >
-          Feld für Asset-Typ festlegen
-        </button>
-        <button
-          class="button button--ghost"
-          type="button"
-          data-open-field-manager
-          aria-haspopup="dialog"
-          aria-expanded="false"
-        >
-          Felder verwalten
-        </button>
+    </div>
+    <div class="asset-pool-view" data-asset-pool-panel="manipulators" hidden>
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Manipulators</h1>
+          <p class="page-subtitle">Create rules that bundle assets from the pool for further processing.</p>
+        </div>
+        <div class="page-actions">
+          <button class="button" type="button" data-open-manipulator-modal>Create Manipulator</button>
+        </div>
+      </header>
+      <div class="asset-pool-body" data-manipulator-body>
+        <p class="helper-text" data-manipulator-loading hidden>Loading manipulators…</p>
+        <p class="form-error" data-manipulator-error hidden></p>
+        <div class="card card--empty" data-manipulator-empty hidden>
+          <h2>No manipulators created yet</h2>
+          <p>Create a manipulator to define how assets should be combined.</p>
+        </div>
+        <div class="table-container" data-manipulator-table hidden></div>
       </div>
-    </header>
-    <div class="asset-pool-body" data-overview-body>
-      <div class="card card--empty" data-empty-state hidden>
-        <h2>Keine Daten hinzugefügt</h2>
-        <p>Bitte importieren Sie eine Rohdatentabelle, um zu beginnen.</p>
-      </div>
-      <div class="table-container" data-asset-pool-table hidden></div>
     </div>
   </section>
 </div>
@@ -117,6 +142,82 @@
     <div class="modal-footer">
       <button class="button button--ghost" type="button" data-cancel-asset-type-modal>Abbrechen</button>
       <button class="button" type="button" data-save-asset-type-field>Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" data-manipulator-modal hidden aria-hidden="true">
+  <div
+    class="modal-dialog modal-dialog--large"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="manipulator-modal-title"
+  >
+    <header class="modal-header">
+      <h2 id="manipulator-modal-title">Create Manipulator</h2>
+      <button
+        class="icon-button"
+        type="button"
+        aria-label="Close manipulator configuration"
+        data-close-manipulator-modal
+      >
+        &times;
+      </button>
+    </header>
+    <div class="modal-body">
+      <form class="selector-form" id="manipulator-form" data-manipulator-form>
+        <div class="form-field form-field--full">
+          <label for="manipulator-title">Title</label>
+          <input
+            id="manipulator-title"
+            type="text"
+            name="title"
+            placeholder="Name the manipulator"
+            data-manipulator-title
+            autocomplete="off"
+          />
+        </div>
+        <div class="form-field form-field--full">
+          <label for="manipulator-description">Description</label>
+          <textarea
+            id="manipulator-description"
+            name="description"
+            rows="3"
+            placeholder="Add a brief description"
+            data-manipulator-description
+          ></textarea>
+        </div>
+        <div class="selector-builder" data-manipulator-builder>
+          <p class="helper-text selector-builder__hint">
+            Define rules to decide which assets belong to this manipulator.
+          </p>
+          <div class="selector-group__container selector-group__container--root" data-manipulator-root>
+            <div class="selector-group__header">
+              <label class="selector-group__matches-label" for="manipulator-mode">
+                Combinator
+                <select id="manipulator-mode" class="selector-group__matches" data-manipulator-mode>
+                  <option value="all">Match all rules (AND)</option>
+                  <option value="any">Match any rule (OR)</option>
+                </select>
+              </label>
+            </div>
+            <div class="selector-group__children" data-manipulator-rules></div>
+            <p class="helper-text" data-manipulator-no-fields hidden>
+              Add Asset-Pool fields to define manipulator rules.
+            </p>
+            <div class="selector-group__actions">
+              <button class="button button--ghost selector-group__action" type="button" data-add-manipulator-rule>
+                Add rule
+              </button>
+            </div>
+          </div>
+        </div>
+        <p class="form-error" data-manipulator-form-error hidden></p>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="button button--ghost" type="button" data-close-manipulator-modal>Cancel</button>
+      <button class="button" type="submit" form="manipulator-form" data-save-manipulator>Create</button>
     </div>
   </div>
 </div>
