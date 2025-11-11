@@ -1,6 +1,7 @@
 import { store } from '../../lib/storage.js';
 import { logger } from '../../lib/logger.js';
 import { getAssetTypeSummary } from '../../lib/assetTypes.js';
+import { getAssetCategoryOverview } from '../../lib/assetCategories.js';
 import {
   getAvailableAssetTypesForGroup,
   listGroupAssetTypes
@@ -155,6 +156,18 @@ export const renderAssetStructure = (req, res) => {
     nav: 'assetStructure',
     topics: topicRows,
     topicCount: topicRows.length
+  });
+};
+
+export const renderAssetCategories = (req, res) => {
+  const overview = getAssetCategoryOverview();
+
+  res.render('asset-categories', {
+    nav: 'assetStructure',
+    categories: overview.categories,
+    assetCategoryState: overview,
+    categoryCount: overview.categories.length,
+    assetSubCategoryCount: overview.assetSubCategories.length
   });
 };
 
