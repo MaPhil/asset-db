@@ -1,7 +1,10 @@
 import { store } from '../../lib/storage.js';
 import { logger } from '../../lib/logger.js';
 import { getAssetTypeSummary } from '../../lib/assetTypes.js';
-import { getAssetCategoryOverview } from '../../lib/assetCategories.js';
+import {
+  getAssetCategoryOverview,
+  getIgnoredAssetSubCategoryIds
+} from '../../lib/assetCategories.js';
 import {
   getAvailableAssetTypesForGroup,
   listGroupAssetTypes
@@ -120,22 +123,27 @@ const buildMeasuresUrl = ({ topicId, subTopicId, assetSubCategoryId }) => {
 
 export const renderAssetStructure = (req, res) => {
   const { topics } = buildAssetStructure();
+  const ignoredAssetSubCategoryIds = getIgnoredAssetSubCategoryIds();
   const groupCounts = buildGroupCounts();
 
   const topicRows = topics.map((topic) => {
     const topicMeasureId = topic?.measure?.id;
     const measuresUrl = buildMeasuresUrl({ topicId: topicMeasureId });
-    const assetSubCategoryCount = topic.subTopics.reduce(
-      (sum, subTopic) => sum + subTopic.assetSubCategories.length,
-      0
-    );
+    const assetSubCategoryCount = topic.subTopics.reduce((sum, subTopic) => {
+      const visibleSubCategories = subTopic.assetSubCategories.filter(
+        (assetSubCategory) => !ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+      );
+      return sum + visibleSubCategories.length;
+    }, 0);
 
     const groupCount = topic.subTopics.reduce((sum, subTopic) => {
       return (
         sum +
         subTopic.assetSubCategories.reduce(
           (categorySum, assetSubCategory) =>
-            categorySum + (groupCounts.get(assetSubCategory.id) ?? 0),
+            ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+              ? categorySum
+              : categorySum + (groupCounts.get(assetSubCategory.id) ?? 0),
           0
         )
       );
@@ -147,7 +155,11 @@ export const renderAssetStructure = (req, res) => {
       subTopicCount: topic.subTopics.length,
       assetSubCategoryCount,
       groupCount,
-      owner: collectOwners(topic.assetSubCategories),
+      owner: collectOwners(
+        topic.assetSubCategories.filter(
+          (assetSubCategory) => !ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+        )
+      ),
       measuresUrl
     };
   });
@@ -182,11 +194,17 @@ export const renderAssetStructureTopic = (req, res) => {
   }
 
   const groupCounts = buildGroupCounts();
+  const ignoredAssetSubCategoryIds = getIgnoredAssetSubCategoryIds();
 
   const subTopics = topic.subTopics.map((subTopic) => {
-    const assetSubCategoryCount = subTopic.assetSubCategories.length;
+    const assetSubCategoryCount = subTopic.assetSubCategories.filter(
+      (assetSubCategory) => !ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+    ).length;
     const groupCount = subTopic.assetSubCategories.reduce(
-      (sum, assetSubCategory) => sum + (groupCounts.get(assetSubCategory.id) ?? 0),
+      (sum, assetSubCategory) =>
+        ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+          ? sum
+          : sum + (groupCounts.get(assetSubCategory.id) ?? 0),
       0
     );
     const measuresUrl = buildMeasuresUrl({
@@ -200,7 +218,11 @@ export const renderAssetStructureTopic = (req, res) => {
       topicId: topic.id,
       assetSubCategoryCount,
       groupCount,
-      owner: collectOwners(subTopic.assetSubCategories),
+      owner: collectOwners(
+        subTopic.assetSubCategories.filter(
+          (assetSubCategory) => !ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+        )
+      ),
       measuresUrl,
       measure: subTopic.measure
     };
@@ -240,23 +262,31 @@ export const renderAssetStructureSubTopic = (req, res) => {
   }
 
   const groupCounts = buildGroupCounts();
+  const ignoredAssetSubCategoryIds = getIgnoredAssetSubCategoryIds();
 
-  const assetSubCategories = subTopic.assetSubCategories.map((assetSubCategory) => ({
-    id: assetSubCategory.id,
-    title:
-      assetSubCategory.title || assetSubCategory.name || `AssetUnterKategorie ${assetSubCategory.id}`,
-    owner:
-      normaliseText(assetSubCategory.owner) || normaliseText(assetSubCategory.group_owner) || '—',
-    integrity: normaliseText(assetSubCategory.integrity) || '—',
-    availability: normaliseText(assetSubCategory.availability) || '—',
-    confidentiality: normaliseText(assetSubCategory.confidentiality) || '—',
-    groupCount: groupCounts.get(assetSubCategory.id) ?? 0,
-    measuresUrl: buildMeasuresUrl({
-      topicId: topic?.measure?.id,
-      subTopicId: subTopic?.measure?.id,
-      assetSubCategoryId: assetSubCategory?.measure?.id
-    })
-  }));
+  const assetSubCategories = subTopic.assetSubCategories.map((assetSubCategory) => {
+    const isIgnored = ignoredAssetSubCategoryIds.has(assetSubCategory.id);
+
+    return {
+      id: assetSubCategory.id,
+      title:
+        assetSubCategory.title || assetSubCategory.name || `AssetUnterKategorie ${assetSubCategory.id}`,
+      owner:
+        normaliseText(assetSubCategory.owner) || normaliseText(assetSubCategory.group_owner) || '—',
+      integrity: normaliseText(assetSubCategory.integrity) || '—',
+      availability: normaliseText(assetSubCategory.availability) || '—',
+      confidentiality: normaliseText(assetSubCategory.confidentiality) || '—',
+      groupCount: groupCounts.get(assetSubCategory.id) ?? 0,
+      measuresUrl: buildMeasuresUrl({
+        topicId: topic?.measure?.id,
+        subTopicId: subTopic?.measure?.id,
+        assetSubCategoryId: assetSubCategory?.measure?.id
+      }),
+      isIgnored
+    };
+  });
+
+  const visibleAssetSubCategoryCount = assetSubCategories.filter((entry) => !entry.isIgnored).length;
 
   res.render('asset-structure-sub-topic', {
     nav: 'assetStructure',
@@ -279,7 +309,7 @@ export const renderAssetStructureSubTopic = (req, res) => {
     },
     notes: '',
     assetSubCategories,
-    assetSubCategoryCount: assetSubCategories.length
+    assetSubCategoryCount: visibleAssetSubCategoryCount
   });
 };
 
