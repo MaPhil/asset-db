@@ -7,7 +7,7 @@ import {
 } from '../controller/assetPool.controller.js';
 import {
   renderAssetStructure,
-  renderAssetStructureAssetCategory,
+  renderAssetStructureAssetSubCategory,
   renderAssetStructureGroup,
   renderAssetStructureSubTopic,
   renderAssetStructureTopic,
@@ -25,12 +25,12 @@ router.get('/asset-pool', renderAssetPool);
 router.get('/asset-pool/raw/:id', renderRawTable);
 router.get('/asset-structure', renderAssetStructure);
 router.get(
-  '/asset-structure/:topicId/:subTopicId/:categoryId/groups/:groupId',
+  '/asset-structure/:topicId/:subTopicId/:assetSubCategoryId/groups/:groupId',
   renderAssetStructureGroup
 );
 router.get(
-  '/asset-structure/:topicId/:subTopicId/:categoryId',
-  renderAssetStructureAssetCategory
+  '/asset-structure/:topicId/:subTopicId/:assetSubCategoryId',
+  renderAssetStructureAssetSubCategory
 );
 router.get('/asset-structure/:topicId/:subTopicId', renderAssetStructureSubTopic);
 router.get('/asset-structure/:topicId', renderAssetStructureTopic);

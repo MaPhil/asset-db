@@ -6,7 +6,7 @@
   data-available-group-asset-types="{{availableGroupAssetTypesCount}}"
   data-topic-id="{{topic.id}}"
   data-sub-topic-id="{{subTopic.id}}"
-  data-category-id="{{category.id}}"
+  data-asset-sub-category-id="{{assetSubCategory.id}}"
   data-group-asset-type-count="{{groupAssetTypeCount}}"
 >
   <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
@@ -22,10 +22,10 @@
         <p class="page-subtitle">Überprüfen und bearbeiten Sie die Gruppendetails, ohne Ihren Arbeitsablauf zu verlassen.</p>
       </div>
       <div class="page-actions">
-        {{#if category.measuresUrl}}
-          <a class="button button--ghost" href="{{category.measuresUrl}}">Maßnahmen anzeigen</a>
+        {{#if assetSubCategory.measuresUrl}}
+          <a class="button button--ghost" href="{{assetSubCategory.measuresUrl}}">Maßnahmen anzeigen</a>
         {{/if}}
-        <a class="button button--ghost" href="/asset-structure/{{topic.id}}/{{subTopic.id}}/{{category.id}}">Zur Asset Kategorie zurück</a>
+        <a class="button button--ghost" href="/asset-structure/{{topic.id}}/{{subTopic.id}}/{{assetSubCategory.id}}">Zur AssetUnterKategorie zurück</a>
         <button
           class="button button--danger"
           type="button"
@@ -50,7 +50,7 @@
       <span aria-hidden="true">›</span>
       <a href="/asset-structure/{{topic.id}}/{{subTopic.id}}">{{subTopic.displayTitle}}</a>
       <span aria-hidden="true">›</span>
-      <a href="/asset-structure/{{topic.id}}/{{subTopic.id}}/{{category.id}}">{{category.title}}</a>
+      <a href="/asset-structure/{{topic.id}}/{{subTopic.id}}/{{assetSubCategory.id}}">{{assetSubCategory.title}}</a>
       <span aria-hidden="true">›</span>
       <span aria-current="page">{{group.displayTitle}}</span>
     </nav>
@@ -73,14 +73,14 @@
             />
           </div>
           <div class="form-field">
-            <label for="group-parent-category">Übergeordnete Asset Kategorie</label>
+            <label for="group-parent-category">Übergeordnete AssetUnterKategorie</label>
             <select id="group-parent-category" name="category_id">
-              {{#if categoryOptions.length}}
-                {{#each categoryOptions}}
-                  <option value="{{id}}" {{#if (eq ../category.id id)}}selected{{/if}}>{{title}}</option>
+              {{#if assetSubCategoryOptions.length}}
+                {{#each assetSubCategoryOptions}}
+                  <option value="{{id}}" {{#if (eq ../assetSubCategory.id id)}}selected{{/if}}>{{title}}</option>
                 {{/each}}
               {{else}}
-                <option value="" disabled>Keine Asset Kategorien verfügbar</option>
+                <option value="" disabled>Keine AssetUnterKategorien verfügbar</option>
               {{/if}}
             </select>
           </div>
