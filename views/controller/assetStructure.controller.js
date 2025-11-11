@@ -186,7 +186,8 @@ export const renderAssetStructureTopic = (req, res) => {
       assetCategoryCount,
       groupCount,
       owner: collectOwners(subTopic.categories),
-      measuresUrl
+      measuresUrl,
+      measure: subTopic.measure
     };
   });
 
@@ -196,7 +197,8 @@ export const renderAssetStructureTopic = (req, res) => {
       id: topic.id,
       title: topic.displayTitle,
       displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE,
-      measuresUrl: buildMeasuresUrl({ topicId: topic?.measure?.id })
+      measuresUrl: buildMeasuresUrl({ topicId: topic?.measure?.id }),
+      measure: topic.measure
     },
     notes: '',
     subTopics,
@@ -245,7 +247,8 @@ export const renderAssetStructureSubTopic = (req, res) => {
       id: topic.id,
       title: topic.displayTitle,
       displayTitle: topic.displayTitle || TOPIC_FALLBACK_TITLE,
-      measuresUrl: buildMeasuresUrl({ topicId: topic?.measure?.id })
+      measuresUrl: buildMeasuresUrl({ topicId: topic?.measure?.id }),
+      measure: topic.measure
     },
     subTopic: {
       id: subTopic.id,
@@ -254,7 +257,8 @@ export const renderAssetStructureSubTopic = (req, res) => {
       measuresUrl: buildMeasuresUrl({
         topicId: topic?.measure?.id,
         subTopicId: subTopic?.measure?.id
-      })
+      }),
+      measure: subTopic.measure
     },
     notes: '',
     assetCategories,

@@ -1,4 +1,9 @@
-<div class="asset-structure-app" data-app="asset-structure" data-topic-id="{{topic.id}}">
+<div
+  class="asset-structure-app"
+  data-app="asset-structure"
+  data-topic-id="{{topic.id}}"
+  {{#if topic.measure.id}}data-measure-topic-id="{{topic.measure.id}}"{{/if}}
+>
   <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
       <a href="/asset-structure" class="sidebar-link sidebar-link--active">Themengebiete</a>
@@ -41,6 +46,16 @@
             <textarea id="topic-notes" name="notes" rows="4" placeholder="Eigene Hinweise oder Informationen ergänzen">{{notes}}</textarea>
           </div>
         </form>
+        <dl class="meta-grid">
+          <div class="meta-item">
+            <dt>Maßnahmen-Themengebiet</dt>
+            <dd>{{#if topic.measure.title}}{{topic.measure.title}}{{else}}—{{/if}}</dd>
+          </div>
+          <div class="meta-item">
+            <dt>Maßnahmen-ID</dt>
+            <dd>{{#if topic.measure.id}}{{topic.measure.id}}{{else}}—{{/if}}</dd>
+          </div>
+        </dl>
       </section>
 
       <section class="structure-section" aria-labelledby="sub-topics-title">
@@ -57,6 +72,7 @@
                     <th scope="col">Sub-Themengebiet</th>
                     <th scope="col">Asset Kategorien</th>
                     <th scope="col">Gruppen</th>
+                    <th scope="col">Maßnahmen-ID</th>
                     <th scope="col">Maßnahmen</th>
                   </tr>
                 </thead>
@@ -66,6 +82,13 @@
                       <td><a class="table-link" href="/asset-structure/{{topicId}}/{{id}}">{{title}}</a></td>
                       <td><a class="table-link" href="/asset-structure/{{topicId}}/{{id}}">{{assetCategoryCount}}</a></td>
                       <td><a class="table-link" href="/asset-structure/{{topicId}}/{{id}}">{{groupCount}}</a></td>
+                      <td>
+                        {{#if measure.id}}
+                          {{measure.id}}
+                        {{else}}
+                          —
+                        {{/if}}
+                      </td>
                       <td>
                         {{#if measuresUrl}}
                           <a class="table-link table-link--muted" href="{{measuresUrl}}">In Maßnahmen öffnen</a>

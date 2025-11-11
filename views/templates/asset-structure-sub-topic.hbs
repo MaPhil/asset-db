@@ -3,6 +3,8 @@
   data-app="asset-structure"
   data-topic-id="{{topic.id}}"
   data-sub-topic-id="{{subTopic.id}}"
+  {{#if topic.measure.id}}data-measure-topic-id="{{topic.measure.id}}"{{/if}}
+  {{#if subTopic.measure.id}}data-measure-sub-topic-id="{{subTopic.measure.id}}"{{/if}}
 >
   <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
@@ -59,6 +61,24 @@
             >{{notes}}</textarea>
           </div>
         </form>
+        <dl class="meta-grid">
+          <div class="meta-item">
+            <dt>Maßnahmen-Themengebiet</dt>
+            <dd>{{#if topic.measure.title}}{{topic.measure.title}}{{else}}—{{/if}}</dd>
+          </div>
+          <div class="meta-item">
+            <dt>Maßnahmen-Themengebiet ID</dt>
+            <dd>{{#if topic.measure.id}}{{topic.measure.id}}{{else}}—{{/if}}</dd>
+          </div>
+          <div class="meta-item">
+            <dt>Maßnahmen-Sub-Themengebiet</dt>
+            <dd>{{#if subTopic.measure.title}}{{subTopic.measure.title}}{{else}}—{{/if}}</dd>
+          </div>
+          <div class="meta-item">
+            <dt>Maßnahmen-Sub-Themengebiet ID</dt>
+            <dd>{{#if subTopic.measure.id}}{{subTopic.measure.id}}{{else}}—{{/if}}</dd>
+          </div>
+        </dl>
       </section>
 
       <section class="structure-section" aria-labelledby="asset-categories-title">
