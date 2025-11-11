@@ -13,7 +13,7 @@ export const ManipulatorsController = {
       } else {
         logger.warn('Manipulators could not be loaded', { error: error.message });
       }
-      res.status(status).json({ error: error.message || 'Manipulators could not be loaded.' });
+      res.status(status).json({ error: error.message || 'Manipulatoren konnten nicht geladen werden.' });
     }
   },
   async create(req, res) {
@@ -30,7 +30,7 @@ export const ManipulatorsController = {
           payload: req.body
         });
       }
-      res.status(status).json({ error: error.message || 'Manipulator could not be created.' });
+      res.status(status).json({ error: error.message || 'Manipulator konnte nicht erstellt werden.' });
     }
   }
 };

@@ -327,12 +327,12 @@ function renderSidebar(root) {
 }
 
 const MANIPULATOR_OPERATORS = [
-  { value: 'equals', label: 'equals' },
-  { value: 'not_equals', label: 'does not equal' },
-  { value: 'regex', label: 'regex (matches)' },
-  { value: 'greater', label: 'greater than' },
-  { value: 'less', label: 'less than' },
-  { value: 'contains', label: 'contains values' }
+  { value: 'equals', label: 'gleich' },
+  { value: 'not_equals', label: 'ungleich' },
+  { value: 'regex', label: 'Regex (Übereinstimmung)' },
+  { value: 'greater', label: 'größer als' },
+  { value: 'less', label: 'kleiner als' },
+  { value: 'contains', label: 'enthält Werte' }
 ];
 
 let manipulatorRuleCounter = 0;
@@ -415,7 +415,7 @@ function renderManipulatorTable(entries) {
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  const headers = ['Title', 'Description', 'Assets', 'Updated'];
+  const headers = ['Titel', 'Beschreibung', 'Assets', 'Aktualisiert'];
   headers.forEach((label) => {
     const th = document.createElement('th');
     th.textContent = label;
@@ -429,7 +429,7 @@ function renderManipulatorTable(entries) {
     const row = document.createElement('tr');
 
     const titleCell = document.createElement('td');
-    titleCell.textContent = entry?.title || 'Untitled manipulator';
+    titleCell.textContent = entry?.title || 'Manipulator ohne Titel';
     row.appendChild(titleCell);
 
     const descriptionCell = document.createElement('td');
@@ -614,7 +614,7 @@ function renderManipulatorModal() {
     fields.forEach((field) => {
       const option = document.createElement('option');
       option.value = field;
-      option.textContent = field || 'Select field';
+      option.textContent = field || 'Feld auswählen';
       if (field === rule.field) {
         option.selected = true;
       }
@@ -646,13 +646,13 @@ function renderManipulatorModal() {
 
     const updatePlaceholder = () => {
       if (operatorSelect.value === 'contains') {
-        valueInput.placeholder = 'Values (comma separated)';
+        valueInput.placeholder = 'Werte (durch Kommas getrennt)';
       } else if (operatorSelect.value === 'regex') {
-        valueInput.placeholder = 'Regex pattern';
+        valueInput.placeholder = 'Regex-Muster';
       } else if (operatorSelect.value === 'greater' || operatorSelect.value === 'less') {
-        valueInput.placeholder = 'Numeric value';
+        valueInput.placeholder = 'Numerischer Wert';
       } else {
-        valueInput.placeholder = 'Value';
+        valueInput.placeholder = 'Wert';
       }
     };
 
@@ -675,7 +675,7 @@ function renderManipulatorModal() {
     removeButton.type = 'button';
     removeButton.className = 'icon-button selector-rule__remove';
     removeButton.innerHTML = '&times;';
-    removeButton.setAttribute('aria-label', 'Remove rule');
+    removeButton.setAttribute('aria-label', 'Regel entfernen');
     removeButton.addEventListener('click', () => {
       modalState.data.rules = activeRules.filter((entry) => entry.id !== rule.id);
       renderManipulatorModal();
@@ -788,14 +788,14 @@ async function handleManipulatorFormSubmit(root, event) {
 
   const title = titleInput?.value.trim() || '';
   if (!title) {
-    setManipulatorFormError('Title is required.');
+    setManipulatorFormError('Titel ist erforderlich.');
     titleInput?.focus();
     return;
   }
 
   const fields = Array.isArray(state.manipulators.fields) ? state.manipulators.fields : [];
   if (!fields.length) {
-    setManipulatorFormError('Add Asset-Pool fields before creating a manipulator.');
+    setManipulatorFormError('Fügen Sie Asset-Pool-Felder hinzu, bevor Sie einen Manipulator erstellen.');
     return;
   }
 
@@ -812,7 +812,7 @@ async function handleManipulatorFormSubmit(root, event) {
     .filter((rule) => rule.field && rule.value);
 
   if (!normalisedRules.length) {
-    setManipulatorFormError('Add at least one rule with a field and value.');
+    setManipulatorFormError('Fügen Sie mindestens eine Regel mit Feld und Wert hinzu.');
     return;
   }
 
@@ -853,9 +853,9 @@ async function handleManipulatorFormSubmit(root, event) {
     state.manipulators.hasLoaded = true;
     renderManipulatorView(root);
     closeManipulatorModal();
-    showToast('Manipulator created.');
+    showToast('Manipulator erstellt.');
   } catch (error) {
-    const message = error?.payload?.error || error?.message || 'Manipulator could not be created.';
+    const message = error?.payload?.error || error?.message || 'Manipulator konnte nicht erstellt werden.';
     setManipulatorFormError(message);
   } finally {
     modalState.isSaving = false;
@@ -883,7 +883,8 @@ async function refreshManipulators(root = document.querySelector('[data-app="ass
     state.manipulators.error = null;
     state.manipulators.hasLoaded = true;
   } catch (error) {
-    state.manipulators.error = error?.payload?.error || error?.message || 'Manipulators could not be loaded.';
+    state.manipulators.error =
+      error?.payload?.error || error?.message || 'Manipulatoren konnten nicht geladen werden.';
   } finally {
     state.manipulators.isLoading = false;
     if (root && state.assetPoolView === 'manipulators') {

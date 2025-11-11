@@ -4,7 +4,7 @@
       <button type="button" class="sidebar-link sidebar-link--active" data-sidebar-link="overview">
         Asset-Pool (Übersicht)
       </button>
-      <button type="button" class="sidebar-link" data-sidebar-link="manipulators">Manipulators</button>
+      <button type="button" class="sidebar-link" data-sidebar-link="manipulators">Manipulatoren</button>
     </div>
     <div class="sidebar-section">
       <p class="sidebar-heading">Rohdaten</p>
@@ -55,19 +55,19 @@
     <div class="asset-pool-view" data-asset-pool-panel="manipulators" hidden>
       <header class="page-header">
         <div>
-          <h1 class="page-title">Manipulators</h1>
-          <p class="page-subtitle">Create rules that bundle assets from the pool for further processing.</p>
+          <h1 class="page-title">Manipulatoren</h1>
+          <p class="page-subtitle">Erstellen Sie Regeln, um Assets aus dem Pool für die Weiterverarbeitung zu bündeln.</p>
         </div>
         <div class="page-actions">
-          <button class="button" type="button" data-open-manipulator-modal>Create Manipulator</button>
+          <button class="button" type="button" data-open-manipulator-modal>Manipulator erstellen</button>
         </div>
       </header>
       <div class="asset-pool-body" data-manipulator-body>
-        <p class="helper-text" data-manipulator-loading hidden>Loading manipulators…</p>
+        <p class="helper-text" data-manipulator-loading hidden>Manipulatoren werden geladen…</p>
         <p class="form-error" data-manipulator-error hidden></p>
         <div class="card card--empty" data-manipulator-empty hidden>
-          <h2>No manipulators created yet</h2>
-          <p>Create a manipulator to define how assets should be combined.</p>
+          <h2>Noch keine Manipulatoren erstellt</h2>
+          <p>Erstellen Sie einen Manipulator, um festzulegen, wie Assets kombiniert werden sollen.</p>
         </div>
         <div class="table-container" data-manipulator-table hidden></div>
       </div>
@@ -154,11 +154,11 @@
     aria-labelledby="manipulator-modal-title"
   >
     <header class="modal-header">
-      <h2 id="manipulator-modal-title">Create Manipulator</h2>
+      <h2 id="manipulator-modal-title">Manipulator erstellen</h2>
       <button
         class="icon-button"
         type="button"
-        aria-label="Close manipulator configuration"
+        aria-label="Manipulator-Konfiguration schließen"
         data-close-manipulator-modal
       >
         &times;
@@ -167,47 +167,45 @@
     <div class="modal-body">
       <form class="selector-form" id="manipulator-form" data-manipulator-form>
         <div class="form-field form-field--full">
-          <label for="manipulator-title">Title</label>
+          <label for="manipulator-title">Titel</label>
           <input
             id="manipulator-title"
             type="text"
             name="title"
-            placeholder="Name the manipulator"
+            placeholder="Manipulator benennen"
             data-manipulator-title
             autocomplete="off"
           />
         </div>
         <div class="form-field form-field--full">
-          <label for="manipulator-description">Description</label>
+          <label for="manipulator-description">Beschreibung</label>
           <textarea
             id="manipulator-description"
             name="description"
             rows="3"
-            placeholder="Add a brief description"
+            placeholder="Kurze Beschreibung hinzufügen"
             data-manipulator-description
           ></textarea>
         </div>
         <div class="selector-builder" data-manipulator-builder>
-          <p class="helper-text selector-builder__hint">
-            Define rules to decide which assets belong to this manipulator.
-          </p>
+          <p class="helper-text selector-builder__hint">Definieren Sie Regeln, um zu bestimmen, welche Assets zu diesem Manipulator gehören.</p>
           <div class="selector-group__container selector-group__container--root" data-manipulator-root>
             <div class="selector-group__header">
               <label class="selector-group__matches-label" for="manipulator-mode">
-                Combinator
+                Verknüpfung
                 <select id="manipulator-mode" class="selector-group__matches" data-manipulator-mode>
-                  <option value="all">Match all rules (AND)</option>
-                  <option value="any">Match any rule (OR)</option>
+                  <option value="all">Alle Regeln erfüllen (UND)</option>
+                  <option value="any">Eine beliebige Regel erfüllen (ODER)</option>
                 </select>
               </label>
             </div>
             <div class="selector-group__children" data-manipulator-rules></div>
             <p class="helper-text" data-manipulator-no-fields hidden>
-              Add Asset-Pool fields to define manipulator rules.
+              Fügen Sie Asset-Pool-Felder hinzu, um Manipulator-Regeln zu definieren.
             </p>
             <div class="selector-group__actions">
               <button class="button button--ghost selector-group__action" type="button" data-add-manipulator-rule>
-                Add rule
+                Regel hinzufügen
               </button>
             </div>
           </div>
@@ -216,8 +214,8 @@
       </form>
     </div>
     <div class="modal-footer">
-      <button class="button button--ghost" type="button" data-close-manipulator-modal>Cancel</button>
-      <button class="button" type="submit" form="manipulator-form" data-save-manipulator>Create</button>
+      <button class="button button--ghost" type="button" data-close-manipulator-modal>Abbrechen</button>
+      <button class="button" type="submit" form="manipulator-form" data-save-manipulator>Erstellen</button>
     </div>
   </div>
 </div>
