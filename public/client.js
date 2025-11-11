@@ -3364,6 +3364,7 @@ function createAssetCategoryModalController(root) {
   const saveButton = select(modal, '[data-save-asset-category]');
   const cancelButton = select(modal, '[data-cancel-asset-category]');
   const closeButton = select(modal, '[data-close-asset-category-modal]');
+  const deleteButton = select(modal, '[data-delete-asset-category]');
 
   function close() {
     modal.hidden = true;
@@ -3406,6 +3407,10 @@ function createAssetCategoryModalController(root) {
       errorEl.hidden = true;
       errorEl.textContent = '';
     }
+    if (deleteButton) {
+      deleteButton.disabled = false;
+      delete deleteButton.dataset.loading;
+    }
 
     renderAssetCategoryOptions(modal);
 
@@ -3430,6 +3435,43 @@ function createAssetCategoryModalController(root) {
 
   if (closeButton) {
     closeButton.addEventListener('click', () => close());
+  }
+
+  if (deleteButton) {
+    deleteButton.addEventListener('click', async () => {
+      const categoryId = assetCategoriesState.modal.categoryId;
+      if (!Number.isInteger(categoryId) || categoryId <= 0) {
+        return;
+      }
+
+      const category = assetCategoriesState.categories.find((entry) => entry.id === categoryId);
+      const name = category?.name || `Asset-Kategorie ${categoryId}`;
+      const confirmMessage =
+        `Asset-Kategorie „${name}“ löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.`;
+
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+
+      deleteButton.disabled = true;
+      deleteButton.dataset.loading = 'true';
+
+      try {
+        const overview = await fetchJson(`${API.assetCategories}/${categoryId}`, { method: 'DELETE' });
+        applyAssetCategoryOverview(overview);
+        renderAssetCategoryTable(root);
+        updateAssetCategorySummary(root);
+        close();
+        showToast('Asset-Kategorie gelöscht.');
+      } catch (error) {
+        const message =
+          error?.payload?.error || error.message || 'Asset-Kategorie konnte nicht gelöscht werden.';
+        showToast(message);
+      } finally {
+        delete deleteButton.dataset.loading;
+        deleteButton.disabled = false;
+      }
+    });
   }
 
   if (saveButton) {

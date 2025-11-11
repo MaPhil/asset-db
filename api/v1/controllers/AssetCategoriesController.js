@@ -1,5 +1,6 @@
 import {
   createAssetCategory,
+  deleteAssetCategory,
   getAssetCategoryOverview,
   updateAssetCategory
 } from '../../../lib/assetCategories.js';
@@ -51,6 +52,27 @@ export const AssetCategoriesController = {
       res
         .status(statusCode)
         .json({ error: error?.message || 'Asset-Kategorie konnte nicht aktualisiert werden.' });
+    }
+  },
+
+  delete: (req, res) => {
+    const id = req.params?.id;
+    try {
+      const overview = deleteAssetCategory(id);
+      res.json(overview);
+    } catch (error) {
+      const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 400;
+      if (statusCode >= 500) {
+        logger.error('Asset-Kategorie konnte nicht gelöscht werden', error, { id });
+      } else {
+        logger.warn('Validierungsfehler beim Löschen einer Asset-Kategorie', {
+          error: error?.message,
+          id
+        });
+      }
+      res
+        .status(statusCode)
+        .json({ error: error?.message || 'Asset-Kategorie konnte nicht gelöscht werden.' });
     }
   }
 };
