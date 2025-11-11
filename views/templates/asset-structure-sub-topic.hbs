@@ -103,47 +103,30 @@
                   </tr>
                 </thead>
                 <tbody>
+                  {{#*inline "assetSubCategoryCell"}}
+                    <td>
+                      {{#if isIgnored}}
+                        <span class="table-link table-link--muted">{{value}}</span>
+                      {{else}}
+                        <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}">{{value}}</a>
+                      {{/if}}
+                    </td>
+                  {{/inline}}
                   {{#each assetSubCategories}}
                     <tr {{#if isIgnored}}data-asset-sub-category-ignored="true"{{/if}}>
-                      <td>
-                        <a
-                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
-                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
-                        >{{title}}</a>
-                      </td>
-                      <td>
-                        <a
-                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
-                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
-                        >{{groupCount}}</a>
-                      </td>
-                      <td>
-                        <a
-                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
-                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
-                        >{{owner}}</a>
-                      </td>
-                      <td>
-                        <a
-                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
-                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
-                        >{{integrity}}</a>
-                      </td>
-                      <td>
-                        <a
-                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
-                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
-                        >{{availability}}</a>
-                      </td>
-                      <td>
-                        <a
-                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
-                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
-                        >{{confidentiality}}</a>
-                      </td>
+                      {{> assetSubCategoryCell value=title}}
+                      {{> assetSubCategoryCell value=groupCount}}
+                      {{> assetSubCategoryCell value=owner}}
+                      {{> assetSubCategoryCell value=integrity}}
+                      {{> assetSubCategoryCell value=availability}}
+                      {{> assetSubCategoryCell value=confidentiality}}
                       <td>
                         {{#if measuresUrl}}
-                          <a class="table-link table-link--muted" href="{{measuresUrl}}">In Maßnahmen öffnen</a>
+                          {{#if isIgnored}}
+                            <span class="table-link table-link--muted">In Maßnahmen öffnen</span>
+                          {{else}}
+                            <a class="table-link table-link--muted" href="{{measuresUrl}}">In Maßnahmen öffnen</a>
+                          {{/if}}
                         {{else}}
                           —
                         {{/if}}
