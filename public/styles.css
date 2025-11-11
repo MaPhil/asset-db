@@ -446,6 +446,24 @@ main {
   background: rgba(59, 130, 246, 0.08);
 }
 
+.table--interactive tbody tr[data-asset-sub-category-ignored='true'] {
+  color: var(--color-muted);
+}
+
+.table--interactive tbody tr[data-asset-sub-category-ignored='true'] .table-link {
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.table--interactive tbody tr[data-asset-sub-category-ignored='true'] .table-link:hover,
+.table--interactive tbody tr[data-asset-sub-category-ignored='true'] .table-link:focus {
+  color: var(--color-muted);
+}
+
+.table--interactive tbody tr[data-asset-sub-category-ignored='true']:hover {
+  background: transparent;
+}
+
 .table-link {
   display: inline-flex;
   align-items: center;

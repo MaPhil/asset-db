@@ -104,24 +104,42 @@
                 </thead>
                 <tbody>
                   {{#each assetSubCategories}}
-                    <tr>
+                    <tr {{#if isIgnored}}data-asset-sub-category-ignored="true"{{/if}}>
                       <td>
-                        <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}">{{title}}</a>
+                        <a
+                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
+                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
+                        >{{title}}</a>
                       </td>
                       <td>
-                        <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}">{{groupCount}}</a>
+                        <a
+                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
+                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
+                        >{{groupCount}}</a>
                       </td>
                       <td>
-                        <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}">{{owner}}</a>
+                        <a
+                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
+                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
+                        >{{owner}}</a>
                       </td>
                       <td>
-                        <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}">{{integrity}}</a>
+                        <a
+                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
+                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
+                        >{{integrity}}</a>
                       </td>
                       <td>
-                        <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}">{{availability}}</a>
+                        <a
+                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
+                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
+                        >{{availability}}</a>
                       </td>
                       <td>
-                        <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}">{{confidentiality}}</a>
+                        <a
+                          class="table-link{{#if isIgnored}} table-link--muted{{/if}}"
+                          href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}"
+                        >{{confidentiality}}</a>
                       </td>
                       <td>
                         {{#if measuresUrl}}
