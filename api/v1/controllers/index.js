@@ -8,3 +8,4 @@ export { AssetPoolController } from './AssetPoolController.js';
 export { AssetTypesController } from './AssetTypesController.js';
 export { GroupAssetTypesController } from './GroupAssetTypesController.js';
 export { MeasuresController } from './MeasuresController.js';
+export { AssetCategoriesController } from './AssetCategoriesController.js';
