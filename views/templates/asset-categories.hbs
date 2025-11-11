@@ -9,7 +9,7 @@
   <section class="asset-structure-content">
     <header class="page-header">
       <div>
-        <h1 class="page-title">Asset-Kategorien</h1>
+        <h1 class="page-title" id="asset-category-page-title">Asset-Kategorien</h1>
         <p class="page-subtitle">
           Verwalten Sie zusätzliche Kategorien für Ihre Assets und weisen Sie AssetUnterKategorien zu.
         </p>
@@ -17,42 +17,20 @@
     </header>
 
     <div class="structure-body">
-      <section class="structure-section" aria-labelledby="asset-category-create-title">
-        <div class="card structure-card">
-          <div class="section-header">
-            <h2 class="section-title" id="asset-category-create-title">Neue Asset-Kategorie erstellen</h2>
-          </div>
-          <form data-asset-category-create class="asset-category-create-form">
-            <div class="form-field">
-              <label for="asset-category-name">Name</label>
-              <div class="asset-category-create-input">
-                <input
-                  id="asset-category-name"
-                  name="name"
-                  type="text"
-                  placeholder="z. B. Kritische Infrastruktur"
-                  autocomplete="off"
-                  required
-                  data-asset-category-name-input
-                />
-                <button class="button" type="submit" data-create-asset-category>Erstellen</button>
-              </div>
-            </div>
-            <p class="form-error" data-asset-category-create-error hidden></p>
-          </form>
-        </div>
-      </section>
-
-      <section class="structure-section" aria-labelledby="asset-category-table-title">
+      <section class="structure-section" aria-labelledby="asset-category-page-title">
         <div class="section-header">
-          <h2 class="section-title" id="asset-category-table-title">Asset-Kategorien</h2>
-          <p class="helper-text" data-asset-category-summary>
+          <p
+            class="helper-text"
+            id="asset-category-summary"
+            data-asset-category-summary
+          >
             {{categoryCount}} Kategorien, {{assetSubCategoryCount}} verfügbare AssetUnterKategorien.
           </p>
+          <button class="button" type="button" data-open-create-asset-category>Erstelle neue Asset Kategorie</button>
         </div>
         <div class="card structure-card" data-asset-category-table>
           <div class="table-wrapper" role="region" aria-live="polite">
-            <table class="table table--interactive" aria-describedby="asset-category-table-title">
+            <table class="table table--interactive" aria-describedby="asset-category-summary">
               <thead>
                 <tr>
                   <th scope="col">Asset-Kategorie</th>
@@ -74,6 +52,45 @@
 </div>
 
 <script type="application/json" data-asset-category-state>{{{json assetCategoryState}}}</script>
+
+<div class="modal" data-asset-category-create-modal hidden aria-hidden="true">
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-category-create-modal-title">
+    <form data-asset-category-create class="asset-category-create-form">
+      <header class="modal-header">
+        <h2 class="section-title" id="asset-category-create-modal-title">Neue Asset-Kategorie erstellen</h2>
+        <button
+          class="icon-button"
+          type="button"
+          data-close-create-asset-category
+          aria-label="Erstellung der Asset-Kategorie schließen"
+        >
+          &times;
+        </button>
+      </header>
+      <div class="modal-body">
+        <div class="form-field">
+          <label for="asset-category-name">Name</label>
+          <div class="asset-category-create-input">
+            <input
+              id="asset-category-name"
+              name="name"
+              type="text"
+              placeholder="z. B. Kritische Infrastruktur"
+              autocomplete="off"
+              required
+              data-asset-category-name-input
+            />
+          </div>
+        </div>
+        <p class="form-error" data-asset-category-create-error hidden></p>
+      </div>
+      <div class="modal-footer">
+        <button class="button button--ghost" type="button" data-cancel-create-asset-category>Abbrechen</button>
+        <button class="button" type="submit" data-create-asset-category>Erstellen</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <div class="modal" data-asset-category-modal hidden aria-hidden="true">
   <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-category-modal-title">

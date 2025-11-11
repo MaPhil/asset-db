@@ -3526,14 +3526,76 @@ function setupAssetCategoryTableInteractions(root, controller) {
 }
 
 function setupAssetCategoryCreateForm(root) {
-  const form = select(root, '[data-asset-category-create]');
-  if (!form) {
+  const trigger = select(root, '[data-open-create-asset-category]');
+  const modal = document.querySelector('[data-asset-category-create-modal]');
+  const form = modal ? select(modal, '[data-asset-category-create]') : null;
+  if (!trigger || !modal || !form) {
     return;
   }
+
+  modal.setAttribute('aria-hidden', 'true');
 
   const input = select(form, '[data-asset-category-name-input]');
   const errorEl = select(form, '[data-asset-category-create-error]');
   const submitButton = select(form, '[data-create-asset-category]');
+  const closeButton = select(form, '[data-close-create-asset-category]');
+  const cancelButton = select(form, '[data-cancel-create-asset-category]');
+
+  let lastFocus = null;
+
+  const resetError = () => {
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+  };
+
+  const open = (origin) => {
+    if (assetCategoriesState.isCreating) {
+      return;
+    }
+    lastFocus = origin || document.activeElement;
+    resetError();
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    modal.setAttribute('tabindex', '-1');
+    modal.focus();
+    input?.focus();
+  };
+
+  const close = ({ force = false } = {}) => {
+    if (!force && assetCategoriesState.isCreating) {
+      return;
+    }
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    if (submitButton) {
+      submitButton.disabled = false;
+      delete submitButton.dataset.loading;
+    }
+    const focusTarget = lastFocus;
+    lastFocus = null;
+    if (focusTarget && typeof focusTarget.focus === 'function') {
+      focusTarget.focus();
+    }
+  };
+
+  trigger.addEventListener('click', () => open(trigger));
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      close();
+    }
+  });
+
+  closeButton?.addEventListener('click', () => close());
+  cancelButton?.addEventListener('click', () => close());
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') {
+      close();
+    }
+  });
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -3551,10 +3613,7 @@ function setupAssetCategoryCreateForm(root) {
       return;
     }
 
-    if (errorEl) {
-      errorEl.hidden = true;
-      errorEl.textContent = '';
-    }
+    resetError();
 
     assetCategoriesState.isCreating = true;
     if (submitButton) {
@@ -3574,6 +3633,7 @@ function setupAssetCategoryCreateForm(root) {
       if (input) {
         input.value = '';
       }
+      close({ force: true });
       showToast('Asset-Kategorie erstellt.');
     } catch (error) {
       const message = error?.payload?.error || error.message || 'Asset-Kategorie konnte nicht erstellt werden.';
@@ -3581,6 +3641,7 @@ function setupAssetCategoryCreateForm(root) {
         errorEl.hidden = false;
         errorEl.textContent = message;
       }
+      input?.focus();
     } finally {
       assetCategoriesState.isCreating = false;
       if (submitButton) {
