@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { GroupAssetTypesController, GroupsController } from '../controllers/index.js';
+import { GroupAssetSelectorsController, GroupsController } from '../controllers/index.js';
 import { asyncHandler, validateId } from '../middleware/index.js';
 
 const router = Router();
@@ -10,25 +10,26 @@ router.put('/:id', validateId(), asyncHandler(GroupsController.update));
 router.delete('/:id', validateId(), asyncHandler(GroupsController.destroy));
 router.post('/:id/link-category', validateId(), asyncHandler(GroupsController.linkCategory));
 router.get(
-  '/:id/asset-types',
+  '/:id/asset-selectors',
   validateId(),
-  asyncHandler(GroupAssetTypesController.list)
-);
-router.get(
-  '/:id/asset-types/available',
-  validateId(),
-  asyncHandler(GroupAssetTypesController.available)
+  asyncHandler(GroupAssetSelectorsController.list)
 );
 router.post(
-  '/:id/asset-types',
+  '/:id/asset-selectors',
   validateId(),
-  asyncHandler(GroupAssetTypesController.create)
+  asyncHandler(GroupAssetSelectorsController.create)
 );
-router.delete(
-  '/:id/asset-types/:assetTypeId',
+router.put(
+  '/:id/asset-selectors/:selectorId',
   validateId(),
-  validateId('assetTypeId'),
-  asyncHandler(GroupAssetTypesController.destroy)
+  validateId('selectorId'),
+  asyncHandler(GroupAssetSelectorsController.update)
+);
+router.get(
+  '/:id/asset-selectors/:selectorId/assets',
+  validateId(),
+  validateId('selectorId'),
+  asyncHandler(GroupAssetSelectorsController.assets)
 );
 
 export default router;

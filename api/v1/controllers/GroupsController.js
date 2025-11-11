@@ -53,17 +53,23 @@ export const GroupsController = {
     const assignedAssetTypes = assignmentsTable.rows.filter(
       (row) => Number(row?.group_id) === id
     );
+    const selectorTable = store.get('group_asset_selectors');
+    const selectorCount = selectorTable.rows.filter((row) => Number(row?.group_id) === id).length;
     const hasLegacyAssetType = Boolean(group?.asset_type && String(group.asset_type).trim());
 
-    if (assignedAssetTypes.length > 0 || hasLegacyAssetType) {
-      logger.warn('Gruppe mit zugewiesenen Asset-Typen kann nicht gelöscht werden', {
+    if (assignedAssetTypes.length > 0 || hasLegacyAssetType || selectorCount > 0) {
+      logger.warn('Gruppe mit zugewiesenen Asset-Typen oder Asset-Selectoren kann nicht gelöscht werden', {
         groupId: id,
         assignmentCount: assignedAssetTypes.length,
+        selectorCount,
         hasLegacyAssetType
       });
       return res
         .status(409)
-        .json({ error: 'Gruppe kann nicht gelöscht werden, solange Asset-Typen zugeordnet sind.' });
+        .json({
+          error:
+            'Gruppe kann nicht gelöscht werden, solange Asset-Typen oder Asset-Selectoren zugeordnet sind.'
+        });
     }
 
     const groupCategoryTable = store.get('group_categories');

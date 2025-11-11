@@ -3,11 +3,10 @@
   data-app="asset-structure"
   data-group-id="{{group.id}}"
   data-group-name="{{group.displayTitle}}"
-  data-available-group-asset-types="{{availableGroupAssetTypesCount}}"
   data-topic-id="{{topic.id}}"
   data-sub-topic-id="{{subTopic.id}}"
   data-asset-sub-category-id="{{assetSubCategory.id}}"
-  data-group-asset-type-count="{{groupAssetTypeCount}}"
+  data-group-selector-count="{{groupSelectorCount}}"
 >
   <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
@@ -32,11 +31,11 @@
           type="button"
           data-delete-group
           data-confirm="Diese Gruppe löschen? Dieser Vorgang kann nicht rückgängig gemacht werden."
-          data-disabled-title="Gruppe kann nicht gelöscht werden, solange Asset-Typen zugeordnet sind."
-          {{#if groupAssetTypeCount}}
+          data-disabled-title="Gruppe kann nicht gelöscht werden, solange Asset-Selectoren vorhanden sind."
+          {{#if groupSelectorCount}}
             disabled
             aria-disabled="true"
-            title="Gruppe kann nicht gelöscht werden, solange Asset-Typen zugeordnet sind."
+            title="Gruppe kann nicht gelöscht werden, solange Asset-Selectoren vorhanden sind."
           {{/if}}
         >
           Gruppe löschen
@@ -126,101 +125,111 @@
         </dl>
       </section>
 
-      <section class="card structure-card" aria-labelledby="group-asset-types-title">
+      <section class="card structure-card" aria-labelledby="group-asset-selectors-title">
         <div class="section-header">
-          <h2 class="section-title" id="group-asset-types-title">Asset-Typen</h2>
-          <button class="button" type="button" data-open-group-asset-type-modal>Asset-Typ hinzufügen</button>
+          <div>
+            <h2 class="section-title" id="group-asset-selectors-title">Assets</h2>
+            <p class="helper-text">
+              Create Asset Selectors to gather matching assets from the pool.
+            </p>
+          </div>
+          <button class="button" type="button" data-open-group-selector-modal>Create Asset Selector</button>
         </div>
-        <p class="helper-text">
-          Wählen Sie aus den verfügbaren Asset-Typen aus Ihrem Asset-Pool. Jeder Asset-Typ kann nur einer
-          Gruppe zugeordnet sein, sofern er nicht ignoriert wird.
+        <p class="helper-text" data-group-selector-loading hidden>Loading asset selectors…</p>
+        <p class="form-error" data-group-selector-error hidden></p>
+        <p class="empty-state" data-group-selector-empty hidden>
+          No asset selectors have been created for this group yet.
         </p>
-        <p
-          class="empty-state"
-          data-group-asset-type-empty
-          {{#if groupAssetTypes.length}}hidden{{/if}}
-        >
-          Dieser Gruppe wurden noch keine Asset-Typen zugewiesen.
-        </p>
-        <ul
-          class="group-asset-type-list"
-          data-group-asset-type-list
-          {{#unless groupAssetTypes.length}}hidden{{/unless}}
-        >
-          {{#each groupAssetTypes}}
-            <li
-              class="group-asset-type-list__item"
-              data-group-asset-type-item
-              data-group-asset-type-name="{{name}}"
-              {{#if id}}data-group-asset-type-id="{{id}}"{{/if}}
-              {{#if isLegacy}}data-group-asset-type-legacy="true"{{/if}}
-            >
-              <div class="group-asset-type-pill{{#if isLegacy}} group-asset-type-pill--legacy{{/if}}">
-                <div class="group-asset-type-pill__header">
-                  <span class="group-asset-type-pill__name">{{name}}</span>
-                  <div class="group-asset-type-pill__actions">
-                    <button
-                      type="button"
-                      class="icon-button group-asset-type-pill__remove"
-                      aria-label="Asset-Typ {{name}} aus dieser Gruppe entfernen"
-                      data-group-asset-type-name="{{name}}"
-                      {{#if id}}
-                        data-remove-group-asset-type="{{id}}"
-                      {{else}}
-                        disabled
-                        aria-disabled="true"
-                        title="Aktualisieren Sie die Gruppeninformationen, um diesen Asset-Typ zu entfernen."
-                      {{/if}}
-                    >
-                      &times;
-                    </button>
-                  </div>
-                </div>
-                <span class="group-asset-type-pill__meta">
-                  {{#if count}}
-                    {{count}} {{#if (eq count 1)}}Asset{{else}}Assets{{/if}}
-                  {{else}}
-                    Noch keine Einträge im Asset-Pool
-                  {{/if}}
-                </span>
-                {{#if isLegacy}}
-                  <span class="group-asset-type-pill__tag">Aus Gruppendetails</span>
-                {{/if}}
-              </div>
-            </li>
-          {{/each}}
-        </ul>
+        <ul class="asset-selector-list" data-group-selector-list hidden></ul>
       </section>
     </div>
   </section>
 </div>
 
-<div class="modal" data-group-asset-type-modal hidden aria-hidden="true">
-  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="group-asset-type-modal-title">
+<script type="application/json" data-group-selector-state>{{{json groupSelectorState}}}</script>
+
+<div class="modal" data-group-selector-modal hidden aria-hidden="true">
+  <div
+    class="modal-dialog modal-dialog--large"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="group-selector-modal-title"
+  >
     <header class="modal-header">
-      <h2 id="group-asset-type-modal-title">Asset-Typ hinzufügen</h2>
+      <h2 id="group-selector-modal-title">Create Asset Selector</h2>
       <button
         class="icon-button"
         type="button"
-        aria-label="Auswahl des Asset-Typs schließen"
-        data-close-group-asset-type-modal
+        aria-label="Close asset selector configuration"
+        data-close-group-selector-modal
       >
         &times;
       </button>
     </header>
     <div class="modal-body">
-      <p class="modal-description">
-        Wählen Sie einen der verfügbaren Asset-Typen, um ihn mit {{group.displayTitle}} zu verknüpfen.
-      </p>
-      <p class="helper-text" data-group-asset-type-loading>Verfügbare Asset-Typen werden geladen…</p>
-      <p class="empty-state" data-group-asset-type-modal-empty hidden>
-        Alle Asset-Typen sind derzeit anderen Gruppen zugeordnet oder zum Ignorieren markiert.
-      </p>
-      <p class="form-error" data-group-asset-type-error hidden></p>
-      <ul class="group-asset-type-modal__list" data-group-asset-type-options></ul>
+      <form class="selector-form" id="group-selector-form" data-group-selector-form>
+        <div class="form-field form-field--full">
+          <label for="group-selector-name">Title</label>
+          <input
+            id="group-selector-name"
+            type="text"
+            name="name"
+            placeholder="Name the asset selector"
+            data-group-selector-name
+            autocomplete="off"
+          />
+        </div>
+        <div class="form-field form-field--full">
+          <label for="group-selector-description">Description</label>
+          <textarea
+            id="group-selector-description"
+            name="description"
+            rows="3"
+            placeholder="Add a brief description"
+            data-group-selector-description
+          ></textarea>
+        </div>
+        <div class="selector-builder" data-selector-builder>
+          <p class="helper-text selector-builder__hint">
+            Define rules and groups to decide which assets belong to this selector.
+          </p>
+          <div class="selector-group" data-selector-root></div>
+        </div>
+        <p class="form-error" data-group-selector-form-error hidden></p>
+      </form>
     </div>
     <div class="modal-footer">
-      <button class="button button--ghost" type="button" data-close-group-asset-type-modal>Schließen</button>
+      <button class="button button--ghost" type="button" data-close-group-selector-modal>Cancel</button>
+      <button class="button" type="submit" form="group-selector-form" data-save-group-selector>Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" data-group-selector-assets-modal hidden aria-hidden="true">
+  <div
+    class="modal-dialog modal-dialog--large"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="group-selector-assets-title"
+  >
+    <header class="modal-header">
+      <h2 id="group-selector-assets-title">Show Assets</h2>
+      <button
+        class="icon-button"
+        type="button"
+        aria-label="Close asset list"
+        data-close-group-selector-assets-modal
+      >
+        &times;
+      </button>
+    </header>
+    <div class="modal-body">
+      <p class="helper-text" data-group-selector-assets-loading>Loading assets…</p>
+      <p class="form-error" data-group-selector-assets-error hidden></p>
+      <div class="table-container" data-group-selector-assets-table hidden></div>
+    </div>
+    <div class="modal-footer">
+      <button class="button" type="button" data-close-group-selector-assets-modal>Close</button>
     </div>
   </div>
 </div>

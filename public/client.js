@@ -11,11 +11,11 @@ const API = {
   categories: '/api/v1/categories',
   assetCategories: '/api/v1/asset-categories',
   groups: '/api/v1/groups',
-  groupAssetTypes: (groupId) => `/api/v1/groups/${groupId}/asset-types`,
-  groupAssetType: (groupId, assetTypeId) =>
-    `/api/v1/groups/${groupId}/asset-types/${assetTypeId}`,
-  groupAssetTypesAvailable: (groupId) =>
-    `/api/v1/groups/${groupId}/asset-types/available`,
+  groupAssetSelectors: (groupId) => `/api/v1/groups/${groupId}/asset-selectors`,
+  groupAssetSelector: (groupId, selectorId) =>
+    `/api/v1/groups/${groupId}/asset-selectors/${selectorId}`,
+  groupAssetSelectorAssets: (groupId, selectorId) =>
+    `/api/v1/groups/${groupId}/asset-selectors/${selectorId}/assets`,
   measures: '/api/v1/measures',
   measuresUpload: '/api/v1/measures/upload'
 };
@@ -60,13 +60,32 @@ const state = {
     activeButton: null,
     error: null
   },
-  groupAssetTypeModal: {
-    isOpen: false,
+  groupSelector: {
+    selectors: [],
+    fields: [],
     isLoading: false,
-    isSaving: false,
-    trigger: null,
-    options: [],
-    error: null
+    error: null,
+    editor: {
+      isOpen: false,
+      isSaving: false,
+      mode: 'create',
+      selectorId: null,
+      error: null,
+      data: null,
+      modal: null,
+      trigger: null
+    },
+    viewer: {
+      isOpen: false,
+      isLoading: false,
+      selectorId: null,
+      error: null,
+      title: '',
+      columns: [],
+      rows: [],
+      modal: null,
+      trigger: null
+    }
   },
   measures: {
     isUploadOpen: false
@@ -143,7 +162,8 @@ function unlockBodyScrollIfIdle() {
     state.fieldManager.isOpen ||
     state.assetTypeFieldModal.isOpen ||
     state.assetTypeDecisionModal.isOpen ||
-    state.groupAssetTypeModal.isOpen ||
+    state.groupSelector?.editor?.isOpen ||
+    state.groupSelector?.viewer?.isOpen ||
     state.measures.isUploadOpen ||
     structureModalOpenCount > 0;
   if (!anyModalOpen) {
@@ -167,11 +187,11 @@ function readNonNegativeInteger(value) {
   return Math.floor(number);
 }
 
-function getGroupAssetTypeCount(root) {
+function getGroupSelectorCount(root) {
   if (!root?.dataset) {
     return 0;
   }
-  return readNonNegativeInteger(root.dataset.groupAssetTypeCount);
+  return readNonNegativeInteger(root.dataset.groupSelectorCount);
 }
 
 function syncDeleteGroupButtonState(root) {
@@ -180,7 +200,7 @@ function syncDeleteGroupButtonState(root) {
     return;
   }
 
-  const shouldDisable = getGroupAssetTypeCount(root) > 0;
+  const shouldDisable = getGroupSelectorCount(root) > 0;
   button.disabled = shouldDisable;
   if (shouldDisable) {
     button.setAttribute('aria-disabled', 'true');
@@ -195,12 +215,12 @@ function syncDeleteGroupButtonState(root) {
   }
 }
 
-function setGroupAssetTypeCount(root, count) {
+function setGroupSelectorCount(root, count) {
   if (!root?.dataset) {
     return;
   }
   const safeCount = readNonNegativeInteger(count);
-  root.dataset.groupAssetTypeCount = String(safeCount);
+  root.dataset.groupSelectorCount = String(safeCount);
   syncDeleteGroupButtonState(root);
 }
 
@@ -2308,385 +2328,920 @@ function setupAssetTypeDecisionModal(root) {
   });
 }
 
-function appendGroupAssetTypePill(root, entry) {
-  const list = select(root, '[data-group-asset-type-list]');
-  const emptyEl = select(root, '[data-group-asset-type-empty]');
-  if (!list) {
-    return;
-  }
+let selectorNodeSequence = 0;
 
-  const item = document.createElement('li');
-  item.className = 'group-asset-type-list__item';
-  item.dataset.groupAssetTypeItem = 'true';
-  const assignmentId = Number(entry?.id);
-  const hasAssignmentId = Number.isInteger(assignmentId) && assignmentId > 0;
-  if (hasAssignmentId) {
-    item.dataset.groupAssetTypeId = String(assignmentId);
-  }
-  const assetTypeName = entry?.name ?? '';
-  item.dataset.groupAssetTypeName = String(assetTypeName);
-  if (entry?.isLegacy) {
-    item.dataset.groupAssetTypeLegacy = 'true';
-  }
-
-  const pill = document.createElement('div');
-  pill.className = `group-asset-type-pill${entry?.isLegacy ? ' group-asset-type-pill--legacy' : ''}`;
-
-  const header = document.createElement('div');
-  header.className = 'group-asset-type-pill__header';
-
-  const nameEl = document.createElement('span');
-  nameEl.className = 'group-asset-type-pill__name';
-  nameEl.textContent = assetTypeName;
-  header.appendChild(nameEl);
-
-  const actionsEl = document.createElement('div');
-  actionsEl.className = 'group-asset-type-pill__actions';
-
-  const removeButton = document.createElement('button');
-  removeButton.type = 'button';
-  removeButton.className = 'icon-button group-asset-type-pill__remove';
-  removeButton.textContent = '×';
-  const labelName = assetTypeName || 'dieser Asset-Typ';
-  removeButton.setAttribute(
-    'aria-label',
-    `Asset-Typ ${labelName} aus dieser Gruppe entfernen`
-  );
-  removeButton.dataset.groupAssetTypeName = String(assetTypeName);
-  if (hasAssignmentId) {
-    removeButton.dataset.removeGroupAssetType = String(assignmentId);
-  } else {
-    removeButton.disabled = true;
-    removeButton.setAttribute('aria-disabled', 'true');
-    removeButton.title = 'Aktualisieren Sie die Gruppeninformationen, um diesen Asset-Typ zu entfernen.';
-  }
-  actionsEl.appendChild(removeButton);
-  header.appendChild(actionsEl);
-
-  pill.appendChild(header);
-
-  const metaEl = document.createElement('span');
-  metaEl.className = 'group-asset-type-pill__meta';
-  const count = Number(entry?.count);
-  if (Number.isFinite(count) && count > 0) {
-    metaEl.textContent = `${count} ${count === 1 ? 'Asset' : 'Assets'}`;
-  } else {
-    metaEl.textContent = 'Noch keine Einträge im Asset-Pool';
-  }
-  pill.appendChild(metaEl);
-
-  if (entry?.isLegacy) {
-    const tagEl = document.createElement('span');
-    tagEl.className = 'group-asset-type-pill__tag';
-    tagEl.textContent = 'Aus Gruppendetails';
-    pill.appendChild(tagEl);
-  }
-
-  item.appendChild(pill);
-  list.appendChild(item);
-
-  list.hidden = false;
-  if (emptyEl) {
-    emptyEl.hidden = true;
-  }
-
-  const totalItems = list.querySelectorAll('[data-group-asset-type-item]').length;
-  setGroupAssetTypeCount(root, totalItems);
-
-  if (root?.dataset) {
-    const available = Number(root.dataset.availableGroupAssetTypes || '0');
-    if (Number.isFinite(available) && available > 0) {
-      root.dataset.availableGroupAssetTypes = String(Math.max(0, available - 1));
-    }
-  }
+function nextSelectorNodeId(prefix) {
+  selectorNodeSequence += 1;
+  return `${prefix}-${selectorNodeSequence}`;
 }
 
-function setupGroupAssetTypeList(root) {
-  const list = select(root, '[data-group-asset-type-list]');
-  if (!list) {
-    return;
-  }
+function createSelectorRule(initial = {}) {
+  const fields = Array.isArray(state.groupSelector.fields) ? state.groupSelector.fields : [];
+  const defaultField = fields.length ? fields[0] : '';
+  return {
+    id: nextSelectorNodeId('rule'),
+    type: 'rule',
+    field: initial.field || defaultField,
+    operator: initial.operator || 'equals',
+    value: initial.value !== undefined && initial.value !== null ? String(initial.value) : ''
+  };
+}
 
-  const emptyEl = select(root, '[data-group-asset-type-empty]');
-  const groupId = Number(root?.dataset?.groupId || '');
-  if (!Number.isInteger(groupId) || groupId <= 0) {
-    return;
-  }
-
-  list.addEventListener('click', async (event) => {
-    const button = event.target.closest('[data-remove-group-asset-type]');
-    if (!button || !list.contains(button)) {
-      return;
-    }
-
-    const assignmentId = Number(button.dataset.removeGroupAssetType || '');
-    if (!Number.isInteger(assignmentId) || assignmentId <= 0) {
-      return;
-    }
-
-    if (button.dataset.loading === 'true') {
-      return;
-    }
-
-    button.dataset.loading = 'true';
-    button.disabled = true;
-
-    const item = button.closest('[data-group-asset-type-item]');
-    const assetTypeName =
-      button.dataset.groupAssetTypeName || item?.dataset.groupAssetTypeName || 'dieser Asset-Typ';
-    const groupName = root?.dataset?.groupName || 'dieser Gruppe';
-
-    try {
-      await fetchJson(API.groupAssetType(groupId, assignmentId), { method: 'DELETE' });
-
-      item?.remove();
-
-      const remainingItems = list.querySelectorAll('[data-group-asset-type-item]').length;
-      setGroupAssetTypeCount(root, remainingItems);
-      if (remainingItems === 0) {
-        list.hidden = true;
-        if (emptyEl) {
-          emptyEl.hidden = false;
-        }
+function createSelectorGroup(initial = {}) {
+  const group = {
+    id: nextSelectorNodeId('group'),
+    type: 'group',
+    mode: initial.mode === 'any' ? 'any' : 'all',
+    children: []
+  };
+  const children = Array.isArray(initial.children) ? initial.children : [];
+  children.forEach((child) => {
+    if (child && typeof child === 'object') {
+      if (child.type === 'group' || Array.isArray(child.children)) {
+        group.children.push(createSelectorGroup(child));
+      } else {
+        group.children.push(createSelectorRule(child));
       }
-
-      if (root?.dataset) {
-        const available = Number(root.dataset.availableGroupAssetTypes || '0');
-        const next = Number.isFinite(available) ? available + 1 : 1;
-        root.dataset.availableGroupAssetTypes = String(next);
-      }
-
-      showToast(`Asset-Typ „${assetTypeName}“ wurde aus ${groupName} entfernt.`);
-    } catch (error) {
-      const message =
-        error?.payload?.error || error?.message || 'Asset-Typ konnte nicht aus dieser Gruppe entfernt werden.';
-      showToast(message);
-      button.disabled = false;
-    } finally {
-      delete button.dataset.loading;
     }
   });
+  return group;
 }
 
-function setupGroupAssetTypeModal(root) {
-  const groupId = Number(root?.dataset.groupId || '');
-  if (!Number.isFinite(groupId) || groupId <= 0) {
+function hydrateSelectorTree(definition) {
+  const source = definition && typeof definition === 'object' ? definition : { mode: 'all', children: [] };
+  selectorNodeSequence = 0;
+  return createSelectorGroup(source);
+}
+
+const ALLOWED_SELECTOR_OPERATORS = ['equals', 'not_equals', 'regex', 'greater', 'less', 'contains'];
+
+function serialiseSelectorNode(node) {
+  if (!node || typeof node !== 'object') {
+    return null;
+  }
+  if (node.type === 'rule') {
+    const field = (node.field || '').trim();
+    if (!field) {
+      return null;
+    }
+    const operator = ALLOWED_SELECTOR_OPERATORS.includes(node.operator) ? node.operator : 'equals';
+    const value = node.value !== undefined && node.value !== null ? String(node.value) : '';
+    return {
+      type: 'rule',
+      field,
+      operator,
+      value
+    };
+  }
+  const children = [];
+  (Array.isArray(node.children) ? node.children : []).forEach((child) => {
+    const serialised = serialiseSelectorNode(child);
+    if (serialised) {
+      children.push(serialised);
+    }
+  });
+  return {
+    type: 'group',
+    mode: node.mode === 'any' ? 'any' : 'all',
+    children
+  };
+}
+
+function sortSelectorEntries(entries) {
+  return (Array.isArray(entries) ? entries : [])
+    .slice()
+    .sort((a, b) => {
+      const left = (a?.name || '').toString();
+      const right = (b?.name || '').toString();
+      return left.localeCompare(right, undefined, { sensitivity: 'base', numeric: true });
+    });
+}
+
+function formatAssetCount(count) {
+  const number = Number(count);
+  if (!Number.isFinite(number) || number <= 0) {
+    return 'No assets';
+  }
+  return `${number} ${number === 1 ? 'Asset' : 'Assets'}`;
+}
+
+function readInitialGroupSelectorState() {
+  const script = document.querySelector('[data-group-selector-state]');
+  if (!script) {
+    return { selectors: [], fieldOptions: [] };
+  }
+  try {
+    const payload = JSON.parse(script.textContent || '{}');
+    return payload && typeof payload === 'object' ? payload : { selectors: [], fieldOptions: [] };
+  } catch (error) {
+    return { selectors: [], fieldOptions: [] };
+  }
+}
+
+function applyGroupSelectorOverview(root, overview) {
+  const selectors = Array.isArray(overview?.selectors) ? overview.selectors : [];
+  const fields = Array.isArray(overview?.fieldOptions) ? overview.fieldOptions : [];
+  state.groupSelector.selectors = sortSelectorEntries(selectors);
+  state.groupSelector.fields = fields;
+  state.groupSelector.isLoading = false;
+  state.groupSelector.error = null;
+  renderGroupSelectorList(root);
+}
+
+function renderGroupSelectorList(root) {
+  const list = select(root, '[data-group-selector-list]');
+  if (!list) {
     return;
   }
+  const emptyEl = select(root, '[data-group-selector-empty]');
+  const loadingEl = select(root, '[data-group-selector-loading]');
+  const errorEl = select(root, '[data-group-selector-error]');
 
-  const trigger = select(root, '[data-open-group-asset-type-modal]');
-  const modal = document.querySelector('[data-group-asset-type-modal]');
-  if (!trigger || !modal) {
-    return;
+  if (loadingEl) {
+    loadingEl.hidden = !state.groupSelector.isLoading;
   }
 
-  const optionsList = select(modal, '[data-group-asset-type-options]');
-  const loadingEl = select(modal, '[data-group-asset-type-loading]');
-  const emptyEl = select(modal, '[data-group-asset-type-modal-empty]');
-  const errorEl = select(modal, '[data-group-asset-type-error]');
-  const closeButtons = selectAll(modal, '[data-close-group-asset-type-modal]');
-
-  function resetModalState() {
-    if (optionsList) {
-      optionsList.innerHTML = '';
-    }
-    if (emptyEl) {
-      emptyEl.hidden = true;
-    }
-    if (errorEl) {
+  if (errorEl) {
+    if (state.groupSelector.error) {
+      errorEl.hidden = false;
+      errorEl.textContent = state.groupSelector.error;
+    } else {
       errorEl.hidden = true;
       errorEl.textContent = '';
     }
   }
 
-  function close(focusTrigger = true) {
-    if (!state.groupAssetTypeModal.isOpen) {
-      return;
+  if (state.groupSelector.isLoading) {
+    list.hidden = true;
+    if (emptyEl) {
+      emptyEl.hidden = true;
     }
-
-    state.groupAssetTypeModal.isOpen = false;
-    state.groupAssetTypeModal.isLoading = false;
-    state.groupAssetTypeModal.isSaving = false;
-    state.groupAssetTypeModal.error = null;
-    state.groupAssetTypeModal.options = [];
-
-    modal.hidden = true;
-    modal.setAttribute('aria-hidden', 'true');
-
-    structureModalOpenCount = Math.max(0, structureModalOpenCount - 1);
-    unlockBodyScrollIfIdle();
-
-    if (loadingEl) {
-      loadingEl.hidden = true;
-    }
-
-    resetModalState();
-
-    trigger.setAttribute('aria-expanded', 'false');
-    state.groupAssetTypeModal.trigger = null;
-
-    if (focusTrigger && typeof trigger.focus === 'function') {
-      trigger.focus();
-    }
+    return;
   }
 
-  function renderOptions(entries) {
-    if (!optionsList) {
-      return;
+  const selectors = Array.isArray(state.groupSelector.selectors) ? state.groupSelector.selectors : [];
+  list.innerHTML = '';
+
+  if (!selectors.length) {
+    list.hidden = true;
+    if (emptyEl) {
+      emptyEl.hidden = false;
     }
-
-    optionsList.innerHTML = '';
-    entries.forEach((entry) => {
-      const item = document.createElement('li');
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'group-asset-type-modal__button';
-
-      const nameEl = document.createElement('span');
-      nameEl.className = 'group-asset-type-modal__name';
-      nameEl.textContent = entry?.name || '';
-
-      const metaEl = document.createElement('span');
-      metaEl.className = 'group-asset-type-modal__meta';
-      const count = Number(entry?.count);
-      if (Number.isFinite(count) && count > 0) {
-        metaEl.textContent = `${count} ${count === 1 ? 'Asset' : 'Assets'}`;
-      } else {
-        metaEl.textContent = 'Noch keine Einträge im Asset-Pool';
-      }
-
-      button.appendChild(nameEl);
-      button.appendChild(metaEl);
-
-      button.addEventListener('click', async () => {
-        if (state.groupAssetTypeModal.isSaving) {
-          return;
-        }
-
-        state.groupAssetTypeModal.isSaving = true;
-        state.groupAssetTypeModal.error = null;
-        if (errorEl) {
-          errorEl.hidden = true;
-          errorEl.textContent = '';
-        }
-
-        selectAll(optionsList, 'button').forEach((btn) => {
-          btn.disabled = true;
-        });
-
-        try {
-          const payload = await fetchJson(API.groupAssetTypes(groupId), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: entry?.name || '' })
-          });
-
-          appendGroupAssetTypePill(root, {
-            name: payload?.name || entry?.name || '',
-            count: payload?.count ?? entry?.count ?? 0
-          });
-
-          const groupName = root?.dataset?.groupName || 'dieser Gruppe';
-          showToast(`Asset-Typ „${payload?.name || entry?.name || ''}“ wurde ${groupName} hinzugefügt.`);
-          close();
-        } catch (error) {
-          const message =
-            error?.payload?.error || error?.message || 'Asset-Typ konnte dieser Gruppe nicht hinzugefügt werden.';
-          state.groupAssetTypeModal.error = message;
-          if (errorEl) {
-            errorEl.hidden = false;
-            errorEl.textContent = message;
-          }
-          selectAll(optionsList, 'button').forEach((btn) => {
-            btn.disabled = false;
-          });
-        } finally {
-          state.groupAssetTypeModal.isSaving = false;
-        }
-      });
-
-      item.appendChild(button);
-      optionsList.appendChild(item);
+  } else {
+    list.hidden = false;
+    if (emptyEl) {
+      emptyEl.hidden = true;
+    }
+    selectors.forEach((entry) => {
+      list.appendChild(createSelectorListItem(root, entry));
     });
   }
 
-  async function loadOptions() {
-    state.groupAssetTypeModal.isLoading = true;
-    state.groupAssetTypeModal.error = null;
-    if (loadingEl) {
-      loadingEl.hidden = false;
+  setGroupSelectorCount(root, selectors.length);
+}
+
+function createSelectorListItem(root, entry) {
+  const item = document.createElement('li');
+  item.className = 'asset-selector-list__item';
+  if (entry?.id !== undefined && entry?.id !== null) {
+    item.dataset.groupSelectorId = String(entry.id);
+  }
+
+  const card = document.createElement('div');
+  card.className = 'asset-selector';
+
+  const header = document.createElement('div');
+  header.className = 'asset-selector__header';
+
+  const info = document.createElement('div');
+  info.className = 'asset-selector__info';
+
+  const title = document.createElement('h3');
+  title.className = 'asset-selector__title';
+  title.textContent = entry?.name || 'Untitled Asset Selector';
+  info.appendChild(title);
+
+  if (entry?.description) {
+    const description = document.createElement('p');
+    description.className = 'asset-selector__description';
+    description.textContent = entry.description;
+    info.appendChild(description);
+  }
+
+  header.appendChild(info);
+
+  const meta = document.createElement('div');
+  meta.className = 'asset-selector__meta';
+
+  const countEl = document.createElement('span');
+  countEl.className = 'asset-selector__count';
+  countEl.textContent = formatAssetCount(entry?.assetCount);
+  meta.appendChild(countEl);
+
+  const actions = document.createElement('div');
+  actions.className = 'asset-selector__actions';
+
+  const showButton = document.createElement('button');
+  showButton.type = 'button';
+  showButton.className = 'button button--ghost';
+  showButton.textContent = 'Show Assets';
+  showButton.addEventListener('click', () => openGroupSelectorAssetsModal(root, entry, showButton));
+  actions.appendChild(showButton);
+
+  const editButton = document.createElement('button');
+  editButton.type = 'button';
+  editButton.className = 'button button--ghost';
+  editButton.textContent = 'Edit';
+  editButton.addEventListener('click', () =>
+    openGroupSelectorEditor(root, { mode: 'edit', entry, trigger: editButton })
+  );
+  actions.appendChild(editButton);
+
+  meta.appendChild(actions);
+  header.appendChild(meta);
+  card.appendChild(header);
+  item.appendChild(card);
+  return item;
+}
+
+function resetSelectorFormError(modal) {
+  const errorEl = select(modal, '[data-group-selector-form-error]');
+  if (errorEl) {
+    errorEl.hidden = true;
+    errorEl.textContent = '';
+  }
+}
+
+function renderSelectorBuilder(modal) {
+  const container = select(modal, '[data-selector-root]');
+  if (!container) {
+    return;
+  }
+  let rootNode = state.groupSelector.editor.data;
+  if (!rootNode || rootNode.type !== 'group') {
+    rootNode = hydrateSelectorTree();
+    state.groupSelector.editor.data = rootNode;
+  }
+  container.innerHTML = '';
+
+  const fields = Array.isArray(state.groupSelector.fields) ? state.groupSelector.fields : [];
+
+  function findParentGroup(group, nodeId) {
+    if (!group || group.type !== 'group') {
+      return null;
     }
-    resetModalState();
-
-    try {
-      const response = await fetchJson(API.groupAssetTypesAvailable(groupId));
-      const entries = Array.isArray(response?.entries) ? response.entries : [];
-      state.groupAssetTypeModal.options = entries;
-
-      if (!entries.length) {
-        if (emptyEl) {
-          emptyEl.hidden = false;
+    for (const child of group.children) {
+      if (child.id === nodeId) {
+        return group;
+      }
+      if (child.type === 'group') {
+        const match = findParentGroup(child, nodeId);
+        if (match) {
+          return match;
         }
+      }
+    }
+    return null;
+  }
+
+  function buildRule(node, parentGroup) {
+    const row = document.createElement('div');
+    row.className = 'selector-rule';
+    row.dataset.selectorNodeId = node.id;
+
+    const fieldWrapper = document.createElement('div');
+    fieldWrapper.className = 'selector-rule__field-wrapper';
+
+    const fieldSelect = document.createElement('select');
+    fieldSelect.className = 'selector-rule__field';
+
+    const uniqueFields = new Set(fields);
+    if (node.field && !uniqueFields.has(node.field)) {
+      uniqueFields.add(node.field);
+    }
+
+    Array.from(uniqueFields).forEach((field) => {
+      const option = document.createElement('option');
+      option.value = field;
+      option.textContent = field || 'Select field';
+      if (field === node.field) {
+        option.selected = true;
+      }
+      fieldSelect.appendChild(option);
+    });
+
+    fieldSelect.addEventListener('change', () => {
+      node.field = fieldSelect.value;
+    });
+    fieldWrapper.appendChild(fieldSelect);
+
+    const operatorSelect = document.createElement('select');
+    operatorSelect.className = 'selector-rule__operator';
+    const operatorOptions = [
+      { value: 'equals', label: 'equals' },
+      { value: 'not_equals', label: 'does not equal' },
+      { value: 'regex', label: 'regex (matches)' },
+      { value: 'greater', label: 'greater than' },
+      { value: 'less', label: 'less than' },
+      { value: 'contains', label: 'contains values' }
+    ];
+    operatorOptions.forEach((option) => {
+      const optionEl = document.createElement('option');
+      optionEl.value = option.value;
+      optionEl.textContent = option.label;
+      if (option.value === node.operator) {
+        optionEl.selected = true;
+      }
+      operatorSelect.appendChild(optionEl);
+    });
+
+    const valueInput = document.createElement('input');
+    valueInput.type = 'text';
+    valueInput.className = 'selector-rule__value';
+    valueInput.autocomplete = 'off';
+    valueInput.value = node.value ?? '';
+
+    const updatePlaceholder = () => {
+      if (operatorSelect.value === 'contains') {
+        valueInput.placeholder = 'Values (comma separated)';
+      } else if (operatorSelect.value === 'regex') {
+        valueInput.placeholder = 'Regex pattern';
+      } else if (operatorSelect.value === 'greater' || operatorSelect.value === 'less') {
+        valueInput.placeholder = 'Numeric value';
       } else {
-        renderOptions(entries);
+        valueInput.placeholder = 'Value';
       }
-    } catch (error) {
-      const message =
-        error?.payload?.error || error?.message || 'Verfügbare Asset-Typen konnten nicht geladen werden.';
-      state.groupAssetTypeModal.error = message;
-      if (errorEl) {
-        errorEl.hidden = false;
-        errorEl.textContent = message;
-      }
-    } finally {
-      state.groupAssetTypeModal.isLoading = false;
-      if (loadingEl) {
-        loadingEl.hidden = true;
-      }
-    }
+    };
+
+    updatePlaceholder();
+
+    operatorSelect.addEventListener('change', () => {
+      node.operator = operatorSelect.value;
+      updatePlaceholder();
+    });
+
+    valueInput.addEventListener('input', () => {
+      node.value = valueInput.value;
+    });
+
+    fieldWrapper.appendChild(operatorSelect);
+    fieldWrapper.appendChild(valueInput);
+    row.appendChild(fieldWrapper);
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'icon-button selector-rule__remove';
+    removeButton.innerHTML = '&times;';
+    removeButton.setAttribute('aria-label', 'Remove rule');
+    removeButton.addEventListener('click', () => {
+      parentGroup.children = parentGroup.children.filter((child) => child.id !== node.id);
+      renderSelectorBuilder(modal);
+    });
+    row.appendChild(removeButton);
+
+    return row;
   }
 
-  function open() {
-    if (state.groupAssetTypeModal.isOpen) {
-      return;
+  function buildGroup(node, { isRoot = false } = {}) {
+    const wrapper = document.createElement('div');
+    wrapper.className = `selector-group__container${isRoot ? ' selector-group__container--root' : ''}`;
+    wrapper.dataset.selectorNodeId = node.id;
+
+    const header = document.createElement('div');
+    header.className = 'selector-group__header';
+
+    const label = document.createElement('label');
+    label.className = 'selector-group__matches-label';
+    label.textContent = 'Matches';
+
+    const selectEl = document.createElement('select');
+    selectEl.className = 'selector-group__matches';
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = 'ALL (AND)';
+    if (node.mode !== 'any') {
+      allOption.selected = true;
+    }
+    selectEl.appendChild(allOption);
+
+    const anyOption = document.createElement('option');
+    anyOption.value = 'any';
+    anyOption.textContent = 'ANY (OR)';
+    if (node.mode === 'any') {
+      anyOption.selected = true;
+    }
+    selectEl.appendChild(anyOption);
+
+    selectEl.addEventListener('change', () => {
+      node.mode = selectEl.value === 'any' ? 'any' : 'all';
+    });
+
+    label.appendChild(selectEl);
+    header.appendChild(label);
+
+    if (!isRoot) {
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'icon-button selector-group__remove';
+      removeButton.innerHTML = '&times;';
+      removeButton.setAttribute('aria-label', 'Remove group');
+      removeButton.addEventListener('click', () => {
+        const parent = findParentGroup(state.groupSelector.editor.data, node.id);
+        if (!parent) {
+          return;
+        }
+        parent.children = parent.children.filter((child) => child.id !== node.id);
+        renderSelectorBuilder(modal);
+      });
+      header.appendChild(removeButton);
     }
 
-    state.groupAssetTypeModal.isOpen = true;
-    state.groupAssetTypeModal.trigger = trigger;
-    state.groupAssetTypeModal.error = null;
-    state.groupAssetTypeModal.options = [];
+    wrapper.appendChild(header);
 
-    trigger.setAttribute('aria-expanded', 'true');
+    const childrenContainer = document.createElement('div');
+    childrenContainer.className = 'selector-group__children';
+    (Array.isArray(node.children) ? node.children : []).forEach((child) => {
+      if (child.type === 'group') {
+        childrenContainer.appendChild(buildGroup(child));
+      } else {
+        childrenContainer.appendChild(buildRule(child, node));
+      }
+    });
+    wrapper.appendChild(childrenContainer);
 
-    modal.hidden = false;
-    modal.removeAttribute('aria-hidden');
-    if (!modal.hasAttribute('tabindex')) {
-      modal.setAttribute('tabindex', '-1');
-    }
-    modal.focus?.();
+    const actions = document.createElement('div');
+    actions.className = 'selector-group__actions';
 
-    structureModalOpenCount += 1;
-    lockBodyScroll();
+    const addRuleButton = document.createElement('button');
+    addRuleButton.type = 'button';
+    addRuleButton.className = 'button button--ghost selector-group__action';
+    addRuleButton.textContent = 'Add rule';
+    addRuleButton.addEventListener('click', () => {
+      node.children.push(createSelectorRule({}));
+      renderSelectorBuilder(modal);
+    });
+    actions.appendChild(addRuleButton);
 
-    loadOptions();
+    const addGroupButton = document.createElement('button');
+    addGroupButton.type = 'button';
+    addGroupButton.className = 'button button--ghost selector-group__action';
+    addGroupButton.textContent = 'Add group';
+    addGroupButton.addEventListener('click', () => {
+      node.children.push(createSelectorGroup({ mode: 'all', children: [] }));
+      renderSelectorBuilder(modal);
+    });
+    actions.appendChild(addGroupButton);
+
+    wrapper.appendChild(actions);
+
+    return wrapper;
   }
 
-  trigger.addEventListener('click', () => open());
+  container.appendChild(buildGroup(rootNode, { isRoot: true }));
+}
+
+function openGroupSelectorEditor(root, { mode, entry, trigger } = {}) {
+  const modal = state.groupSelector.editor.modal;
+  if (!modal || state.groupSelector.editor.isOpen) {
+    return;
+  }
+
+  state.groupSelector.editor.mode = mode === 'edit' ? 'edit' : 'create';
+  state.groupSelector.editor.selectorId = entry?.id ?? null;
+  state.groupSelector.editor.isOpen = true;
+  state.groupSelector.editor.isSaving = false;
+  state.groupSelector.editor.trigger = trigger || null;
+  state.groupSelector.editor.error = null;
+
+  const titleEl = modal.querySelector('#group-selector-modal-title');
+  if (titleEl) {
+    titleEl.textContent = state.groupSelector.editor.mode === 'edit'
+      ? 'Edit Asset Selector'
+      : 'Create Asset Selector';
+  }
+
+  const nameInput = select(modal, '[data-group-selector-name]');
+  const descriptionInput = select(modal, '[data-group-selector-description]');
+  if (nameInput) {
+    nameInput.value = entry?.name || '';
+  }
+  if (descriptionInput) {
+    descriptionInput.value = entry?.description || '';
+  }
+
+  state.groupSelector.editor.data = hydrateSelectorTree(entry?.definition);
+  renderSelectorBuilder(modal);
+  resetSelectorFormError(modal);
+
+  const saveButton = select(modal, '[data-save-group-selector]');
+  if (saveButton) {
+    saveButton.disabled = false;
+    delete saveButton.dataset.loading;
+  }
+
+  modal.hidden = false;
+  modal.setAttribute('aria-hidden', 'false');
+  if (!modal.hasAttribute('tabindex')) {
+    modal.setAttribute('tabindex', '-1');
+  }
+  modal.focus?.();
+  structureModalOpenCount += 1;
+  lockBodyScroll();
+  nameInput?.focus();
+}
+
+function closeGroupSelectorEditor(root, { focusTrigger = true } = {}) {
+  const modal = state.groupSelector.editor.modal;
+  if (!modal || !state.groupSelector.editor.isOpen) {
+    return;
+  }
+
+  const saveButton = select(modal, '[data-save-group-selector]');
+  if (saveButton) {
+    saveButton.disabled = false;
+    delete saveButton.dataset.loading;
+  }
+
+  resetSelectorFormError(modal);
+  const form = select(modal, '[data-group-selector-form]');
+  form?.reset();
+
+  modal.hidden = true;
+  modal.setAttribute('aria-hidden', 'true');
+  state.groupSelector.editor.isOpen = false;
+  state.groupSelector.editor.isSaving = false;
+  state.groupSelector.editor.selectorId = null;
+  state.groupSelector.editor.data = null;
+
+  structureModalOpenCount = Math.max(0, structureModalOpenCount - 1);
+  unlockBodyScrollIfIdle();
+
+  const trigger = state.groupSelector.editor.trigger;
+  state.groupSelector.editor.trigger = null;
+  if (focusTrigger && trigger && typeof trigger.focus === 'function') {
+    trigger.focus();
+  }
+}
+
+function getGroupId(root) {
+  return root?.dataset?.groupId;
+}
+
+async function handleSelectorFormSubmit(root, event) {
+  event.preventDefault();
+  if (state.groupSelector.editor.isSaving) {
+    return;
+  }
+
+  const modal = state.groupSelector.editor.modal;
+  if (!modal) {
+    return;
+  }
+
+  const nameInput = select(modal, '[data-group-selector-name]');
+  const descriptionInput = select(modal, '[data-group-selector-description]');
+  const errorEl = select(modal, '[data-group-selector-form-error]');
+  const saveButton = select(modal, '[data-save-group-selector]');
+
+  const name = nameInput?.value?.trim() ?? '';
+  if (!name) {
+    if (errorEl) {
+      errorEl.hidden = false;
+      errorEl.textContent = 'Please provide a title for the asset selector.';
+    }
+    nameInput?.focus();
+    return;
+  }
+
+  const definition = serialiseSelectorNode(state.groupSelector.editor.data) || {
+    type: 'group',
+    mode: 'all',
+    children: []
+  };
+
+  const payload = {
+    name,
+    description: descriptionInput?.value?.trim() ?? '',
+    definition
+  };
+
+  state.groupSelector.editor.isSaving = true;
+  state.groupSelector.editor.error = null;
+  if (errorEl) {
+    errorEl.hidden = true;
+    errorEl.textContent = '';
+  }
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.dataset.loading = 'true';
+  }
+
+  const groupId = getGroupId(root);
+  if (!groupId) {
+    return;
+  }
+
+  const method = state.groupSelector.editor.mode === 'edit' ? 'PUT' : 'POST';
+  const url = state.groupSelector.editor.mode === 'edit'
+    ? API.groupAssetSelector(groupId, state.groupSelector.editor.selectorId)
+    : API.groupAssetSelectors(groupId);
+
+  try {
+    const response = await fetchJson(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const selectors = Array.isArray(state.groupSelector.selectors)
+      ? state.groupSelector.selectors.slice()
+      : [];
+
+    if (state.groupSelector.editor.mode === 'edit') {
+      const index = selectors.findIndex((item) => item?.id === response?.id);
+      if (index === -1) {
+        selectors.push(response);
+      } else {
+        selectors[index] = response;
+      }
+      showToast('Asset selector updated.');
+    } else {
+      selectors.push(response);
+      showToast('Asset selector created.');
+    }
+
+    state.groupSelector.selectors = sortSelectorEntries(selectors);
+    renderGroupSelectorList(root);
+    closeGroupSelectorEditor(root);
+  } catch (error) {
+    const message =
+      error?.payload?.error || error?.message || 'Asset selector could not be saved.';
+    state.groupSelector.editor.error = message;
+    if (errorEl) {
+      errorEl.hidden = false;
+      errorEl.textContent = message;
+    }
+  } finally {
+    state.groupSelector.editor.isSaving = false;
+    if (saveButton) {
+      saveButton.disabled = false;
+      delete saveButton.dataset.loading;
+    }
+  }
+}
+
+function formatSelectorCellValue(value) {
+  if (value === undefined || value === null || value === '') {
+    return '—';
+  }
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+  if (typeof value === 'object') {
+    return Object.values(value)
+      .map((entry) => (entry === undefined || entry === null ? '' : String(entry)))
+      .filter((entry) => entry)
+      .join(', ') || '—';
+  }
+  return String(value);
+}
+
+function renderSelectorAssetsContent() {
+  const modal = state.groupSelector.viewer.modal;
+  if (!modal) {
+    return;
+  }
+  const loadingEl = select(modal, '[data-group-selector-assets-loading]');
+  const errorEl = select(modal, '[data-group-selector-assets-error]');
+  const tableContainer = select(modal, '[data-group-selector-assets-table]');
+
+  if (loadingEl) {
+    loadingEl.hidden = !state.groupSelector.viewer.isLoading;
+  }
+  if (errorEl) {
+    if (state.groupSelector.viewer.error) {
+      errorEl.hidden = false;
+      errorEl.textContent = state.groupSelector.viewer.error;
+    } else {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+  }
+  if (!tableContainer) {
+    return;
+  }
+
+  if (state.groupSelector.viewer.isLoading || state.groupSelector.viewer.error) {
+    tableContainer.hidden = true;
+    tableContainer.innerHTML = '';
+    return;
+  }
+
+  const rows = Array.isArray(state.groupSelector.viewer.rows) ? state.groupSelector.viewer.rows : [];
+  const columns = Array.isArray(state.groupSelector.viewer.columns)
+    ? state.groupSelector.viewer.columns
+    : [];
+
+  tableContainer.hidden = false;
+  tableContainer.innerHTML = '';
+
+  if (!rows.length) {
+    const emptyState = document.createElement('p');
+    emptyState.className = 'empty-state';
+    emptyState.textContent = 'No assets were found for this selector.';
+    tableContainer.appendChild(emptyState);
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'selector-assets-table';
+
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  const headers = [
+    { key: '__id', label: 'Asset-ID' },
+    { key: '__source', label: 'Quelle' },
+    ...columns.map((field) => ({ key: field, label: field }))
+  ];
+
+  headers.forEach((col) => {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = col.label;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  rows.forEach((row) => {
+    const tr = document.createElement('tr');
+    headers.forEach((col) => {
+      const td = document.createElement('td');
+      let value = '';
+      if (col.key === '__id') {
+        value = row?.id;
+      } else if (col.key === '__source') {
+        value = row?.rawTableTitle || '';
+      } else {
+        value = row?.values?.[col.key];
+      }
+      td.textContent = formatSelectorCellValue(value);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  tableContainer.appendChild(table);
+}
+
+async function openGroupSelectorAssetsModal(root, entry, trigger) {
+  const modal = state.groupSelector.viewer.modal;
+  if (!modal || state.groupSelector.viewer.isOpen) {
+    return;
+  }
+
+  state.groupSelector.viewer.isOpen = true;
+  state.groupSelector.viewer.selectorId = entry?.id ?? null;
+  state.groupSelector.viewer.isLoading = true;
+  state.groupSelector.viewer.error = null;
+  state.groupSelector.viewer.columns = [];
+  state.groupSelector.viewer.rows = [];
+  state.groupSelector.viewer.trigger = trigger || null;
+
+  const titleEl = modal.querySelector('#group-selector-assets-title');
+  if (titleEl) {
+    titleEl.textContent = entry?.name ? `Assets for “${entry.name}”` : 'Show Assets';
+  }
+
+  renderSelectorAssetsContent();
+
+  modal.hidden = false;
+  modal.setAttribute('aria-hidden', 'false');
+  if (!modal.hasAttribute('tabindex')) {
+    modal.setAttribute('tabindex', '-1');
+  }
+  modal.focus?.();
+  structureModalOpenCount += 1;
+  lockBodyScroll();
+
+  const groupId = getGroupId(root);
+  if (!groupId || !entry?.id) {
+    state.groupSelector.viewer.isLoading = false;
+    state.groupSelector.viewer.error = 'Asset selector could not be loaded.';
+    renderSelectorAssetsContent();
+    return;
+  }
+
+  try {
+    const response = await fetchJson(API.groupAssetSelectorAssets(groupId, entry.id));
+    state.groupSelector.viewer.columns = Array.isArray(response?.columns) ? response.columns : [];
+    state.groupSelector.viewer.rows = Array.isArray(response?.rows) ? response.rows : [];
+  } catch (error) {
+    state.groupSelector.viewer.error =
+      error?.payload?.error || error?.message || 'Assets could not be loaded.';
+  } finally {
+    state.groupSelector.viewer.isLoading = false;
+    renderSelectorAssetsContent();
+  }
+}
+
+function closeGroupSelectorAssetsModal({ restoreFocus = true } = {}) {
+  const modal = state.groupSelector.viewer.modal;
+  if (!modal || !state.groupSelector.viewer.isOpen) {
+    return;
+  }
+  modal.hidden = true;
+  modal.setAttribute('aria-hidden', 'true');
+  state.groupSelector.viewer.isOpen = false;
+  state.groupSelector.viewer.isLoading = false;
+  state.groupSelector.viewer.selectorId = null;
+  state.groupSelector.viewer.error = null;
+  state.groupSelector.viewer.columns = [];
+  state.groupSelector.viewer.rows = [];
+  renderSelectorAssetsContent();
+
+  structureModalOpenCount = Math.max(0, structureModalOpenCount - 1);
+  unlockBodyScrollIfIdle();
+
+  const trigger = state.groupSelector.viewer.trigger;
+  state.groupSelector.viewer.trigger = null;
+  if (restoreFocus && trigger && typeof trigger.focus === 'function') {
+    trigger.focus();
+  }
+}
+
+function setupGroupSelectorEditor(root) {
+  const modal = state.groupSelector.editor.modal;
+  if (!modal) {
+    return;
+  }
+  const form = select(modal, '[data-group-selector-form]');
+  const closeButtons = selectAll(modal, '[data-close-group-selector-modal]');
+
+  form?.addEventListener('submit', (event) => handleSelectorFormSubmit(root, event));
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeGroupSelectorEditor(root);
+    }
+  });
+
   closeButtons.forEach((button) => {
-    button.addEventListener('click', () => close());
+    button.addEventListener('click', () => closeGroupSelectorEditor(root));
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.groupSelector.editor.isOpen) {
+      event.preventDefault();
+      closeGroupSelectorEditor(root);
+    }
+  });
+}
+
+function setupGroupSelectorAssetsModal(root) {
+  const modal = state.groupSelector.viewer.modal;
+  if (!modal) {
+    return;
+  }
+  const closeButtons = selectAll(modal, '[data-close-group-selector-assets-modal]');
+
+  closeButtons.forEach((button) => {
+    button.addEventListener('click', () => closeGroupSelectorAssetsModal());
   });
 
   modal.addEventListener('click', (event) => {
     if (event.target === modal) {
-      close();
+      closeGroupSelectorAssetsModal();
     }
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && state.groupAssetTypeModal.isOpen) {
-      close();
+    if (event.key === 'Escape' && state.groupSelector.viewer.isOpen) {
+      event.preventDefault();
+      closeGroupSelectorAssetsModal();
     }
   });
+}
+
+function setupGroupSelectorInterface(root) {
+  if (!root) {
+    return;
+  }
+
+  state.groupSelector.editor.modal = document.querySelector('[data-group-selector-modal]');
+  state.groupSelector.viewer.modal = document.querySelector('[data-group-selector-assets-modal]');
+
+  const overview = readInitialGroupSelectorState();
+  applyGroupSelectorOverview(root, overview);
+
+  const trigger = select(root, '[data-open-group-selector-modal]');
+  if (trigger) {
+    trigger.addEventListener('click', () => openGroupSelectorEditor(root, { mode: 'create', trigger }));
+  }
+
+  setupGroupSelectorEditor(root);
+  setupGroupSelectorAssetsModal(root);
 }
 
 const measureCellReaders = [
@@ -3726,8 +4281,7 @@ function initAssetStructureApp() {
   setupCreateGroupForm(root);
   setupDeleteGroupButton(root);
   setupAssetTypeDecisionModal(root);
-  setupGroupAssetTypeList(root);
-  setupGroupAssetTypeModal(root);
+  setupGroupSelectorInterface(root);
 }
 
 async function initAssetPoolApp() {
