@@ -5,7 +5,7 @@
         <h1 class="page-title">Maßnahmen</h1>
         <p class="page-subtitle">
           Importieren Sie Maßnahmen aus einer Excel-Datei und filtern Sie die aktuelle Version nach Themengebiet,
-          Sub-Themengebiet und Asset-Kategorie.
+          Sub-Themengebiet und AssetUnterKategorie.
         </p>
       </div>
       <div class="page-actions">
@@ -31,7 +31,7 @@
         </select>
       </div>
       <div class="form-field measure-filter">
-        <label for="measure-filter-category">Asset-Kategorie</label>
+        <label for="measure-filter-category">AssetUnterKategorie</label>
         <select id="measure-filter-category" data-measure-filter="category">
           <option value="">Alle</option>
         </select>
@@ -54,7 +54,7 @@
               <tr>
                 <th>Themengebiet</th>
                 <th>Sub-Themengebiet</th>
-                <th>Asset-Kategorie</th>
+                <th>AssetUnterKategorie</th>
                 <th>ID</th>
                 <th>Vertraulichkeit niedrig</th>
                 <th>Vertraulichkeit mittel</th>
@@ -96,7 +96,7 @@
               <label for="measure-upload-file">Excel-Datei (.xlsx)</label>
               <input id="measure-upload-file" name="file" type="file" accept=".xlsx" required />
               <p class="helper-text">
-                Die Datei muss alle folgenden Spalten enthalten. Mehrere Themen, Sub-Themen oder Asset-Kategorien können durch
+                Die Datei muss alle folgenden Spalten enthalten. Mehrere Themen, Sub-Themen oder AssetUnterKategorien können durch
                 ein Semikolon (;) getrennt werden.
               </p>
               <ul class="measure-header-list">
