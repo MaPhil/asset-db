@@ -16,24 +16,24 @@ class MeasuresImportError extends Error {
 const HEADER_FIELD_MAP = {
   Themengebiet: 'topics',
   'Sub-Themengebiet': 'subTopics',
-  'Asset-Kategorie': 'categories',
+  'AssetUnterKategorien': 'categories',
   ID: 'identifier',
-  'Vertraulichkeit niedrig': 'confidentialityLow',
-  'Vertraulichkeit mittel': 'confidentialityMedium',
-  'Vertraulichkeit hoch': 'confidentialityHigh',
-  'Vertraulichkeit sehr hoch': 'confidentialityVeryHigh',
-  'Integrität niedrig': 'integrityLow',
-  'Integrität mittel': 'integrityMedium',
-  'Integrität hoch': 'integrityHigh',
-  'Integrität sehr hoch': 'integrityVeryHigh',
-  'Verfügbarkeit niedrig': 'availabilityLow',
-  'Verfügbarkeit mittel': 'availabilityMedium',
-  'Verfügbarkeit hoch': 'availabilityHigh',
-  'Verfügbarkeit sehr hoch': 'availabilityVeryHigh',
-  Anforderungen: 'requirements',
-  Erläuterung: 'explanation',
-  Dokumentation: 'documentation',
-  'Standard Antwort': 'standardAnswer'
+  'Vertraulichkeit_niedrig': 'confidentialityLow',
+  'Vertraulichkeit_mittel': 'confidentialityMedium',
+  'Vertraulichkeit_hoch': 'confidentialityHigh',
+  'Vertraulichkeit_sehr_hoch': 'confidentialityVeryHigh',
+  'Integrität_niedrig': 'integrityLow',
+  'Integrität_mittel': 'integrityMedium',
+  'Integrität_hoch': 'integrityHigh',
+  'Integrität_sehr_hoch': 'integrityVeryHigh',
+  'Verfügbarkeit_niedrig': 'availabilityLow',
+  'Verfügbarkeit_mittel': 'availabilityMedium',
+  'Verfügbarkeit_hoch': 'availabilityHigh',
+  'Verfügbarkeit_sehr_hoch': 'availabilityVeryHigh',
+  Sollanforderung: 'requirements',
+  Ergänzung_Erläuterung: 'explanation',
+  Zusätzli_Doku_IT: 'documentation',
+  Vorgeschlagene_Standardantworten: 'standardAnswer'
 };
 
 const MEASURE_TABLES = {
@@ -299,7 +299,8 @@ const buildMeasureResponse = ({ topicId, subTopicId, categoryId }) => {
 const parseWorkbook = (filePath) => {
   let workbook;
   try {
-    workbook = XLSX.readFile(filePath, { cellDates: false });
+    let xlsx_file = fs.readFileSync(filePath)
+    workbook = XLSX.read(xlsx_file);
   } catch (error) {
     throw new MeasuresImportError(
       'Die hochgeladene Datei konnte nicht gelesen werden. Bitte stellen Sie sicher, dass es sich um eine gültige Excel-Datei handelt.'

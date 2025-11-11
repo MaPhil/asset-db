@@ -63,7 +63,8 @@ export const SourcesController = {
     let records = [];
 
     try {
-      const workbook = XLSX.readFile(file.path, { cellDates: true });
+      let xlsx_file = fs.readFileSync(filePath)
+      workbook = XLSX.read(xlsx_file);
       const sheetName = workbook.SheetNames[0];
       records = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: null });
     } catch (error) {

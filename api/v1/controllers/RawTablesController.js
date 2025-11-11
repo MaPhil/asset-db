@@ -203,7 +203,8 @@ export const RawTablesController = {
     }
 
     try {
-      const workbook = XLSX.readFile(file.path, { cellDates: true });
+      let xlsx_file = fs.readFileSync(filePath)
+      workbook = XLSX.read(xlsx_file);
       const sheetName = workbook.SheetNames[0];
       if (!sheetName) {
         removeTempFile(file.path);
