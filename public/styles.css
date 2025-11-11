@@ -1091,6 +1091,10 @@ main {
   gap: 0.75rem;
 }
 
+.modal-footer__start {
+  margin-right: auto;
+}
+
 .mapping-list {
   display: grid;
   gap: 1rem;
