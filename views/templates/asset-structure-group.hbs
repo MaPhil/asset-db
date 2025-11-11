@@ -130,15 +130,15 @@
           <div>
             <h2 class="section-title" id="group-asset-selectors-title">Assets</h2>
             <p class="helper-text">
-              Create Asset Selectors to gather matching assets from the pool.
+              Erstellen Sie Asset-Selektoren, um passende Assets aus dem Pool zu sammeln.
             </p>
           </div>
-          <button class="button" type="button" data-open-group-selector-modal>Create Asset Selector</button>
+          <button class="button" type="button" data-open-group-selector-modal>Asset-Selektor erstellen</button>
         </div>
-        <p class="helper-text" data-group-selector-loading hidden>Loading asset selectors…</p>
+        <p class="helper-text" data-group-selector-loading hidden>Asset-Selektoren werden geladen …</p>
         <p class="form-error" data-group-selector-error hidden></p>
         <p class="empty-state" data-group-selector-empty hidden>
-          No asset selectors have been created for this group yet.
+          Für diese Gruppe wurden noch keine Asset-Selektoren erstellt.
         </p>
         <ul class="asset-selector-list" data-group-selector-list hidden></ul>
       </section>
@@ -156,11 +156,11 @@
     aria-labelledby="group-selector-modal-title"
   >
     <header class="modal-header">
-      <h2 id="group-selector-modal-title">Create Asset Selector</h2>
+      <h2 id="group-selector-modal-title">Asset-Selektor erstellen</h2>
       <button
         class="icon-button"
         type="button"
-        aria-label="Close asset selector configuration"
+        aria-label="Konfiguration des Asset-Selektors schließen"
         data-close-group-selector-modal
       >
         &times;
@@ -169,29 +169,29 @@
     <div class="modal-body">
       <form class="selector-form" id="group-selector-form" data-group-selector-form>
         <div class="form-field form-field--full">
-          <label for="group-selector-name">Title</label>
+          <label for="group-selector-name">Titel</label>
           <input
             id="group-selector-name"
             type="text"
             name="name"
-            placeholder="Name the asset selector"
+            placeholder="Asset-Selektor benennen"
             data-group-selector-name
             autocomplete="off"
           />
         </div>
         <div class="form-field form-field--full">
-          <label for="group-selector-description">Description</label>
+          <label for="group-selector-description">Beschreibung</label>
           <textarea
             id="group-selector-description"
             name="description"
             rows="3"
-            placeholder="Add a brief description"
+            placeholder="Kurze Beschreibung hinzufügen"
             data-group-selector-description
           ></textarea>
         </div>
         <div class="selector-builder" data-selector-builder>
           <p class="helper-text selector-builder__hint">
-            Define rules and groups to decide which assets belong to this selector.
+            Definieren Sie Regeln und Gruppen, um festzulegen, welche Assets zu diesem Selektor gehören.
           </p>
           <div class="selector-group" data-selector-root></div>
         </div>
@@ -199,8 +199,8 @@
       </form>
     </div>
     <div class="modal-footer">
-      <button class="button button--ghost" type="button" data-close-group-selector-modal>Cancel</button>
-      <button class="button" type="submit" form="group-selector-form" data-save-group-selector>Save</button>
+      <button class="button button--ghost" type="button" data-close-group-selector-modal>Abbrechen</button>
+      <button class="button" type="submit" form="group-selector-form" data-save-group-selector>Speichern</button>
     </div>
   </div>
 </div>
@@ -213,23 +213,23 @@
     aria-labelledby="group-selector-assets-title"
   >
     <header class="modal-header">
-      <h2 id="group-selector-assets-title">Show Assets</h2>
+      <h2 id="group-selector-assets-title">Assets anzeigen</h2>
       <button
         class="icon-button"
         type="button"
-        aria-label="Close asset list"
+        aria-label="Asset-Liste schließen"
         data-close-group-selector-assets-modal
       >
         &times;
       </button>
     </header>
     <div class="modal-body">
-      <p class="helper-text" data-group-selector-assets-loading>Loading assets…</p>
+      <p class="helper-text" data-group-selector-assets-loading>Assets werden geladen …</p>
       <p class="form-error" data-group-selector-assets-error hidden></p>
       <div class="table-container" data-group-selector-assets-table hidden></div>
     </div>
     <div class="modal-footer">
-      <button class="button" type="button" data-close-group-selector-assets-modal>Close</button>
+      <button class="button" type="button" data-close-group-selector-assets-modal>Schließen</button>
     </div>
   </div>
 </div>
