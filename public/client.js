@@ -7,6 +7,8 @@ const API = {
   assetPoolFieldValue: (rowId, field) =>
     `/api/v1/asset-pool/rows/${encodeURIComponent(rowId)}/fields/${encodeURIComponent(field)}`,
   assetTypeField: '/api/v1/asset-pool/settings/asset-type-field',
+  manipulators: '/api/v1/manipulators',
+  manipulator: (id) => `/api/v1/manipulators/${encodeURIComponent(id)}`,
   assetTypes: '/api/v1/asset-types',
   categories: '/api/v1/categories',
   assetCategories: '/api/v1/asset-categories',
@@ -28,6 +30,7 @@ const state = {
   assetPool: null,
   assetPoolSort: { key: '__rowId', direction: 'asc' },
   assetPoolPage: 1,
+  assetPoolView: 'overview',
   assetFieldSuggestions: [],
   currentRawDetail: null,
   modal: {
@@ -59,6 +62,26 @@ const state = {
     isSaving: false,
     activeButton: null,
     error: null
+  },
+  manipulators: {
+    entries: [],
+    fields: [],
+    isLoading: false,
+    hasLoaded: false,
+    error: null,
+    modal: {
+      isOpen: false,
+      isSaving: false,
+      trigger: null,
+      error: null,
+      mode: 'create',
+      manipulatorId: null,
+      data: {
+        mode: 'all',
+        rules: []
+      },
+      modal: null
+    }
   },
   groupSelector: {
     selectors: [],
@@ -162,6 +185,7 @@ function unlockBodyScrollIfIdle() {
     state.fieldManager.isOpen ||
     state.assetTypeFieldModal.isOpen ||
     state.assetTypeDecisionModal.isOpen ||
+    state.manipulators?.modal?.isOpen ||
     state.groupSelector?.editor?.isOpen ||
     state.groupSelector?.viewer?.isOpen ||
     state.measures.isUploadOpen ||
@@ -302,6 +326,734 @@ function renderSidebar(root) {
       link.dataset.active = 'true';
     }
     list.appendChild(link);
+  });
+}
+
+const MANIPULATOR_OPERATORS = [
+  { value: 'equals', label: 'gleich' },
+  { value: 'not_equals', label: 'ungleich' },
+  { value: 'regex', label: 'Regex (Übereinstimmung)' },
+  { value: 'greater', label: 'größer als' },
+  { value: 'less', label: 'kleiner als' },
+  { value: 'contains', label: 'enthält Werte' }
+];
+
+let manipulatorRuleCounter = 0;
+
+function createManipulatorRule(initial = {}) {
+  manipulatorRuleCounter += 1;
+  const operators = new Set(MANIPULATOR_OPERATORS.map((option) => option.value));
+  const operator = operators.has(initial.operator) ? initial.operator : 'equals';
+  return {
+    id: `manipulator-rule-${manipulatorRuleCounter}`,
+    field: typeof initial.field === 'string' ? initial.field : '',
+    operator,
+    value: typeof initial.value === 'string' ? initial.value : initial.value ?? ''
+  };
+}
+
+function sortManipulators(entries) {
+  return entries.slice().sort((a, b) => {
+    const aTitle = (a?.title || '').toLowerCase();
+    const bTitle = (b?.title || '').toLowerCase();
+    return aTitle.localeCompare(bTitle, undefined, { sensitivity: 'base', numeric: true });
+  });
+}
+
+function syncAssetPoolNavigation(root) {
+  const currentView = state.assetPoolView;
+  selectAll(root, '[data-sidebar-link]').forEach((link) => {
+    const target = link.dataset.sidebarLink;
+    if (!target) {
+      return;
+    }
+    const isActive = target === currentView;
+    link.classList.toggle('sidebar-link--active', isActive);
+    if (isActive) {
+      link.setAttribute('aria-current', 'page');
+    } else {
+      link.removeAttribute('aria-current');
+    }
+  });
+}
+
+function setAssetPoolView(root, view) {
+  if (!root) {
+    return;
+  }
+
+  const allowedViews = new Set(['overview', 'manipulators', 'raw']);
+  const nextView = allowedViews.has(view) ? view : 'overview';
+  state.assetPoolView = nextView;
+  root.dataset.view = nextView;
+
+  selectAll(root, '[data-asset-pool-panel]').forEach((panel) => {
+    const panelView = panel.dataset.assetPoolPanel;
+    if (!panelView) {
+      return;
+    }
+    const isActive = panelView === nextView;
+    panel.hidden = !isActive;
+  });
+
+  syncAssetPoolNavigation(root);
+
+  if (nextView === 'overview') {
+    renderAssetPool(root);
+  } else if (nextView === 'manipulators') {
+    renderManipulatorView(root);
+    if (!state.manipulators.hasLoaded && !state.manipulators.isLoading) {
+      refreshManipulators(root);
+    }
+  }
+}
+
+function renderManipulatorTable(entries, root) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'table-wrapper';
+  const scroller = document.createElement('div');
+  scroller.className = 'table-scroller';
+  const table = document.createElement('table');
+  table.className = 'table';
+
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  const headers = ['Titel', 'Beschreibung', 'Feldname', 'Wert', 'Assets', 'Aktualisiert'];
+  headers.forEach((label) => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  entries.forEach((entry) => {
+    const row = document.createElement('tr');
+    row.classList.add('table-row', 'table-row--interactive');
+    row.tabIndex = 0;
+    row.setAttribute('role', 'button');
+    row.dataset.manipulatorId = entry?.id;
+    if (entry?.title) {
+      row.setAttribute('aria-label', `Manipulator „${entry.title}” bearbeiten`);
+    }
+
+    const titleCell = document.createElement('td');
+    titleCell.textContent = entry?.title || 'Manipulator ohne Titel';
+    row.appendChild(titleCell);
+
+    const descriptionCell = document.createElement('td');
+    descriptionCell.textContent = entry?.description || '';
+    row.appendChild(descriptionCell);
+
+    const fieldCell = document.createElement('td');
+    fieldCell.textContent = entry?.fieldName || '';
+    row.appendChild(fieldCell);
+
+    const valueCell = document.createElement('td');
+    valueCell.textContent = entry?.fieldValue ?? '';
+    row.appendChild(valueCell);
+
+    const assetsCell = document.createElement('td');
+    assetsCell.textContent = formatAssetCount(entry?.assetCount);
+    row.appendChild(assetsCell);
+
+    const updatedCell = document.createElement('td');
+    updatedCell.textContent = formatDate(entry?.updatedAt || entry?.createdAt);
+    row.appendChild(updatedCell);
+
+    const handleOpen = () => {
+      openManipulatorModal(root, row, entry);
+    };
+
+    row.addEventListener('click', handleOpen);
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handleOpen();
+      }
+    });
+
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+  scroller.appendChild(table);
+  wrapper.appendChild(scroller);
+  return wrapper;
+}
+
+function renderManipulatorView(root) {
+  const panel = select(root, '[data-asset-pool-panel="manipulators"]');
+  if (!panel) {
+    return;
+  }
+
+  const loadingEl = select(panel, '[data-manipulator-loading]');
+  const errorEl = select(panel, '[data-manipulator-error]');
+  const emptyCard = select(panel, '[data-manipulator-empty]');
+  const tableContainer = select(panel, '[data-manipulator-table]');
+
+  if (loadingEl) {
+    loadingEl.hidden = !state.manipulators.isLoading;
+  }
+
+  if (errorEl) {
+    if (state.manipulators.error) {
+      errorEl.hidden = false;
+      errorEl.textContent = state.manipulators.error;
+    } else {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+  }
+
+  if (tableContainer) {
+    tableContainer.hidden = true;
+    tableContainer.innerHTML = '';
+  }
+
+  if (emptyCard) {
+    emptyCard.hidden = true;
+  }
+
+  if (state.manipulators.isLoading || state.manipulators.error) {
+    return;
+  }
+
+  const entries = Array.isArray(state.manipulators.entries) ? state.manipulators.entries : [];
+  if (!entries.length) {
+    if (emptyCard) {
+      emptyCard.hidden = false;
+    }
+    return;
+  }
+
+  if (tableContainer) {
+    const table = renderManipulatorTable(entries, root);
+    tableContainer.appendChild(table);
+    tableContainer.hidden = false;
+  }
+}
+
+function clearManipulatorFormError() {
+  const modal = state.manipulators.modal.modal;
+  if (!modal) {
+    return;
+  }
+  const errorEl = select(modal, '[data-manipulator-form-error]');
+  if (errorEl) {
+    errorEl.hidden = true;
+    errorEl.textContent = '';
+  }
+}
+
+function setManipulatorFormError(message) {
+  const modal = state.manipulators.modal.modal;
+  if (!modal) {
+    return;
+  }
+  const errorEl = select(modal, '[data-manipulator-form-error]');
+  if (errorEl) {
+    errorEl.hidden = false;
+    errorEl.textContent = message;
+  }
+}
+
+function renderManipulatorModal() {
+  const modalState = state.manipulators.modal;
+  const modal = modalState.modal;
+  if (!modal) {
+    return;
+  }
+
+  const fields = Array.isArray(state.manipulators.fields) ? state.manipulators.fields : [];
+  const data = modalState.data || { mode: 'all', rules: [] };
+
+  const mode = data.mode === 'any' ? 'any' : 'all';
+  data.mode = mode;
+
+  const titleEl = select(modal, '[data-manipulator-modal-title]');
+  if (titleEl) {
+    titleEl.textContent = modalState.mode === 'edit' ? 'Manipulator bearbeiten' : 'Manipulator erstellen';
+  }
+
+  const modeSelect = select(modal, '[data-manipulator-mode]');
+  if (modeSelect) {
+    modeSelect.value = mode;
+    modeSelect.disabled = fields.length === 0;
+    modeSelect.onchange = () => {
+      data.mode = modeSelect.value === 'any' ? 'any' : 'all';
+    };
+  }
+
+  const addButton = select(modal, '[data-add-manipulator-rule]');
+  if (addButton) {
+    addButton.disabled = fields.length === 0;
+    addButton.onclick = () => {
+      const defaultField = fields[0] || '';
+      data.rules = Array.isArray(data.rules) ? data.rules.slice() : [];
+      data.rules.push(createManipulatorRule({ field: defaultField }));
+      renderManipulatorModal();
+    };
+  }
+
+  const saveButton = select(modal, '[data-save-manipulator]');
+  if (saveButton && !modalState.isSaving) {
+    saveButton.disabled = fields.length === 0;
+    saveButton.textContent = modalState.mode === 'edit' ? 'Speichern' : 'Erstellen';
+    if (fields.length === 0) {
+      delete saveButton.dataset.loading;
+    }
+  }
+
+  const noFieldsMessage = select(modal, '[data-manipulator-no-fields]');
+  if (noFieldsMessage) {
+    noFieldsMessage.hidden = fields.length > 0;
+  }
+
+  const rulesContainer = select(modal, '[data-manipulator-rules]');
+  if (!rulesContainer) {
+    return;
+  }
+
+  rulesContainer.innerHTML = '';
+
+  if (fields.length === 0) {
+    modalState.data.rules = [];
+    return;
+  }
+
+  const rules = Array.isArray(data.rules) ? data.rules : [];
+  rules.forEach((rule) => {
+    if (!fields.includes(rule.field)) {
+      rule.field = fields[0] || '';
+    }
+  });
+
+  if (!rules.length) {
+    data.rules = [createManipulatorRule({ field: fields[0] || '' })];
+  }
+
+  const activeRules = Array.isArray(data.rules) ? data.rules : [];
+
+  activeRules.forEach((rule, index) => {
+    const row = document.createElement('div');
+    row.className = 'selector-rule';
+    row.dataset.manipulatorRuleId = rule.id;
+
+    const fieldWrapper = document.createElement('div');
+    fieldWrapper.className = 'selector-rule__field-wrapper';
+
+    const fieldSelect = document.createElement('select');
+    fieldSelect.className = 'selector-rule__field';
+    fields.forEach((field) => {
+      const option = document.createElement('option');
+      option.value = field;
+      option.textContent = field || 'Feld auswählen';
+      if (field === rule.field) {
+        option.selected = true;
+      }
+      fieldSelect.appendChild(option);
+    });
+    fieldSelect.addEventListener('change', () => {
+      rule.field = fieldSelect.value;
+      clearManipulatorFormError();
+    });
+    fieldWrapper.appendChild(fieldSelect);
+
+    const operatorSelect = document.createElement('select');
+    operatorSelect.className = 'selector-rule__operator';
+    MANIPULATOR_OPERATORS.forEach((option) => {
+      const optionEl = document.createElement('option');
+      optionEl.value = option.value;
+      optionEl.textContent = option.label;
+      if (option.value === rule.operator) {
+        optionEl.selected = true;
+      }
+      operatorSelect.appendChild(optionEl);
+    });
+
+    const valueInput = document.createElement('input');
+    valueInput.type = 'text';
+    valueInput.className = 'selector-rule__value';
+    valueInput.autocomplete = 'off';
+    valueInput.value = rule.value ?? '';
+
+    const updatePlaceholder = () => {
+      if (operatorSelect.value === 'contains') {
+        valueInput.placeholder = 'Werte (durch Kommas getrennt)';
+      } else if (operatorSelect.value === 'regex') {
+        valueInput.placeholder = 'Regex-Muster';
+      } else if (operatorSelect.value === 'greater' || operatorSelect.value === 'less') {
+        valueInput.placeholder = 'Numerischer Wert';
+      } else {
+        valueInput.placeholder = 'Wert';
+      }
+    };
+
+    updatePlaceholder();
+
+    operatorSelect.addEventListener('change', () => {
+      rule.operator = operatorSelect.value;
+      updatePlaceholder();
+    });
+
+    valueInput.addEventListener('input', () => {
+      rule.value = valueInput.value;
+    });
+
+    fieldWrapper.appendChild(operatorSelect);
+    fieldWrapper.appendChild(valueInput);
+    row.appendChild(fieldWrapper);
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'icon-button selector-rule__remove';
+    removeButton.innerHTML = '&times;';
+    removeButton.setAttribute('aria-label', 'Regel entfernen');
+    removeButton.addEventListener('click', () => {
+      modalState.data.rules = activeRules.filter((entry) => entry.id !== rule.id);
+      renderManipulatorModal();
+    });
+
+    if (activeRules.length > 1) {
+      row.appendChild(removeButton);
+    } else {
+      removeButton.disabled = true;
+      removeButton.setAttribute('aria-hidden', 'true');
+    }
+
+    rulesContainer.appendChild(row);
+  });
+}
+
+function openManipulatorModal(root, trigger, entry = null) {
+  const modalState = state.manipulators.modal;
+  if (!modalState.modal) {
+    modalState.modal = document.querySelector('[data-manipulator-modal]');
+  }
+  const modal = modalState.modal;
+  if (!modal || modalState.isOpen) {
+    return;
+  }
+
+  modalState.isOpen = true;
+  modalState.isSaving = false;
+  modalState.trigger = trigger || null;
+  modalState.error = null;
+  modalState.mode = entry ? 'edit' : 'create';
+  modalState.manipulatorId = entry?.id ?? null;
+
+  const form = select(modal, '[data-manipulator-form]');
+  form?.reset();
+
+  const titleInput = select(modal, '[data-manipulator-title]');
+  const descriptionInput = select(modal, '[data-manipulator-description]');
+  const fieldNameInput = select(modal, '[data-manipulator-field-name]');
+  const fieldValueInput = select(modal, '[data-manipulator-field-value]');
+  if (entry) {
+    if (titleInput) {
+      titleInput.value = entry.title || '';
+    }
+    if (descriptionInput) {
+      descriptionInput.value = entry.description || '';
+    }
+    if (fieldNameInput) {
+      fieldNameInput.value = entry.fieldName || '';
+    }
+    if (fieldValueInput) {
+      fieldValueInput.value = entry.fieldValue ?? '';
+    }
+  } else {
+    if (titleInput) {
+      titleInput.value = '';
+    }
+    if (descriptionInput) {
+      descriptionInput.value = '';
+    }
+    if (fieldNameInput) {
+      fieldNameInput.value = '';
+    }
+    if (fieldValueInput) {
+      fieldValueInput.value = '';
+    }
+  }
+
+  const fields = Array.isArray(state.manipulators.fields) ? state.manipulators.fields : [];
+  if (entry?.definition) {
+    const definition = entry.definition;
+    const mode = definition?.mode === 'any' ? 'any' : 'all';
+    const rules = [];
+    const collectRules = (node) => {
+      if (!node || typeof node !== 'object') {
+        return;
+      }
+      if (node.type === 'rule') {
+        rules.push(createManipulatorRule(node));
+        return;
+      }
+      const children = Array.isArray(node.children) ? node.children : [];
+      children.forEach((child) => collectRules(child));
+    };
+    collectRules(definition);
+    modalState.data = { mode, rules };
+  } else {
+    modalState.data = {
+      mode: 'all',
+      rules: fields.length ? [createManipulatorRule({ field: fields[0] || '' })] : []
+    };
+  }
+
+  clearManipulatorFormError();
+  renderManipulatorModal();
+
+  modal.hidden = false;
+  modal.setAttribute('aria-hidden', 'false');
+  if (!modal.hasAttribute('tabindex')) {
+    modal.setAttribute('tabindex', '-1');
+  }
+  modal.focus?.();
+  lockBodyScroll();
+  titleInput?.focus();
+}
+
+function closeManipulatorModal({ focusTrigger = true } = {}) {
+  const modalState = state.manipulators.modal;
+  const modal = modalState.modal;
+  if (!modal || !modalState.isOpen) {
+    return;
+  }
+
+  const saveButton = select(modal, '[data-save-manipulator]');
+  if (saveButton) {
+    saveButton.disabled = false;
+    delete saveButton.dataset.loading;
+  }
+
+  const form = select(modal, '[data-manipulator-form]');
+  form?.reset();
+
+  modal.hidden = true;
+  modal.setAttribute('aria-hidden', 'true');
+
+  modalState.isOpen = false;
+  modalState.isSaving = false;
+  modalState.error = null;
+  modalState.mode = 'create';
+  modalState.manipulatorId = null;
+  modalState.data = { mode: 'all', rules: [] };
+
+  clearManipulatorFormError();
+  unlockBodyScrollIfIdle();
+
+  const trigger = modalState.trigger;
+  modalState.trigger = null;
+  if (focusTrigger && trigger && typeof trigger.focus === 'function') {
+    trigger.focus();
+  }
+}
+
+async function handleManipulatorFormSubmit(root, event) {
+  event.preventDefault();
+  const modalState = state.manipulators.modal;
+  const modal = modalState.modal;
+  if (!modal || modalState.isSaving) {
+    return;
+  }
+
+  clearManipulatorFormError();
+
+  const titleInput = select(modal, '[data-manipulator-title]');
+  const descriptionInput = select(modal, '[data-manipulator-description]');
+  const fieldNameInput = select(modal, '[data-manipulator-field-name]');
+  const fieldValueInput = select(modal, '[data-manipulator-field-value]');
+  const saveButton = select(modal, '[data-save-manipulator]');
+
+  const title = titleInput?.value.trim() || '';
+  if (!title) {
+    setManipulatorFormError('Titel ist erforderlich.');
+    titleInput?.focus();
+    return;
+  }
+
+  const fieldName = fieldNameInput?.value.trim() || '';
+  if (!fieldName) {
+    setManipulatorFormError('Feldname ist erforderlich.');
+    fieldNameInput?.focus();
+    return;
+  }
+
+  const rawFieldValue = fieldValueInput?.value;
+  const hasFieldValue = typeof rawFieldValue === 'string' ? rawFieldValue.trim().length > 0 : false;
+  if (!hasFieldValue) {
+    setManipulatorFormError('Feldwert ist erforderlich.');
+    fieldValueInput?.focus();
+    return;
+  }
+  const fieldValue = typeof rawFieldValue === 'string' ? rawFieldValue : String(rawFieldValue ?? '');
+
+  const fields = Array.isArray(state.manipulators.fields) ? state.manipulators.fields : [];
+  if (!fields.length) {
+    setManipulatorFormError('Fügen Sie Asset-Pool-Felder hinzu, bevor Sie einen Manipulator erstellen.');
+    return;
+  }
+
+  const rawRules = Array.isArray(modalState.data.rules) ? modalState.data.rules : [];
+  const normalisedRules = rawRules
+    .map((rule) => {
+      const field = typeof rule.field === 'string' ? rule.field.trim() : '';
+      const operator = MANIPULATOR_OPERATORS.some((option) => option.value === rule.operator)
+        ? rule.operator
+        : 'equals';
+      const value = typeof rule.value === 'string' ? rule.value.trim() : String(rule.value ?? '').trim();
+      return { field, operator, value };
+    })
+    .filter((rule) => rule.field && rule.value);
+
+  if (!normalisedRules.length) {
+    setManipulatorFormError('Fügen Sie mindestens eine Regel mit Feld und Wert hinzu.');
+    return;
+  }
+
+  const payload = {
+    title,
+    description: descriptionInput?.value.trim() || '',
+    fieldName,
+    fieldValue,
+    definition: {
+      type: 'group',
+      mode: modalState.data.mode === 'any' ? 'any' : 'all',
+      children: normalisedRules.map((rule) => ({
+        type: 'rule',
+        field: rule.field,
+        operator: rule.operator,
+        value: rule.value
+      }))
+    }
+  };
+
+  modalState.isSaving = true;
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.dataset.loading = 'true';
+  }
+
+  try {
+    const isEdit = modalState.mode === 'edit' && modalState.manipulatorId !== null;
+    const url = isEdit ? API.manipulator(modalState.manipulatorId) : API.manipulators;
+    const entry = await fetchJson(url, {
+      method: isEdit ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const entries = Array.isArray(state.manipulators.entries)
+      ? state.manipulators.entries.slice()
+      : [];
+    const existingIndex = entries.findIndex((item) => item?.id === entry?.id);
+    if (existingIndex === -1) {
+      entries.push(entry);
+    } else {
+      entries[existingIndex] = entry;
+    }
+    state.manipulators.entries = sortManipulators(entries);
+    state.manipulators.error = null;
+    state.manipulators.hasLoaded = true;
+    renderManipulatorView(root);
+    closeManipulatorModal();
+    await refreshAssetPool();
+    await refreshManipulators(root);
+    showToast(isEdit ? 'Manipulator aktualisiert.' : 'Manipulator erstellt.');
+  } catch (error) {
+    const message =
+      error?.payload?.error ||
+      error?.message ||
+      (modalState.mode === 'edit'
+        ? 'Manipulator konnte nicht aktualisiert werden.'
+        : 'Manipulator konnte nicht erstellt werden.');
+    setManipulatorFormError(message);
+  } finally {
+    modalState.isSaving = false;
+    if (saveButton) {
+      saveButton.disabled = false;
+      delete saveButton.dataset.loading;
+      if (!fields.length) {
+        saveButton.disabled = true;
+      }
+    }
+  }
+}
+
+async function refreshManipulators(root = document.querySelector('[data-app="asset-pool"]')) {
+  state.manipulators.isLoading = true;
+  if (root && state.assetPoolView === 'manipulators') {
+    renderManipulatorView(root);
+  }
+
+  try {
+    const data = await fetchJson(API.manipulators);
+    const entries = Array.isArray(data?.manipulators) ? data.manipulators : [];
+    state.manipulators.entries = sortManipulators(entries);
+    state.manipulators.fields = Array.isArray(data?.fieldOptions) ? data.fieldOptions : [];
+    state.manipulators.error = null;
+    state.manipulators.hasLoaded = true;
+  } catch (error) {
+    state.manipulators.error =
+      error?.payload?.error || error?.message || 'Manipulatoren konnten nicht geladen werden.';
+  } finally {
+    state.manipulators.isLoading = false;
+    if (root && state.assetPoolView === 'manipulators') {
+      renderManipulatorView(root);
+    }
+    if (state.manipulators.modal.isOpen) {
+      renderManipulatorModal();
+    }
+  }
+}
+
+function setupManipulatorInterface(root) {
+  const modalState = state.manipulators.modal;
+  modalState.modal = document.querySelector('[data-manipulator-modal]');
+  const modal = modalState.modal;
+
+  const trigger = select(root, '[data-open-manipulator-modal]');
+  if (trigger) {
+    trigger.addEventListener('click', () => openManipulatorModal(root, trigger));
+  }
+
+  if (modal) {
+    selectAll(modal, '[data-close-manipulator-modal]').forEach((button) => {
+      button.addEventListener('click', () => closeManipulatorModal());
+    });
+
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeManipulatorModal({ focusTrigger: false });
+      }
+    });
+
+    const form = select(modal, '[data-manipulator-form]');
+    form?.addEventListener('submit', (event) => handleManipulatorFormSubmit(root, event));
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.manipulators.modal.isOpen) {
+      closeManipulatorModal();
+    }
+  });
+}
+
+function setupAssetPoolNavigation(root) {
+  selectAll(root, '[data-sidebar-link]').forEach((link) => {
+    const target = link.dataset.sidebarLink;
+    if (!target) {
+      return;
+    }
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      setAssetPoolView(root, target);
+    });
   });
 }
 
@@ -1758,8 +2510,10 @@ async function refreshAssetPool() {
     state.assetFieldSuggestions = Array.from(new Set([...preserved, ...statNames]));
     const root = document.querySelector('[data-app="asset-pool"]');
     if (root) {
-      if (root.dataset.view === 'overview') {
+      if (state.assetPoolView === 'overview') {
         renderAssetPool(root);
+      } else if (state.assetPoolView === 'manipulators') {
+        renderManipulatorView(root);
       } else {
         renderFieldManager(root);
       }
@@ -4288,19 +5042,31 @@ async function initAssetPoolApp() {
   const root = document.querySelector('[data-app="asset-pool"]');
   if (!root) return;
 
+  state.assetPoolView = root.dataset.view === 'manipulators'
+    ? 'manipulators'
+    : root.dataset.view === 'raw'
+    ? 'raw'
+    : 'overview';
+
   consumePendingToast();
   setupImportButtons(root);
   setupFieldManager(root);
   setupAssetTypeFieldModal(root);
   setupCloseModal();
   renderSidebar(root);
+  setupAssetPoolNavigation(root);
+  setupManipulatorInterface(root);
+  syncAssetPoolNavigation(root);
 
   await refreshRawTables();
   await refreshAssetPool();
+  refreshManipulators(root);
 
-  if (root.dataset.view === 'overview') {
+  if (state.assetPoolView === 'overview') {
     renderAssetPool(root);
-  } else if (root.dataset.view === 'raw') {
+  } else if (state.assetPoolView === 'manipulators') {
+    renderManipulatorView(root);
+  } else if (state.assetPoolView === 'raw') {
     setupEditMapping(root);
     renderRawTable(root);
   }

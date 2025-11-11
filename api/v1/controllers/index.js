@@ -9,3 +9,4 @@ export { AssetTypesController } from './AssetTypesController.js';
 export { GroupAssetSelectorsController } from './GroupAssetSelectorsController.js';
 export { MeasuresController } from './MeasuresController.js';
 export { AssetCategoriesController } from './AssetCategoriesController.js';
+export { ManipulatorsController } from './ManipulatorsController.js';

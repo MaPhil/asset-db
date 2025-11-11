@@ -144,6 +144,15 @@ main {
   transition: background var(--transition), color var(--transition);
 }
 
+button.sidebar-link {
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
 .sidebar-link:hover,
 .sidebar-link:focus {
   background: rgba(148, 163, 184, 0.25);
@@ -862,6 +871,16 @@ main {
 
 .table tbody tr:hover {
   background: rgba(59, 130, 246, 0.08);
+}
+
+.table-row--interactive {
+  cursor: pointer;
+}
+
+.table-row--interactive:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  background: rgba(59, 130, 246, 0.12);
 }
 
 .table tbody tr:last-child td {
