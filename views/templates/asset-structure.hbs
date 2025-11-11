@@ -9,7 +9,7 @@
     <header class="page-header">
       <div>
         <h1 class="page-title">Asset-Struktur</h1>
-        <p class="page-subtitle">Steuern Sie die Themengebiete, Sub-Themengebiete und Asset Kategorien Ihres Asset-Inventars.</p>
+        <p class="page-subtitle">Steuern Sie die Themengebiete, Sub-Themengebiete und AssetUnterKategorien Ihres Asset-Inventars.</p>
       </div>
     </header>
     <div class="structure-body">
@@ -23,7 +23,7 @@
                   <tr>
                     <th scope="col">Themengebiet</th>
                     <th scope="col">Sub-Themengebiete</th>
-                    <th scope="col">Asset Kategorien</th>
+                    <th scope="col">AssetUnterKategorien</th>
                     <th scope="col">Gruppen</th>
                     <th scope="col">Maßnahmen</th>
                   </tr>
@@ -33,7 +33,7 @@
                     <tr>
                       <td><a class="table-link" href="/asset-structure/{{id}}">{{title}}</a></td>
                       <td><a class="table-link" href="/asset-structure/{{id}}">{{subTopicCount}}</a></td>
-                      <td><a class="table-link" href="/asset-structure/{{id}}">{{assetCategoryCount}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/{{id}}">{{assetSubCategoryCount}}</a></td>
                       <td><a class="table-link" href="/asset-structure/{{id}}">{{groupCount}}</a></td>
                       <td>
                         {{#if measuresUrl}}

@@ -16,7 +16,7 @@
     <header class="page-header">
       <div>
         <h1 class="page-title">{{#if subTopic.displayTitle}}{{subTopic.displayTitle}}{{else}}Unbenanntes Sub-Themengebiet{{/if}}</h1>
-        <p class="page-subtitle">Überblick über die Asset Kategorien, die diesem Sub-Themengebiet zugeordnet sind.</p>
+        <p class="page-subtitle">Überblick über die AssetUnterKategorien, die diesem Sub-Themengebiet zugeordnet sind.</p>
       </div>
       <div class="page-actions">
         {{#if subTopic.measuresUrl}}
@@ -81,18 +81,18 @@
         </dl>
       </section>
 
-      <section class="structure-section" aria-labelledby="asset-categories-title">
+      <section class="structure-section" aria-labelledby="asset-sub-categories-title">
         <div class="section-header">
-          <h2 class="section-title" id="asset-categories-title">Asset Kategorien</h2>
+          <h2 class="section-title" id="asset-sub-categories-title">AssetUnterKategorien</h2>
         </div>
-        <p class="helper-text">{{assetCategoryCount}} Asset Kategorien sind diesem Sub-Themengebiet zugeordnet.</p>
+        <p class="helper-text">{{assetSubCategoryCount}} AssetUnterKategorien sind diesem Sub-Themengebiet zugeordnet.</p>
         <div class="card structure-card">
-          {{#if assetCategories.length}}
+          {{#if assetSubCategories.length}}
             <div class="table-wrapper">
-              <table class="table table--interactive" aria-describedby="asset-categories-title">
+              <table class="table table--interactive" aria-describedby="asset-sub-categories-title">
                 <thead>
                   <tr>
-                    <th scope="col">Asset Kategorie</th>
+                    <th scope="col">AssetUnterKategorie</th>
                     <th scope="col">Gruppen</th>
                     <th scope="col">Verantwortlich</th>
                     <th scope="col">Integrität</th>
@@ -102,7 +102,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {{#each assetCategories}}
+                  {{#each assetSubCategories}}
                     <tr>
                       <td>
                         <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}">{{title}}</a>
@@ -135,7 +135,7 @@
               </table>
             </div>
           {{else}}
-            <p class="empty-state">Diesem Sub-Themengebiet sind noch keine Asset Kategorien zugeordnet.</p>
+            <p class="empty-state">Diesem Sub-Themengebiet sind noch keine AssetUnterKategorien zugeordnet.</p>
           {{/if}}
         </div>
       </section>

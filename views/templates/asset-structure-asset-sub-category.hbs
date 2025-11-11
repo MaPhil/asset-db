@@ -3,7 +3,7 @@
   data-app="asset-structure"
   data-topic-id="{{topic.id}}"
   data-sub-topic-id="{{subTopic.id}}"
-  data-category-id="{{assetCategory.id}}"
+  data-asset-sub-category-id="{{assetSubCategory.id}}"
 >
   <aside class="asset-structure-sidebar" aria-label="Asset-Struktur-Navigation">
     <div class="sidebar-section">
@@ -14,12 +14,12 @@
   <section class="asset-structure-content">
     <header class="page-header">
       <div>
-        <h1 class="page-title">{{#if assetCategory.displayTitle}}{{assetCategory.displayTitle}}{{else}}Unbenannte Asset Kategorie{{/if}}</h1>
-        <p class="page-subtitle">Aktualisieren Sie die Asset Kategorie und verwalten Sie die zugehörigen Gruppen.</p>
+        <h1 class="page-title">{{#if assetSubCategory.displayTitle}}{{assetSubCategory.displayTitle}}{{else}}Unbenannte AssetUnterKategorie{{/if}}</h1>
+        <p class="page-subtitle">Aktualisieren Sie die AssetUnterKategorie und verwalten Sie die zugehörigen Gruppen.</p>
       </div>
       <div class="page-actions">
-        {{#if assetCategory.measuresUrl}}
-          <a class="button button--ghost" href="{{assetCategory.measuresUrl}}">Maßnahmen anzeigen</a>
+        {{#if assetSubCategory.measuresUrl}}
+          <a class="button button--ghost" href="{{assetSubCategory.measuresUrl}}">Maßnahmen anzeigen</a>
         {{/if}}
         <a class="button button--ghost" href="/asset-structure/{{topic.id}}/{{subTopic.id}}">Zum Sub-Themengebiet</a>
         <a class="button button--ghost" href="/asset-structure/{{topic.id}}">Zum Themengebiet</a>
@@ -33,85 +33,85 @@
       <span aria-hidden="true">›</span>
       <a href="/asset-structure/{{topic.id}}/{{subTopic.id}}">{{subTopic.displayTitle}}</a>
       <span aria-hidden="true">›</span>
-      <span aria-current="page">{{#if assetCategory.displayTitle}}{{assetCategory.displayTitle}}{{else}}Unbenannte Asset Kategorie{{/if}}</span>
+      <span aria-current="page">{{#if assetSubCategory.displayTitle}}{{assetSubCategory.displayTitle}}{{else}}Unbenannte AssetUnterKategorie{{/if}}</span>
     </nav>
 
     <div class="structure-body">
-      <section class="card structure-card" aria-labelledby="asset-category-details-title">
+      <section class="card structure-card" aria-labelledby="asset-sub-category-details-title">
         <div class="section-header">
-          <h2 class="section-title" id="asset-category-details-title">Asset Kategorie Informationen</h2>
+          <h2 class="section-title" id="asset-sub-category-details-title">AssetUnterKategorie Informationen</h2>
           <button class="button" type="button">Änderungen speichern</button>
         </div>
         <form class="form-grid form-grid--two">
           <div class="form-field form-field--full">
-            <label for="asset-category-name">Titel</label>
+            <label for="asset-sub-category-name">Titel</label>
             <input
-              id="asset-category-name"
+              id="asset-sub-category-name"
               type="text"
               name="title"
-              value="{{assetCategory.title}}"
-              placeholder="Titel der Asset Kategorie"
+              value="{{assetSubCategory.title}}"
+              placeholder="Titel der AssetUnterKategorie"
               readonly
               aria-readonly="true"
             />
           </div>
           <div class="form-field">
-            <label for="asset-category-owner">Verantwortlich</label>
+            <label for="asset-sub-category-owner">Verantwortlich</label>
             <input
-              id="asset-category-owner"
+              id="asset-sub-category-owner"
               type="text"
               name="owner"
-              value="{{assetCategory.owner}}"
+              value="{{assetSubCategory.owner}}"
               placeholder="z. B. Asset-Governance"
             />
           </div>
           <div class="form-field">
-            <label for="asset-category-integrity">Integrität</label>
-            <select id="asset-category-integrity" name="integrity">
-              <option value="" {{#unless assetCategory.integrity}}selected{{/unless}}>Bewertung auswählen</option>
-              <option {{#if (eq assetCategory.integrity 'Low')}}selected{{/if}}>Niedrig</option>
-              <option {{#if (eq assetCategory.integrity 'Moderate')}}selected{{/if}}>Mittel</option>
-              <option {{#if (eq assetCategory.integrity 'High')}}selected{{/if}}>Hoch</option>
+            <label for="asset-sub-category-integrity">Integrität</label>
+            <select id="asset-sub-category-integrity" name="integrity">
+              <option value="" {{#unless assetSubCategory.integrity}}selected{{/unless}}>Bewertung auswählen</option>
+              <option {{#if (eq assetSubCategory.integrity 'Low')}}selected{{/if}}>Niedrig</option>
+              <option {{#if (eq assetSubCategory.integrity 'Moderate')}}selected{{/if}}>Mittel</option>
+              <option {{#if (eq assetSubCategory.integrity 'High')}}selected{{/if}}>Hoch</option>
             </select>
           </div>
           <div class="form-field">
-            <label for="asset-category-availability">Verfügbarkeit</label>
-            <select id="asset-category-availability" name="availability">
-              <option value="" {{#unless assetCategory.availability}}selected{{/unless}}>Bewertung auswählen</option>
-              <option {{#if (eq assetCategory.availability 'Low')}}selected{{/if}}>Niedrig</option>
-              <option {{#if (eq assetCategory.availability 'Moderate')}}selected{{/if}}>Mittel</option>
-              <option {{#if (eq assetCategory.availability 'High')}}selected{{/if}}>Hoch</option>
+            <label for="asset-sub-category-availability">Verfügbarkeit</label>
+            <select id="asset-sub-category-availability" name="availability">
+              <option value="" {{#unless assetSubCategory.availability}}selected{{/unless}}>Bewertung auswählen</option>
+              <option {{#if (eq assetSubCategory.availability 'Low')}}selected{{/if}}>Niedrig</option>
+              <option {{#if (eq assetSubCategory.availability 'Moderate')}}selected{{/if}}>Mittel</option>
+              <option {{#if (eq assetSubCategory.availability 'High')}}selected{{/if}}>Hoch</option>
             </select>
           </div>
           <div class="form-field">
-            <label for="asset-category-confidentiality">Vertraulichkeit</label>
-            <select id="asset-category-confidentiality" name="confidentiality">
-              <option value="" {{#unless assetCategory.confidentiality}}selected{{/unless}}>Bewertung auswählen</option>
-              <option {{#if (eq assetCategory.confidentiality 'Low')}}selected{{/if}}>Niedrig</option>
-              <option {{#if (eq assetCategory.confidentiality 'Moderate')}}selected{{/if}}>Mittel</option>
-              <option {{#if (eq assetCategory.confidentiality 'High')}}selected{{/if}}>Hoch</option>
+            <label for="asset-sub-category-confidentiality">Vertraulichkeit</label>
+            <select id="asset-sub-category-confidentiality" name="confidentiality">
+              <option value="" {{#unless assetSubCategory.confidentiality}}selected{{/unless}}>Bewertung auswählen</option>
+              <option {{#if (eq assetSubCategory.confidentiality 'Low')}}selected{{/if}}>Niedrig</option>
+              <option {{#if (eq assetSubCategory.confidentiality 'Moderate')}}selected{{/if}}>Mittel</option>
+              <option {{#if (eq assetSubCategory.confidentiality 'High')}}selected{{/if}}>Hoch</option>
             </select>
           </div>
           <div class="form-field form-field--full">
-            <label for="asset-category-description">Beschreibung</label>
+            <label for="asset-sub-category-description">Beschreibung</label>
             <textarea
-              id="asset-category-description"
+              id="asset-sub-category-description"
               name="description"
               rows="4"
-              placeholder="Beschreiben Sie, wie diese Asset Kategorie verwendet wird"
-            >{{assetCategory.description}}</textarea>
+              placeholder="Beschreiben Sie, wie diese AssetUnterKategorie verwendet wird"
+            >{{assetSubCategory.description}}</textarea>
           </div>
         </form>
       </section>
 
-      <section class="card structure-card" aria-labelledby="asset-category-groups-title">
+      <section class="card structure-card" aria-labelledby="asset-sub-category-groups-title">
         <div class="section-header">
-          <h2 class="section-title" id="asset-category-groups-title">Gruppen</h2>
+          <h2 class="section-title" id="asset-sub-category-groups-title">Gruppen</h2>
           <button class="button" type="button" data-open-structure-modal="group">Gruppe hinzufügen</button>
         </div>
         {{#if groups.length}}
           <div class="table-wrapper">
-            <table class="table table--interactive" aria-describedby="asset-category-groups-title">
+            <table class="table table--interactive" aria-describedby="asset-sub-category-groups-title">
               <thead>
                 <tr>
                   <th scope="col">Gruppe</th>
@@ -124,16 +124,16 @@
                 {{#each groups}}
                   <tr>
                     <td>
-                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetCategory.id}}/groups/{{id}}">{{title}}</a>
+                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetSubCategory.id}}/groups/{{id}}">{{title}}</a>
                     </td>
                     <td>
-                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetCategory.id}}/groups/{{id}}">{{status}}</a>
+                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetSubCategory.id}}/groups/{{id}}">{{status}}</a>
                     </td>
                     <td>
-                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetCategory.id}}/groups/{{id}}">{{assetType}}</a>
+                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetSubCategory.id}}/groups/{{id}}">{{assetType}}</a>
                     </td>
                     <td>
-                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetCategory.id}}/groups/{{id}}">{{updatedAt}}</a>
+                      <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{../assetSubCategory.id}}/groups/{{id}}">{{updatedAt}}</a>
                     </td>
                   </tr>
                 {{/each}}
@@ -141,7 +141,7 @@
             </table>
           </div>
         {{else}}
-          <p class="empty-state">Es sind noch keine Gruppen mit dieser Asset Kategorie verknüpft.</p>
+          <p class="empty-state">Es sind noch keine Gruppen mit dieser AssetUnterKategorie verknüpft.</p>
         {{/if}}
       </section>
     </div>

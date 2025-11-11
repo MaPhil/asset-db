@@ -45,11 +45,12 @@ const buildGroupCounts = () => {
   }, new Map());
 };
 
-const collectOwners = (categories) => {
+const collectOwners = (assetSubCategories) => {
   const owners = new Set();
 
-  categories.forEach((category) => {
-    const owner = normaliseText(category?.owner) || normaliseText(category?.group_owner);
+  assetSubCategories.forEach((assetSubCategory) => {
+    const owner =
+      normaliseText(assetSubCategory?.owner) || normaliseText(assetSubCategory?.group_owner);
     if (owner) {
       owners.add(owner);
     }
@@ -93,11 +94,11 @@ const normaliseMeasureFilterValue = (value) => {
   return '';
 };
 
-const buildMeasuresUrl = ({ topicId, subTopicId, categoryId }) => {
+const buildMeasuresUrl = ({ topicId, subTopicId, assetSubCategoryId }) => {
   const params = new URLSearchParams();
   const topicValue = normaliseMeasureFilterValue(topicId);
   const subTopicValue = normaliseMeasureFilterValue(subTopicId);
-  const categoryValue = normaliseMeasureFilterValue(categoryId);
+  const assetSubCategoryValue = normaliseMeasureFilterValue(assetSubCategoryId);
 
   if (topicValue) {
     params.set('topic', topicValue);
@@ -105,8 +106,8 @@ const buildMeasuresUrl = ({ topicId, subTopicId, categoryId }) => {
   if (subTopicValue) {
     params.set('subTopic', subTopicValue);
   }
-  if (categoryValue) {
-    params.set('category', categoryValue);
+  if (assetSubCategoryValue) {
+    params.set('category', assetSubCategoryValue);
   }
 
   if (!params.size) {
@@ -123,16 +124,17 @@ export const renderAssetStructure = (req, res) => {
   const topicRows = topics.map((topic) => {
     const topicMeasureId = topic?.measure?.id;
     const measuresUrl = buildMeasuresUrl({ topicId: topicMeasureId });
-    const assetCategoryCount = topic.subTopics.reduce(
-      (sum, subTopic) => sum + subTopic.categories.length,
+    const assetSubCategoryCount = topic.subTopics.reduce(
+      (sum, subTopic) => sum + subTopic.assetSubCategories.length,
       0
     );
 
     const groupCount = topic.subTopics.reduce((sum, subTopic) => {
       return (
         sum +
-        subTopic.categories.reduce(
-          (categorySum, category) => categorySum + (groupCounts.get(category.id) ?? 0),
+        subTopic.assetSubCategories.reduce(
+          (categorySum, assetSubCategory) =>
+            categorySum + (groupCounts.get(assetSubCategory.id) ?? 0),
           0
         )
       );
@@ -142,9 +144,9 @@ export const renderAssetStructure = (req, res) => {
       id: topic.id,
       title: topic.displayTitle,
       subTopicCount: topic.subTopics.length,
-      assetCategoryCount,
+      assetSubCategoryCount,
       groupCount,
-      owner: collectOwners(topic.categories),
+      owner: collectOwners(topic.assetSubCategories),
       measuresUrl
     };
   });
@@ -169,9 +171,9 @@ export const renderAssetStructureTopic = (req, res) => {
   const groupCounts = buildGroupCounts();
 
   const subTopics = topic.subTopics.map((subTopic) => {
-    const assetCategoryCount = subTopic.categories.length;
-    const groupCount = subTopic.categories.reduce(
-      (sum, category) => sum + (groupCounts.get(category.id) ?? 0),
+    const assetSubCategoryCount = subTopic.assetSubCategories.length;
+    const groupCount = subTopic.assetSubCategories.reduce(
+      (sum, assetSubCategory) => sum + (groupCounts.get(assetSubCategory.id) ?? 0),
       0
     );
     const measuresUrl = buildMeasuresUrl({
@@ -183,9 +185,9 @@ export const renderAssetStructureTopic = (req, res) => {
       id: subTopic.id,
       title: subTopic.displayTitle,
       topicId: topic.id,
-      assetCategoryCount,
+      assetSubCategoryCount,
       groupCount,
-      owner: collectOwners(subTopic.categories),
+      owner: collectOwners(subTopic.assetSubCategories),
       measuresUrl,
       measure: subTopic.measure
     };
@@ -226,18 +228,20 @@ export const renderAssetStructureSubTopic = (req, res) => {
 
   const groupCounts = buildGroupCounts();
 
-  const assetCategories = subTopic.categories.map((category) => ({
-    id: category.id,
-    title: category.title || category.name || `Asset Kategorie ${category.id}`,
-    owner: normaliseText(category.owner) || normaliseText(category.group_owner) || '—',
-    integrity: normaliseText(category.integrity) || '—',
-    availability: normaliseText(category.availability) || '—',
-    confidentiality: normaliseText(category.confidentiality) || '—',
-    groupCount: groupCounts.get(category.id) ?? 0,
+  const assetSubCategories = subTopic.assetSubCategories.map((assetSubCategory) => ({
+    id: assetSubCategory.id,
+    title:
+      assetSubCategory.title || assetSubCategory.name || `AssetUnterKategorie ${assetSubCategory.id}`,
+    owner:
+      normaliseText(assetSubCategory.owner) || normaliseText(assetSubCategory.group_owner) || '—',
+    integrity: normaliseText(assetSubCategory.integrity) || '—',
+    availability: normaliseText(assetSubCategory.availability) || '—',
+    confidentiality: normaliseText(assetSubCategory.confidentiality) || '—',
+    groupCount: groupCounts.get(assetSubCategory.id) ?? 0,
     measuresUrl: buildMeasuresUrl({
       topicId: topic?.measure?.id,
       subTopicId: subTopic?.measure?.id,
-      categoryId: category?.measure?.id
+      assetSubCategoryId: assetSubCategory?.measure?.id
     })
   }));
 
@@ -261,25 +265,32 @@ export const renderAssetStructureSubTopic = (req, res) => {
       measure: subTopic.measure
     },
     notes: '',
-    assetCategories,
-    assetCategoryCount: assetCategories.length
+    assetSubCategories,
+    assetSubCategoryCount: assetSubCategories.length
   });
 };
 
-export const renderAssetStructureAssetCategory = (req, res) => {
+export const renderAssetStructureAssetSubCategory = (req, res) => {
   const { topicId, subTopicId } = req.params;
-  const categoryId = Number(req.params.categoryId);
+  const assetSubCategoryId = Number(req.params.assetSubCategoryId);
 
-  if (!Number.isInteger(categoryId) || categoryId <= 0) {
-    logger.warn('Ungültige Asset-Kategorie-ID angefordert', { categoryId, topicId, subTopicId });
-    return res.status(404).send('Asset-Kategorie nicht gefunden');
+  if (!Number.isInteger(assetSubCategoryId) || assetSubCategoryId <= 0) {
+    logger.warn('Ungültige AssetUnterKategorie-ID angefordert', {
+      assetSubCategoryId,
+      topicId,
+      subTopicId
+    });
+    return res.status(404).send('AssetUnterKategorie nicht gefunden');
   }
 
   const { topicById, subTopicById } = buildAssetStructure();
   const topic = topicById.get(topicId);
 
   if (!topic) {
-    logger.warn('Themengebiet für Asset-Kategorie nicht gefunden', { topicId, categoryId });
+    logger.warn('Themengebiet für AssetUnterKategorie nicht gefunden', {
+      topicId,
+      assetSubCategoryId
+    });
     return res.status(404).send('Themengebiet nicht gefunden');
   }
 
@@ -287,41 +298,45 @@ export const renderAssetStructureAssetCategory = (req, res) => {
   const subTopic = subTopicById.get(key);
 
   if (!subTopic) {
-    logger.warn('Sub-Themengebiet für Asset-Kategorie nicht gefunden', {
+    logger.warn('Sub-Themengebiet für AssetUnterKategorie nicht gefunden', {
       topicId,
       subTopicId,
-      categoryId
+      assetSubCategoryId
     });
     return res.status(404).send('Sub-Themengebiet nicht gefunden');
   }
 
-  const category = subTopic.categories.find((entry) => entry.id === categoryId);
+  const assetSubCategory = subTopic.assetSubCategories.find((entry) => entry.id === assetSubCategoryId);
 
-  if (!category) {
-    logger.warn('Asset-Kategorie für UI-Route nicht gefunden', { categoryId, topicId, subTopicId });
-    return res.status(404).send('Asset-Kategorie nicht gefunden');
+  if (!assetSubCategory) {
+    logger.warn('AssetUnterKategorie für UI-Route nicht gefunden', {
+      assetSubCategoryId,
+      topicId,
+      subTopicId
+    });
+    return res.status(404).send('AssetUnterKategorie nicht gefunden');
   }
 
   const links = store
     .get('group_categories')
-    .rows.filter((row) => Number(row.category_id) === categoryId);
+    .rows.filter((row) => Number(row.category_id) === assetSubCategoryId);
   const groups = store
     .get('groups')
     .rows.filter((group) => links.some((link) => Number(link.group_id) === group.id));
 
   const viewModel = {
-    id: category.id,
-    title: category.title || category.name || '',
-    displayTitle: category.title || category.name || 'Unbenannte Asset Kategorie',
-    description: category.description || '',
-    owner: category.owner || category.group_owner || '',
-    integrity: category.integrity || '',
-    availability: category.availability || '',
-    confidentiality: category.confidentiality || '',
+    id: assetSubCategory.id,
+    title: assetSubCategory.title || assetSubCategory.name || '',
+    displayTitle: assetSubCategory.title || assetSubCategory.name || 'Unbenannte AssetUnterKategorie',
+    description: assetSubCategory.description || '',
+    owner: assetSubCategory.owner || assetSubCategory.group_owner || '',
+    integrity: assetSubCategory.integrity || '',
+    availability: assetSubCategory.availability || '',
+    confidentiality: assetSubCategory.confidentiality || '',
     measuresUrl: buildMeasuresUrl({
       topicId: topic?.measure?.id,
       subTopicId: subTopic?.measure?.id,
-      categoryId: category?.measure?.id
+      assetSubCategoryId: assetSubCategory?.measure?.id
     })
   };
 
@@ -333,7 +348,7 @@ export const renderAssetStructureAssetCategory = (req, res) => {
     updatedAt: formatDateTime(group.updated_at) || '—'
   }));
 
-  res.render('asset-structure-asset-category', {
+  res.render('asset-structure-asset-sub-category', {
     nav: 'assetStructure',
     topic: {
       id: topic.id,
@@ -350,25 +365,25 @@ export const renderAssetStructureAssetCategory = (req, res) => {
         subTopicId: subTopic?.measure?.id
       })
     },
-    assetCategory: viewModel,
+    assetSubCategory: viewModel,
     groups: groupRows,
     groupCount: groupRows.length
   });
 };
 
 export const renderAssetStructureGroup = (req, res) => {
-  const categoryId = Number(req.params.categoryId);
+  const assetSubCategoryId = Number(req.params.assetSubCategoryId);
   const groupId = Number(req.params.groupId);
   const { topicId, subTopicId } = req.params;
 
-  if (!Number.isInteger(categoryId) || categoryId <= 0) {
-    logger.warn('Ungültige Kategorie-ID für Gruppen-UI-Route', {
-      categoryId,
+  if (!Number.isInteger(assetSubCategoryId) || assetSubCategoryId <= 0) {
+    logger.warn('Ungültige AssetUnterKategorie-ID für Gruppen-UI-Route', {
+      assetSubCategoryId,
       groupId,
       topicId,
       subTopicId
     });
-    return res.status(404).send('Kategorie nicht gefunden');
+    return res.status(404).send('AssetUnterKategorie nicht gefunden');
   }
 
   const { topicById, subTopicById } = buildAssetStructure();
@@ -377,7 +392,7 @@ export const renderAssetStructureGroup = (req, res) => {
   if (!topic) {
     logger.warn('Themengebiet für Gruppen-UI-Route nicht gefunden', {
       topicId,
-      categoryId,
+      assetSubCategoryId,
       groupId
     });
     return res.status(404).send('Themengebiet nicht gefunden');
@@ -390,29 +405,29 @@ export const renderAssetStructureGroup = (req, res) => {
     logger.warn('Sub-Themengebiet für Gruppen-UI-Route nicht gefunden', {
       topicId,
       subTopicId,
-      categoryId,
+      assetSubCategoryId,
       groupId
     });
     return res.status(404).send('Sub-Themengebiet nicht gefunden');
   }
 
-  const category = subTopic.categories.find((entry) => entry.id === categoryId);
+  const assetSubCategory = subTopic.assetSubCategories.find((entry) => entry.id === assetSubCategoryId);
 
-  if (!category) {
-    logger.warn('Kategorie für Gruppen-UI-Route nicht gefunden', {
+  if (!assetSubCategory) {
+    logger.warn('AssetUnterKategorie für Gruppen-UI-Route nicht gefunden', {
       topicId,
       subTopicId,
-      categoryId,
+      assetSubCategoryId,
       groupId
     });
-    return res.status(404).send('Kategorie nicht gefunden');
+    return res.status(404).send('AssetUnterKategorie nicht gefunden');
   }
 
-  const categoryOptions = store
+  const assetSubCategoryOptions = store
     .get('categories')
     .rows.map((row) => ({
       id: row.id,
-      title: row.title || row.name || `Kategorie ${row.id}`
+      title: row.title || row.name || `AssetUnterKategorie ${row.id}`
     }))
     .sort((a, b) => a.title.localeCompare(b.title, 'de', { sensitivity: 'base' }));
 
@@ -421,7 +436,7 @@ export const renderAssetStructureGroup = (req, res) => {
     .rows.find((row) => row.id === groupId);
 
   if (!group) {
-    logger.warn('Gruppe für UI-Route nicht gefunden', { categoryId, groupId });
+    logger.warn('Gruppe für UI-Route nicht gefunden', { assetSubCategoryId, groupId });
     return res.status(404).send('Gruppe nicht gefunden');
   }
 
@@ -456,17 +471,17 @@ export const renderAssetStructureGroup = (req, res) => {
         subTopicId: subTopic?.measure?.id
       })
     },
-    category: {
-      id: category.id,
-      title: category.title || category.name || 'Unbenannte Asset Kategorie',
+    assetSubCategory: {
+      id: assetSubCategory.id,
+      title: assetSubCategory.title || assetSubCategory.name || 'Unbenannte AssetUnterKategorie',
       measuresUrl: buildMeasuresUrl({
         topicId: topic?.measure?.id,
         subTopicId: subTopic?.measure?.id,
-        categoryId: category?.measure?.id
+        assetSubCategoryId: assetSubCategory?.measure?.id
       })
     },
     group: detail,
-    categoryOptions,
+    assetSubCategoryOptions,
     groupAssetTypes,
     availableGroupAssetTypesCount: availableGroupAssetTypes.length,
     groupAssetTypeCount: groupAssetTypes.length

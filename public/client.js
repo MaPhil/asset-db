@@ -1932,8 +1932,8 @@ function setupCreateCategoryForm(root) {
 }
 
 function setupCreateGroupForm(root) {
-  const categoryId = Number(root?.dataset.categoryId || '');
-  if (!Number.isFinite(categoryId) || categoryId <= 0) {
+  const assetSubCategoryId = Number(root?.dataset.assetSubCategoryId || '');
+  if (!Number.isFinite(assetSubCategoryId) || assetSubCategoryId <= 0) {
     return;
   }
 
@@ -1989,7 +1989,7 @@ function setupCreateGroupForm(root) {
         await fetchJson(`${API.groups}/${groupId}/link-category`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ category_id: categoryId })
+          body: JSON.stringify({ category_id: assetSubCategoryId })
         });
       }
 
@@ -2037,19 +2037,19 @@ function setupDeleteGroupButton(root) {
 
     try {
       await fetchJson(`${API.groups}/${groupId}`, { method: 'DELETE' });
-      const categoryId = Number(root?.dataset?.categoryId || '');
+      const assetSubCategoryId = Number(root?.dataset?.assetSubCategoryId || '');
       const topicId = root?.dataset?.topicId || '';
       const subTopicId = root?.dataset?.subTopicId || '';
 
       if (
-        Number.isInteger(categoryId) &&
-        categoryId > 0 &&
+        Number.isInteger(assetSubCategoryId) &&
+        assetSubCategoryId > 0 &&
         typeof topicId === 'string' &&
         topicId &&
         typeof subTopicId === 'string' &&
         subTopicId
       ) {
-        window.location.assign(`/asset-structure/${topicId}/${subTopicId}/${categoryId}`);
+        window.location.assign(`/asset-structure/${topicId}/${subTopicId}/${assetSubCategoryId}`);
       } else if (typeof topicId === 'string' && topicId) {
         window.location.assign(`/asset-structure/${topicId}`);
       } else {

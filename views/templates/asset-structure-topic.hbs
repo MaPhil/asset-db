@@ -14,7 +14,7 @@
     <header class="page-header">
       <div>
         <h1 class="page-title">{{#if topic.displayTitle}}{{topic.displayTitle}}{{else}}Unbenanntes Themengebiet{{/if}}</h1>
-        <p class="page-subtitle">Verwalten Sie die Sub-Themengebiete und Asset Kategorien innerhalb dieses Themengebiets.</p>
+        <p class="page-subtitle">Verwalten Sie die Sub-Themengebiete und AssetUnterKategorien innerhalb dieses Themengebiets.</p>
       </div>
       <div class="page-actions">
         {{#if topic.measuresUrl}}
@@ -62,7 +62,7 @@
         <div class="section-header">
           <h2 class="section-title" id="sub-topics-title">Sub-Themengebiete</h2>
         </div>
-        <p class="helper-text">{{subTopicCount}} Sub-Themengebiete verfügbar. Wählen Sie eines aus, um die zugehörigen Asset Kategorien zu verwalten.</p>
+        <p class="helper-text">{{subTopicCount}} Sub-Themengebiete verfügbar. Wählen Sie eines aus, um die zugehörigen AssetUnterKategorien zu verwalten.</p>
         <div class="card structure-card">
           {{#if subTopics.length}}
             <div class="table-wrapper">
@@ -70,7 +70,7 @@
                 <thead>
                   <tr>
                     <th scope="col">Sub-Themengebiet</th>
-                    <th scope="col">Asset Kategorien</th>
+                    <th scope="col">AssetUnterKategorien</th>
                     <th scope="col">Gruppen</th>
                     <th scope="col">Maßnahmen-ID</th>
                     <th scope="col">Maßnahmen</th>
@@ -80,7 +80,7 @@
                   {{#each subTopics}}
                     <tr>
                       <td><a class="table-link" href="/asset-structure/{{topicId}}/{{id}}">{{title}}</a></td>
-                      <td><a class="table-link" href="/asset-structure/{{topicId}}/{{id}}">{{assetCategoryCount}}</a></td>
+                      <td><a class="table-link" href="/asset-structure/{{topicId}}/{{id}}">{{assetSubCategoryCount}}</a></td>
                       <td><a class="table-link" href="/asset-structure/{{topicId}}/{{id}}">{{groupCount}}</a></td>
                       <td>
                         {{#if measure.id}}
