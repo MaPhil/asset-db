@@ -9,7 +9,6 @@ const API = {
   assetTypeField: '/api/v1/asset-pool/settings/asset-type-field',
   manipulators: '/api/v1/manipulators',
   manipulator: (id) => `/api/v1/manipulators/${encodeURIComponent(id)}`,
-  assetTypes: '/api/v1/asset-types',
   categories: '/api/v1/categories',
   assetCategories: '/api/v1/asset-categories',
   groups: '/api/v1/groups',
@@ -55,12 +54,6 @@ const state = {
     isOpen: false,
     isSaving: false,
     trigger: null,
-    error: null
-  },
-  assetTypeDecisionModal: {
-    isOpen: false,
-    isSaving: false,
-    activeButton: null,
     error: null
   },
   manipulators: {
@@ -184,7 +177,6 @@ function unlockBodyScrollIfIdle() {
     state.modal.isOpen ||
     state.fieldManager.isOpen ||
     state.assetTypeFieldModal.isOpen ||
-    state.assetTypeDecisionModal.isOpen ||
     state.manipulators?.modal?.isOpen ||
     state.groupSelector?.editor?.isOpen ||
     state.groupSelector?.viewer?.isOpen ||
@@ -2853,235 +2845,6 @@ function setupDeleteGroupButton(root) {
   });
 }
 
-function setupAssetTypeDecisionModal(root) {
-  const modal = document.querySelector('[data-asset-type-decision-modal]');
-  if (!modal) {
-    return;
-  }
-
-  const buttons = selectAll(root, '[data-asset-type-button]');
-  if (!buttons.length) {
-    return;
-  }
-
-  const titleEl = select(modal, '[data-asset-type-modal-title]');
-  const selectEl = select(modal, '[data-asset-type-decision-select]');
-  const commentInput = select(modal, '[data-asset-type-comment]');
-  const errorEl = select(modal, '[data-asset-type-decision-error]');
-  const saveButton = select(modal, '[data-save-asset-type-decision]');
-  const cancelButton = select(modal, '[data-cancel-asset-type-decision]');
-  const closeButton = select(modal, '[data-close-asset-type-decision]');
-  const groupListEl = select(modal, '[data-asset-type-group-list]');
-  const groupEmptyEl = select(modal, '[data-asset-type-group-empty]');
-  const ignoreWarningEl = select(modal, '[data-asset-type-ignore-warning]');
-
-  function readButtonGroups(button) {
-    if (!button) {
-      return [];
-    }
-    return selectAll(button, '[data-asset-type-group]').map((node) => ({
-      id: Number(node.dataset.groupId || '') || null,
-      title: node.dataset.groupTitle || '',
-      url: node.dataset.groupUrl || ''
-    }));
-  }
-
-  function renderGroupAssignments(groups) {
-    const entries = Array.isArray(groups) ? groups : [];
-    const hasGroups = entries.length > 0;
-
-    if (groupListEl) {
-      groupListEl.innerHTML = '';
-      groupListEl.hidden = !hasGroups;
-    }
-
-    if (groupEmptyEl) {
-      groupEmptyEl.hidden = hasGroups;
-    }
-
-    if (groupListEl && hasGroups) {
-      const sortedEntries = [...entries].sort((a, b) =>
-        (a?.title || '').localeCompare(b?.title || '', undefined, { numeric: true, sensitivity: 'base' })
-      );
-      sortedEntries.forEach((entry) => {
-        const item = document.createElement('li');
-        item.className = 'asset-type-groups__item';
-        const title = entry?.title || (Number.isInteger(entry?.id) ? `Gruppe ${entry.id}` : 'Gruppe');
-        if (entry?.url) {
-          const link = document.createElement('a');
-          link.href = entry.url;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          link.className = 'asset-type-groups__link';
-          link.textContent = title;
-          item.appendChild(link);
-        } else {
-          const text = document.createElement('span');
-          text.className = 'asset-type-groups__text';
-          text.textContent = title;
-          item.appendChild(text);
-        }
-        groupListEl.appendChild(item);
-      });
-    }
-
-    if (ignoreWarningEl) {
-      ignoreWarningEl.hidden = !hasGroups;
-    }
-
-    if (selectEl) {
-      const ignoreOption = selectEl.querySelector('option[value="ignore"]');
-      if (ignoreOption) {
-        ignoreOption.disabled = hasGroups;
-      }
-      if (hasGroups && selectEl.value === 'ignore') {
-        selectEl.value = 'use';
-      }
-    }
-  }
-
-  function open(button) {
-    const name = button?.dataset.assetTypeName || '';
-    state.assetTypeDecisionModal.isOpen = true;
-    state.assetTypeDecisionModal.isSaving = false;
-    state.assetTypeDecisionModal.activeButton = button;
-    state.assetTypeDecisionModal.error = null;
-
-    if (titleEl) {
-      titleEl.textContent = name ? `„${name}“ konfigurieren` : 'Asset-Typ konfigurieren';
-    }
-    if (selectEl) {
-      selectEl.value = button?.dataset.assetTypeDecision || 'use';
-    }
-    if (commentInput) {
-      commentInput.value = button?.dataset.assetTypeComment || '';
-    }
-    if (errorEl) {
-      errorEl.hidden = true;
-      errorEl.textContent = '';
-    }
-
-    renderGroupAssignments(readButtonGroups(button));
-
-    modal.hidden = false;
-    modal.removeAttribute('aria-hidden');
-    if (!modal.hasAttribute('tabindex')) {
-      modal.setAttribute('tabindex', '-1');
-    }
-    modal.focus?.();
-
-    structureModalOpenCount += 1;
-    lockBodyScroll();
-  }
-
-  function close() {
-    if (!state.assetTypeDecisionModal.isOpen) {
-      return;
-    }
-
-    state.assetTypeDecisionModal.isOpen = false;
-    state.assetTypeDecisionModal.isSaving = false;
-
-    modal.hidden = true;
-    modal.setAttribute('aria-hidden', 'true');
-
-    structureModalOpenCount = Math.max(0, structureModalOpenCount - 1);
-    unlockBodyScrollIfIdle();
-
-    if (errorEl) {
-      errorEl.hidden = true;
-      errorEl.textContent = '';
-    }
-
-    renderGroupAssignments([]);
-
-    const button = state.assetTypeDecisionModal.activeButton;
-    state.assetTypeDecisionModal.activeButton = null;
-    if (button && typeof button.focus === 'function') {
-      button.focus();
-    }
-  }
-
-  buttons.forEach((button) => {
-    button.addEventListener('click', () => open(button));
-  });
-
-  cancelButton?.addEventListener('click', () => close());
-  closeButton?.addEventListener('click', () => close());
-
-  modal.addEventListener('click', (event) => {
-    if (event.target === modal) {
-      close();
-    }
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && state.assetTypeDecisionModal.isOpen) {
-      close();
-    }
-  });
-
-  saveButton?.addEventListener('click', async () => {
-    if (state.assetTypeDecisionModal.isSaving) {
-      return;
-    }
-
-    const button = state.assetTypeDecisionModal.activeButton;
-    if (!button) {
-      return;
-    }
-
-    const name = button.dataset.assetTypeName || '';
-    if (!name) {
-      return;
-    }
-
-    const decision = selectEl ? selectEl.value || 'use' : 'use';
-    const comment = commentInput ? commentInput.value.trim() : '';
-
-    state.assetTypeDecisionModal.isSaving = true;
-    state.assetTypeDecisionModal.error = null;
-    if (errorEl) {
-      errorEl.hidden = true;
-      errorEl.textContent = '';
-    }
-    saveButton.disabled = true;
-
-    try {
-      const response = await fetchJson(`${API.assetTypes}/${encodeURIComponent(name)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ decision, comment })
-      });
-
-      const nextDecision = response?.decision || decision;
-      const nextComment = response?.comment ?? comment;
-
-      button.dataset.assetTypeDecision = nextDecision;
-      button.dataset.assetTypeComment = nextComment;
-      button.setAttribute('data-asset-type-decision', nextDecision);
-
-      const statusEl = button.querySelector('[data-asset-type-status]');
-      if (statusEl) {
-        statusEl.textContent = nextDecision === 'ignore' ? 'Ignorieren' : 'Verwenden';
-        statusEl.dataset.status = nextDecision;
-      }
-
-      close();
-    } catch (error) {
-      const message = error?.payload?.error || error?.message || 'Entscheidung zum Asset-Typ konnte nicht gespeichert werden.';
-      state.assetTypeDecisionModal.error = message;
-      if (errorEl) {
-        errorEl.hidden = false;
-        errorEl.textContent = message;
-      }
-    } finally {
-      state.assetTypeDecisionModal.isSaving = false;
-      saveButton.disabled = false;
-    }
-  });
-}
-
 let selectorNodeSequence = 0;
 
 function nextSelectorNodeId(prefix) {
@@ -5034,7 +4797,6 @@ function initAssetStructureApp() {
   setupCreateCategoryForm(root);
   setupCreateGroupForm(root);
   setupDeleteGroupButton(root);
-  setupAssetTypeDecisionModal(root);
   setupGroupSelectorInterface(root);
 }
 

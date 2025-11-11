@@ -11,7 +11,6 @@ import {
   renderAssetStructureGroup,
   renderAssetStructureSubTopic,
   renderAssetStructureTopic,
-  renderAssetTypes,
   renderAssetCategories
 } from '../controller/assetStructure.controller.js';
 import { renderImplementation } from '../controller/implementation.controller.js';
@@ -35,7 +34,6 @@ router.get(
 );
 router.get('/asset-structure/:topicId/:subTopicId', renderAssetStructureSubTopic);
 router.get('/asset-structure/:topicId', renderAssetStructureTopic);
-router.get('/asset-types', renderAssetTypes);
 router.get('/asset-categories', renderAssetCategories);
 router.get('/implementation', renderImplementation);
 router.get('/measures', renderMeasures);
