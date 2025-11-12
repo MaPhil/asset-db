@@ -1,6 +1,5 @@
 import { store } from '../../lib/storage.js';
 import { logger } from '../../lib/logger.js';
-import { getAssetTypeSummary } from '../../lib/assetTypes.js';
 import {
   getAssetCategoryOverview,
   getIgnoredAssetSubCategoryIds
@@ -523,15 +522,5 @@ export const renderAssetStructureGroup = (req, res) => {
     assetSubCategoryOptions,
     groupSelectorState: selectorOverview,
     groupSelectorCount: selectorOverview?.selectors?.length ?? 0
-  });
-};
-
-export const renderAssetTypes = (req, res) => {
-  const summary = getAssetTypeSummary();
-
-  res.render('asset-types', {
-    nav: 'assetStructure',
-    assetTypes: summary.entries,
-    assetTypeField: summary.field
   });
 };
