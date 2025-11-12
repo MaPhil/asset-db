@@ -334,8 +334,7 @@ const MANIPULATOR_OPERATORS = [
   { value: 'not_equals', label: 'ungleich' },
   { value: 'regex', label: 'Regex (Übereinstimmung)' },
   { value: 'greater', label: 'größer als' },
-  { value: 'less', label: 'kleiner als' },
-  { value: 'contains', label: 'enthält Werte' }
+  { value: 'less', label: 'kleiner als' }
 ];
 
 let manipulatorRuleCounter = 0;
@@ -664,6 +663,10 @@ function renderManipulatorModal() {
 
     const operatorSelect = document.createElement('select');
     operatorSelect.className = 'selector-rule__operator';
+    const hasManipulatorOperator = MANIPULATOR_OPERATORS.some((option) => option.value === rule.operator);
+    if (!hasManipulatorOperator) {
+      rule.operator = 'equals';
+    }
     MANIPULATOR_OPERATORS.forEach((option) => {
       const optionEl = document.createElement('option');
       optionEl.value = option.value;
@@ -681,9 +684,7 @@ function renderManipulatorModal() {
     valueInput.value = rule.value ?? '';
 
     const updatePlaceholder = () => {
-      if (operatorSelect.value === 'contains') {
-        valueInput.placeholder = 'Werte (durch Kommas getrennt)';
-      } else if (operatorSelect.value === 'regex') {
+      if (operatorSelect.value === 'regex') {
         valueInput.placeholder = 'Regex-Muster';
       } else if (operatorSelect.value === 'greater' || operatorSelect.value === 'less') {
         valueInput.placeholder = 'Numerischer Wert';
@@ -3127,7 +3128,7 @@ function hydrateSelectorTree(definition) {
   return createSelectorGroup(source);
 }
 
-const ALLOWED_SELECTOR_OPERATORS = ['equals', 'not_equals', 'regex', 'greater', 'less', 'contains'];
+const ALLOWED_SELECTOR_OPERATORS = ['equals', 'not_equals', 'regex', 'greater', 'less'];
 
 function serialiseSelectorNode(node) {
   if (!node || typeof node !== 'object') {
@@ -3396,9 +3397,11 @@ function renderSelectorBuilder(modal) {
       { value: 'not_equals', label: 'does not equal' },
       { value: 'regex', label: 'regex (matches)' },
       { value: 'greater', label: 'greater than' },
-      { value: 'less', label: 'less than' },
-      { value: 'contains', label: 'contains values' }
+      { value: 'less', label: 'less than' }
     ];
+    if (!operatorOptions.some((option) => option.value === node.operator)) {
+      node.operator = 'equals';
+    }
     operatorOptions.forEach((option) => {
       const optionEl = document.createElement('option');
       optionEl.value = option.value;
@@ -3416,9 +3419,7 @@ function renderSelectorBuilder(modal) {
     valueInput.value = node.value ?? '';
 
     const updatePlaceholder = () => {
-      if (operatorSelect.value === 'contains') {
-        valueInput.placeholder = 'Values (comma separated)';
-      } else if (operatorSelect.value === 'regex') {
+      if (operatorSelect.value === 'regex') {
         valueInput.placeholder = 'Regex pattern';
       } else if (operatorSelect.value === 'greater' || operatorSelect.value === 'less') {
         valueInput.placeholder = 'Numeric value';
