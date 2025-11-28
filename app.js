@@ -1,11 +1,12 @@
 import express from 'express';
+import exphbs from 'express-handlebars';
 import bodyParser from 'body-parser';
-import fs from 'fs';
 import path from 'path';
 
 
 import api from './api/index.js';
 import { logger } from './lib/logger.js';
+import viewRoutes from './views/routes/index.js';
 
 const app = express();
 
@@ -17,10 +18,24 @@ process.on('uncaughtException', (error) => {
   logger.error('Nicht abgefangene Ausnahme erkannt', error);
 });
 
-const publicPath = path.join(process.cwd(), 'public');
-const distIndexPath = path.join(publicPath, 'dist', 'index.html');
+const templatesPath = path.join(process.cwd(), 'views', 'templates');
 
-app.use(express.static(publicPath));
+app.engine(
+  'hbs',
+  exphbs.engine({
+    extname: '.hbs',
+    layoutsDir: path.join(templatesPath, 'layouts'),
+    partialsDir: path.join(templatesPath, 'partials'),
+    helpers: {
+      eq: (a, b) => a === b,
+      json: (context) => JSON.stringify(context)
+    }
+  })
+);
+app.set('view engine', 'hbs');
+app.set('views', templatesPath);
+
+app.use(express.static(path.join(process.cwd(), 'public')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -56,19 +71,8 @@ app.use((req, res, next) => {
 // Mount API
 app.use('/api', api);
 
-// Serve SPA entry for non-API GET requests
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.method !== 'GET') {
-    return next();
-  }
-
-  if (fs.existsSync(distIndexPath)) {
-    return res.sendFile(distIndexPath);
-  }
-
-  logger.error('Frontend build not found at expected path', { distIndexPath });
-  return res.status(404).send('Frontend build not found. Bitte `npm run client:build` ausführen.');
-});
+// UI routes
+app.use('/', viewRoutes);
 
 const PORT = process.env.PORT || 5678;
 app.use((err, req, res, next) => {
