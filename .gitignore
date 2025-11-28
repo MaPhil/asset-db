@@ -9,3 +9,4 @@ npm-debug.log*
 storage/*
 !storage/.gitkeep
 package-lock.json
+public/dist/

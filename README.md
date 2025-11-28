@@ -1,13 +1,13 @@
 # Assets Inventory API + JSON-Speicher
 
-Dieses Repository stellt einen JSON-gestützten Dienst zur Verwaltung eines Asset-Verzeichnisses bereit. Der Service bietet eine versionierte REST-API unter `/api/v1` und hält die Handlebars-Oberfläche vor. Die Anwendung verzichtet auf klassische Datenbanken, indem sie strukturierte JSON-Dateien auf der Festplatte speichert.
+Dieses Repository stellt einen JSON-gestützten Dienst zur Verwaltung eines Asset-Verzeichnisses bereit. Der Service bietet eine versionierte REST-API unter `/api/v1` und liefert das gebaute Vue-Frontend aus `public/dist` aus. Die Anwendung verzichtet auf klassische Datenbanken, indem sie strukturierte JSON-Dateien auf der Festplatte speichert.
 
 ## Funktionen
 
 - **Versionierte API** – sämtliche Anfragen laufen über `/api/v1/*` und sind nach Controller-, Middleware- und Routen-Ordnern.
 - **JSON-Persistenz** – Datensätze werden in Dateien `storage/*.json` gespeichert. Jede Datei enthält einen `meta`-Abschnitt für die Sequenzierung sowie das eigentliche `rows`-Array.
 - **Neuaufbau der vereinheitlichten Assets** – `lib/merge.js` stellt `rebuildUnified()` bereit, um die denormalisierte Asset-Tabelle neu zu erstellen, sobald Quellen oder Zuordnungen geändert werden.
-- **Schlanke Oberfläche** – `views/` enthält einfache Handlebars-Vorlagen zum lesen der Quellen und zusammengeführten Assets, während die API die Hauptarbeit übernimmt.
+- **Schlanke Oberfläche** – das Vue-Frontend wird aus `public/dist` über Express ausgeliefert und kann per SPA-Routing alle UI-Routen bedienen.
 
 ## Projektstruktur
 
@@ -19,14 +19,15 @@ Dieses Repository stellt einen JSON-gestützten Dienst zur Verwaltung eines Asse
 │     ├─ middleware/         # Gemeinsame HTTP-Helfer
 │     ├─ routes/             # Express-Router gruppiert nach Ressourcen
 │     └─ index.js            # Bindet den v1-Router ein
-├─ app.js                    # Express-Startpunkt + UI-Routen
+├─ app.js                    # Express-Startpunkt + API + SPA-Fallback
 ├─ lib/
 │  ├─ merge.js               # rebuildUnified() mit JSON-Daten
 │  └─ storage.js             # Minimalistische Zugriffsschicht auf JSON-Daten
-├─ public/                   # Statische Assets (CSS/JS)
+├─ public/                   # Statische Assets (CSS/JS) + gebaute Vue-App unter ./dist
+├─ frontend/                 # Vite + Vue 3 Quellcode
 ├─ storage/                  # JSON-„Datenbank“-Dateien
 ├─ uploads/                  # Multer-Zwischenspeicher für Uploads (per .gitignore ausgeschlossen)
-├─ views/                    # Handlebars-Vorlagen
+├─ views/                    # Legacy Handlebars-Vorlagen (werden nicht mehr gerendert)
 └─ README.md
 ```
 
@@ -39,6 +40,23 @@ npm run dev
 ```
 
 Der Entwicklungsbefehl nutzt `nodemon` für automatische Neustarts. In Produktionsumgebungen `npm start` verwenden.
+
+## Vue-Frontend (Vite + Vue 3)
+
+Eine moderne Vue-Oberfläche liegt unter `frontend/` und bildet das globale Layout mit Header, Navigation und Inhaltsbereich
+nach. Die gebauten Assets landen in `public/dist` und werden durch das bestehende Express-Static-Mount unter `/dist`
+ausgeliefert.
+
+```bash
+# Entwicklungsserver
+npm run client:dev
+
+# Production-Build -> public/dist
+npm run client:build
+
+# Vorschau des Builds
+npm run client:preview
+```
 
 ## Speicherformat
 
