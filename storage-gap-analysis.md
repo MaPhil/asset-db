@@ -5,8 +5,8 @@
 The current application storage architecture operates as a **pseudo-relational database** using flat JSON files managed through `lib/storage.js`. Data is normalized and split across multiple files (e.g., headers in one file, rows in another, mappings in a third).【F:lib/storage.js†L7-L90】【F:api/v1/controllers/RawTablesController.js†L89-L197】
 
 The **Target Vision** requires a **document-oriented storage** approach for both assets and measures:
-* **Assets:** Each uploaded Excel file becomes a self-contained `raw-asset-data` document stored under `storage/raw-assets` and stays there until a user explicitly archives it. Archiving moves the file to `storage/archived-raw-assets`, and all related asset IDs in the pool are marked `archived: true`. Meta data (`title`, `mapping` object) and raw rows start from the second spreadsheet row. A central `asset-pool.json` aggregates every asset by UUID/ID key and supports updates, archives, unarchive on ID reuse, and pagination-friendly access.
-* **Measures:** Each Measures upload is hashed row-by-row; if a new upload with the same name arrives, the existing per-upload file is moved to `storage/measures/archived/` before the new file replaces it in `storage/measures/`. An **active** measures file holds current entries keyed by a hash derived from concatenating row values, while archived measure files live in the archive directory.
+* **Assets:** Each uploaded Excel file becomes a self-contained `raw-asset-data` document stored under `storage/raw-assets` and stays there until a user explicitly archives it. Archiving moves the file to `storage/archived-raw-assets`, and all related asset IDs in the pool are marked `archived: true`. Meta data (`title`, `mapping` object) and raw rows start from the second spreadsheet row. A central `asset-pool.json` aggregates every asset by UUID/ID key and supports updates and pagination-friendly access (no dedicated archive/delete helper flows beyond the existing editing experience).
+* **Measures:** There is always a single active measures file named `storage/measures.json` that holds current entries keyed by a hash derived from concatenating row values. When a measures upload endpoint receives a new file, it checks whether `storage/measures.json` already exists; if so, that existing file is moved into `storage/archived-measures/` before the new content overwrites `storage/measures.json`. Archive files keep the same hash-keyed structure as the active file.
 
 **Key Finding:** The current architecture is fundamentally incompatible with the Target Vision and requires a complete refactor of the storage layer (`lib/storage.js`), the raw upload controller (`api/v1/controllers/RawTablesController.js`), the asset pool utilities (`lib/assetPool.js`), and the measure ingestion/storage surfaces (`api/v1/controllers/MeasuresController.js`, `lib/assetStructure.js`).
 
@@ -20,8 +20,8 @@ The **Target Vision** requires a **document-oriented storage** approach for both
 | **Active Raw Assets** | **Missing.** Raw uploads are split across `raw_tables.json`, `raw_rows.json`, and `raw_mappings.json`.【F:api/v1/controllers/RawTablesController.js†L142-L213】【F:api/v1/controllers/RawTablesController.js†L226-L275】 | `storage/raw-assets/{upload-id}.json` (one file per upload) that remains active until explicitly archived. | Create directory and change writes to per-upload JSON documents. |
 | **Archived Raw Assets** | **Missing.** No archive directory or move logic. | `storage/archived-raw-assets/{upload-id}.json` created only after an explicit archive action that removes the file from `raw-assets`. | Add directory and move files upon archive while marking asset IDs archived in the pool. |
 | **Asset Pool** | `unified_assets.json` referenced but not aligned with file-per-asset object store.【F:lib/storage.js†L8-L34】【F:lib/assetPool.js†L1-L205】 | `storage/asset-pool.json` as `{ assetId: { ... }, ... }` plus `archived` flag per asset. | Replace `unified_assets.json` usage with `asset-pool.json` and update consumers. |
-| **Active Measures** | **Missing.** Measures are normalized across multiple tables (`measure_*`).【F:lib/storage.js†L27-L32】【F:api/v1/controllers/MeasuresController.js†L40-L174】 | Single active measure file (e.g., `storage/measures/active.json`) keyed by a hash of concatenated row values; one entry per spreadsheet row. New uploads replace existing per-upload files after the old one is archived. | Introduce active measure file and hash-keyed entries plus pre-replacement archival. |
-| **Archived Measures** | **Missing.** No measure archive mechanism. | `storage/measures/archived/{upload-id}.json` holding hash-keyed rows for archived uploads when superseded or explicitly archived. | Add archive folder and move/archive logic for measure imports. |
+| **Active Measures** | **Missing.** Measures are normalized across multiple tables (`measure_*`).【F:lib/storage.js†L27-L32】【F:api/v1/controllers/MeasuresController.js†L40-L174】 | Single active measure file `storage/measures.json` keyed by a hash of concatenated row values; one entry per spreadsheet row. New uploads replace the active file after archiving the prior version. | Introduce the single active file and hash-keyed entries plus pre-replacement archival. |
+| **Archived Measures** | **Missing.** No measure archive mechanism. | `storage/archived-measures/{upload-id}.json` holding hash-keyed rows for archived uploads when superseded. | Add archive folder and move/archive logic for measure imports. |
 
 ---
 
@@ -71,11 +71,11 @@ Data is shredded across three separate files tied together by `raw_table_id` key
   * Controllers and loaders read/write normalized rows: `api/v1/controllers/MeasuresController.js` and `lib/assetStructure.js`.【F:api/v1/controllers/MeasuresController.js†L40-L288】【F:lib/assetStructure.js†L61-L382】
 
 **Target Vision (Denormalized / Document):**
-* Each raw measure upload produces a JSON document under `storage/measures/` (e.g., `{upload-id}.json`) with all rows. If a same-named file already exists, it is moved to `storage/measures/archived/{upload-id}.json` before the new upload is stored.
-* Active measures live in a single file (e.g., `storage/measures/active.json`) structured as `{ hash: { ...row fields... } }`, where `hash` is derived by concatenating row values and hashing the result.
-* Archived measure uploads keep the same hash-keyed structure in `storage/measures/archived/{upload-id}.json` for superseded or explicitly archived uploads.
+* A single active measures document `storage/measures.json` holds hash-keyed rows derived by concatenating row values.
+* When a measures upload arrives via the dedicated endpoint, check for an existing `storage/measures.json`; if present, move it to `storage/archived-measures/{upload-id-or-timestamp}.json` before writing the new content.
+* Archived measure uploads keep the same hash-keyed structure as the active file.
 
-**Gap:** Measure data is split across normalized tables with no hash-keyed active store, no per-upload raw files, and no archive location. Hash generation and keying logic do not exist in the current codebase.
+**Gap:** Measure data is split across normalized tables with no hash-keyed active store or archival process that moves the previous `storage/measures.json` into an archive folder.
 
 ---
 
@@ -104,27 +104,27 @@ Data is shredded across three separate files tied together by `raw_table_id` key
 
 ### D. Asset Pool Utilities
 *   **Current:** `lib/assetPool.js` builds an in-memory view each request and relies on `store` tables; it cannot update or archive assets persistently.【F:lib/assetPool.js†L1-L205】
-*   **Target:** Dedicated helper that reads/writes `asset-pool.json` and supports: create, update single, update many, archive, delete, get (with/without filter), and paginated reads.
-*   **Action:** Replace view-builder logic with read/write helpers backed by the new file; expose APIs/controllers that call these helpers instead of the current computed view.
+*   **Target:** Dedicated helper that reads/writes `asset-pool.json` and supports: create, update single, update many, get (with/without filter), and paginated reads (no archive or delete flows beyond the current editing experience).
+*   **Action:** Replace view-builder logic with read/write helpers backed by the new file that focus on listing and editing fields as in the current asset pool view.
 
 ### E. Measure Import, Hashing, and Archiving
 *   **Current:** Measures are loaded from multiple normalized tables and delivered via `MeasuresController` list endpoints without a document store or hash-based keys.【F:api/v1/controllers/MeasuresController.js†L170-L288】【F:lib/assetStructure.js†L61-L382】
-*   **Target:** Parse raw measure uploads into per-upload JSON documents, derive a hash by concatenating row values as the key, and materialize an active measures file keyed by those hashes. When a Measures upload with the same name exists, archive the old file before writing the new one; archiving a measure upload moves its file to `storage/measures/archived/` and removes or flags the hashes from the active file.
-*   **Action:** Add measure import + hash generator, write per-upload measure documents, maintain `storage/measures/active.json`, archive superseded uploads pre-write, and update controllers/services to read from the hash-keyed store instead of the normalized tables.
+*   **Target:** Parse raw measure uploads into a single hash-keyed document at `storage/measures.json`. When a new measures upload arrives, archive the existing `storage/measures.json` into `storage/archived-measures/{upload-id-or-timestamp}.json` before writing the new hashes.
+*   **Action:** Add measure import + hash generator that writes to `storage/measures.json`, archives the prior file pre-write, and update controllers/services to read from the hash-keyed store instead of the normalized tables.
 
 ---
 
 ## 5. Recommended Plan of Action (Backend-Only)
 
-1.  **Create Storage Layout:** Add `storage/raw-assets/`, `storage/archived-raw-assets/`, `storage/measures/`, and `storage/measures/archived/`; stop initializing unused table JSON files once migration completes.
+1.  **Create Storage Layout:** Add `storage/raw-assets/`, `storage/archived-raw-assets/`, keep the root `storage/measures.json`, and introduce `storage/archived-measures/`; stop initializing unused table JSON files once migration completes.
 2.  **Asset ID Strategy:** During import, support selecting an ID column or generate UUIDs; persist the choice in each raw-asset file meta for later reprocessing.
 3.  **Refactor Asset Import Flow:** Rewrite `RawTablesController.import` to write `{ meta, data }` JSON per upload and to seed/extend `asset-pool.json` with cloned rows keyed by asset ID and `archived: false`; if an incoming ID already exists but was archived, revive it and replace its data.
 4.  **Implement Asset Archive Flow:** Add controller/service that moves the raw file to `archived-raw-assets/` only on explicit archive and marks the associated asset IDs as `archived: true` in `asset-pool.json`.
 5.  **Mapping Management:** Update mapping handling to write into `meta.mapping` objects on the raw file and to reapply mappings to the asset pool (including a "Zuordnungen aktualisieren" button hook).
-6.  **Asset Pool Service:** Replace `lib/assetPool.js` with a file-based helper that can create, update-one, update-many, archive, delete, and read assets (with filters and pagination). Controllers consuming asset pool data must switch to this helper.
-7.  **Measure Import & Hashing:** Add a measure import path that writes each raw upload into `storage/measures/{upload-id}.json` with one entry per row and derives a deterministic hash by concatenating row values; if a file of the same name exists, archive it first; aggregate active measures into `storage/measures/active.json` keyed by that hash.
-8.  **Measure Archiving:** Move archived or superseded measure uploads into `storage/measures/archived/{upload-id}.json` and remove or mark their hashes from the active file to avoid duplicates.
-9.  **Measure Access Layer:** Refactor `MeasuresController` and `assetStructure` loaders to consume the new hash-keyed active file (and optional filters) instead of normalized tables.
+6.  **Asset Pool Service:** Replace `lib/assetPool.js` with a file-based helper that can create, update-one, update-many, and read assets (with filters and pagination) to match the current asset pool list/edit functionality.
+7.  **Measure Import & Hashing:** Add a measure import path that writes the hashed rows into the single `storage/measures.json`; if that file already exists, archive it first to `storage/archived-measures/{upload-id-or-timestamp}.json`.
+8.  **Measure Archiving:** Ensure the upload endpoint moves the previous `storage/measures.json` into `storage/archived-measures/` before writing a new version, keeping the same hash-keyed structure.
+9.  **Measure Access Layer:** Refactor `MeasuresController` and `assetStructure` loaders to consume the hash-keyed `storage/measures.json` (and optional filters) instead of normalized tables.
 10. **Migration or Reset:** Provide scripts to convert existing asset `raw_tables/raw_rows/raw_mappings` data and measure `measure_*` tables into the new per-upload and active files, or explicitly start with empty directories.
 11. **Ignore Other Domains:** Group-related and category-adjacent tables remain out of scope for this refactor unless they consume asset or measure data directly.
 
@@ -167,7 +167,7 @@ Same shape as the active raw asset file. Asset IDs referenced here must be marke
 {
   "550e8400-e29b-41d4-a716-446655440000": {
     "archived": false,
-    "sourceUploadId": "upload-123",
+    "source": ["upload-123", "archived-upload-001"],
     "fields": {
       "name": "Example name",
       "category": "Example category"
@@ -175,7 +175,7 @@ Same shape as the active raw asset file. Asset IDs referenced here must be marke
   },
   "4c9d7fa2-3f11-4e5a-b7a4-1b21c4c1c9b5": {
     "archived": true,
-    "sourceUploadId": "upload-456",
+    "source": ["archived-upload-999"],
     "fields": {
       "name": "Older asset"
     }
@@ -183,10 +183,9 @@ Same shape as the active raw asset file. Asset IDs referenced here must be marke
 }
 ```
 
-### D. `storage/measures/{upload-id}.json`
+### D. `storage/measures.json`
 ```json
 {
-  "uploadId": "measures-2024-01-01",
   "uploadedAt": "ISO-8601 string",
   "rows": [
     {
@@ -200,29 +199,78 @@ Same shape as the active raw asset file. Asset IDs referenced here must be marke
   ]
 }
 ```
-If a file with the same `uploadId` already exists, move it to `storage/measures/archived/{upload-id}.json` before writing the new document.
+If `storage/measures.json` already exists when a new measures upload arrives, move the existing file to `storage/archived-measures/{upload-id-or-timestamp}.json` before writing the new document.
 
-### E. `storage/measures/active.json`
+### E. `storage/archived-measures/{upload-id}.json`
 ```json
 {
-  "3f785b...": {
-    "sourceUploadId": "measures-2024-01-01",
-    "columns": {
-      "Measure": "Example measure",
-      "Value": 10,
-      "Unit": "%"
+  "uploadedAt": "ISO-8601 string",
+  "rows": [
+    {
+      "hash": "3f785b...",
+      "columns": {
+        "Measure": "Example measure",
+        "Value": 10,
+        "Unit": "%"
+      }
     }
-  },
-  "9d2a1c...": {
-    "sourceUploadId": "measures-2024-01-02",
-    "columns": {
-      "Measure": "Another measure",
-      "Value": 5,
-      "Unit": "%"
-    }
-  }
+  ]
 }
 ```
 
-### F. `storage/measures/archived/{upload-id}.json`
-Same shape as the per-upload measure document (`storage/measures/{upload-id}.json`), representing superseded or explicitly archived uploads.
+Same shape as the active measures document, representing superseded uploads moved out of `storage/measures.json`.
+
+### F. `storage/asset_pool_manipulator.json`
+```json
+{
+  "fields": [
+    {
+      "key": "name",
+      "label": "Asset name",
+      "type": "text"
+    },
+    {
+      "key": "category",
+      "label": "Category",
+      "type": "select",
+      "options": ["Category A", "Category B"]
+    }
+  ],
+  "displayOrder": ["name", "category"],
+  "editable": true
+}
+```
+This replaces the current generic `manipulator` description with an asset-pool-specific configuration that defines which fields appear in the asset pool UI, their labels, input types, and ordering.
+
+---
+
+## 7. Storage File Disposition Under the New Scheme
+
+| File | Previous Purpose | New Purpose | Action |
+| :--- | :--- | :--- | :--- |
+| asset_categories.json | Normalized lookup for asset categories tied to measures. | Superseded by hash-keyed measures and asset pool metadata. | Delete once new measures/asset pool are in place. |
+| asset_category_assignments.json | Linked assets to category records. | Superseded by embedded category fields in `asset-pool.json`. | Delete after migrating category values into asset records. |
+| asset_pool_cells.json | Stored cell-level asset pool grid data. | Replaced by denormalized asset entries in `asset-pool.json`. | Delete after migration. |
+| asset_pool_fields.json | Defined asset pool field metadata. | Consolidate into `asset_pool_manipulator.json` configuration. | Modify/merge into new manipulator file. |
+| asset_type_decisions.json | Held inferred/selected asset type decisions. | Capture any needed type directly on asset pool entries. | Delete after folding needed fields into `asset-pool.json`. |
+| categories.json | Shared category lookup for groups/assets. | Remains a shared taxonomy if the UI still needs it. | Modify later only if taxonomy model changes. |
+| group_asset_selectors.json | Linked groups to asset selection rules. | Still relevant for group features; independent of storage refactor. | Keep as-is for now. |
+| group_asset_types.json | Defined asset types per group. | Still relevant for group features; independent of storage refactor. | Keep as-is for now. |
+| group_categories.json | Defined categories per group. | Still relevant for group features; independent of storage refactor. | Keep as-is for now. |
+| groups.json | Stored group records. | Still relevant for group features; independent of storage refactor. | Keep as-is for now. |
+| manipulators.json | Generic manipulator definitions. | Replace with `asset_pool_manipulator.json` focused on asset pool UI fields. | Modify/replace. |
+| mappings.json | Stored column mappings for assets. | Persist mappings inside each `raw-assets/{upload-id}.json` meta section. | Delete after migration. |
+| measure_categories.json | Lookup table for measure categories. | Superseded by flat measures rows in `measures.json`. | Delete. |
+| measure_state.json | Lookup/state table for measures. | Superseded by flat measures rows in `measures.json`. | Delete. |
+| measure_sub_topics.json | Lookup table for sub-topics. | Superseded by flat measures rows in `measures.json`. | Delete. |
+| measure_topics.json | Lookup table for topics. | Superseded by flat measures rows in `measures.json`. | Delete. |
+| measure_versions.json | Versioning table for measures. | Superseded by the archived copies in `archived-measures/`. | Delete after migration. |
+| measures.json | Current normalized measure rows. | Becomes the single hash-keyed active measures document at `storage/measures.json`. | Modify to new structure/location. |
+| raw_mappings.json | Normalized asset column mappings. | Captured per upload in `raw-assets/{upload-id}.json` meta. | Delete after migration. |
+| raw_rows.json | Normalized asset rows for all uploads. | Superseded by per-upload `raw-assets/{upload-id}.json` data blocks. | Delete after migration. |
+| raw_tables.json | Upload metadata for assets. | Superseded by per-upload `raw-assets/{upload-id}.json` meta blocks. | Delete after migration. |
+| schema.json | Global schema definition for normalized tables. | Replace with JSON schema definitions for new documents if needed. | Modify/replace. |
+| settings.json | Application-level settings. | Still applicable; unrelated to storage refactor. | Keep as-is. |
+| source_rows.json | Normalized source rows. | Superseded by per-upload raw asset documents and archived copies. | Delete after migration. |
+| sources.json | Source metadata for uploads. | Capture source details inside raw asset meta or measure archive entries. | Delete after migrating needed fields. |
+| unified_assets.json | Legacy unified asset view. | Superseded entirely by `asset-pool.json`. | Delete. |
