@@ -8,7 +8,7 @@ The **Target Vision** requires a **document-oriented storage** approach for both
 * **Assets:** Each uploaded Excel file becomes a self-contained `raw-asset-data` document stored under `storage/raw-assets` and stays there until a user explicitly archives it. Archiving moves the file to `storage/archived-raw-assets`, and all related asset IDs in the pool are marked `archived: true`. Meta data (`title`, `mapping` object) and raw rows start from the second spreadsheet row. A central `asset-pool.json` aggregates every asset by UUID/ID key and supports updates and pagination-friendly access (no dedicated archive/delete helper flows beyond the existing editing experience).
 * **Measures:** There is always a single active measures file named `storage/measures.json` that holds current entries keyed by a deterministic hash derived from concatenating row values. The hash is the stable lookup key for a specific row—consumers should address rows by this hash rather than by index, which also makes it trivial to diff active versus archived uploads or detect duplicates. When a measures upload endpoint receives a new file, it checks whether `storage/measures.json` already exists; if so, that existing file is moved into `storage/archived-measures/` before the new content overwrites `storage/measures.json`. Archive files keep the same hash-keyed structure as the active file.
 
-**Key Finding:** The current architecture is fundamentally incompatible with the Target Vision and requires a complete refactor of the storage layer (`lib/storage.js`), the raw upload controller (`api/v1/controllers/RawTablesController.js`), the asset pool utilities (`lib/assetPool.js`), and the measure ingestion/storage surfaces (`api/v1/controllers/MeasuresController.js`, `lib/assetStructure.js`).
+**Key Finding:** The current architecture is fundamentally incompatible with the Target Vision and requires a complete refactor of the storage layer (`lib/storage.js`), the raw upload controller (`api/v1/controllers/RawTablesController.js`), the asset pool utilities (`lib/assetPool.js`), the measure ingestion/storage surfaces (`api/v1/controllers/MeasuresController.js`, `lib/assetStructure.js`), and every server/frontend consumer that still expects normalized tables (e.g., asset-pool APIs, the raw-table view renderer, and the SPA logic that drives uploads/mappings).【F:api/v1/controllers/AssetPoolController.js†L1-L198】【F:views/controller/assetPool.controller.js†L17-L30】【F:public/client.js†L2358-L2509】
 
 ---
 
@@ -107,6 +107,12 @@ Data is shredded across three separate files tied together by `raw_table_id` key
 *   **Target:** Dedicated helper that reads/writes `asset-pool.json` and supports: create, update single, update many, get (with/without filter), and paginated reads (no archive or delete flows beyond the current editing experience).
 *   **Action:** Replace view-builder logic with read/write helpers backed by the new file that focus on listing and editing fields as in the current asset pool view.
 
+### F. Server/Frontend Touchpoints
+*   **Asset Pool API:** `AssetPoolController` reads/writes `asset_pool_fields`, `asset_pool_cells`, and `raw_mappings` tables and returns the derived view object; it must be reworked to consume `asset-pool.json`, emit archive-aware rows, and persist edits against the new shape.【F:api/v1/controllers/AssetPoolController.js†L34-L198】
+*   **Raw Table View Rendering:** The server-side view controller renders the raw table page by looking up `raw_tables` and `raw_rows` in the normalized store; it needs to resolve raw asset documents and archive status instead of table IDs.【F:views/controller/assetPool.controller.js†L17-L30】
+*   **Client SPA (Asset Pool & Raw Imports):** Frontend flows for preview/import/mapping, asset-pool rendering, and toast/navigation logic call `/api/v1/raw-tables`, `/api/v1/asset-pool`, and mapping endpoints assuming normalized responses; those handlers must be updated to work with per-upload files, asset IDs, and archive toggles once the API changes.【F:public/client.js†L2358-L2509】
+*   **Client SPA (Measures):** The measures view fetches `/api/v1/measures` with topic/sub-topic/category filters and renders version metadata coming from normalized tables; it must read hash-keyed documents and render upload/archive history derived from the active/archived files instead.【F:public/client.js†L4012-L4050】【F:public/client.js†L4081-L4182】
+
 ### E. Measure Import, Hashing, and Archiving
 *   **Current:** Measures are loaded from multiple normalized tables and delivered via `MeasuresController` list endpoints without a document store or hash-based keys.【F:api/v1/controllers/MeasuresController.js†L170-L288】【F:lib/assetStructure.js†L61-L382】
 *   **Target:** Parse raw measure uploads into a single hash-keyed document at `storage/measures.json`. When a new measures upload arrives, archive the existing `storage/measures.json` into `storage/archived-measures/{upload-id-or-timestamp}.json` before writing the new hashes.
@@ -114,7 +120,7 @@ Data is shredded across three separate files tied together by `raw_table_id` key
 
 ---
 
-## 5. Recommended Plan of Action (Backend-Only)
+## 5. Recommended Plan of Action (Backend + Frontend)
 
 1.  **Create Storage Layout:** Add `storage/raw-assets/`, `storage/archived-raw-assets/`, keep the root `storage/measures.json`, and introduce `storage/archived-measures/`; stop initializing unused table JSON files once migration completes.
 2.  **Asset ID Strategy:** During import, support selecting an ID column or generate UUIDs; persist the choice in each raw-asset file meta for later reprocessing.
@@ -122,11 +128,13 @@ Data is shredded across three separate files tied together by `raw_table_id` key
 4.  **Implement Asset Archive Flow:** Add controller/service that moves the raw file to `archived-raw-assets/` only on explicit archive and marks the associated asset IDs as `archived: true` in `asset-pool.json`.
 5.  **Mapping Management:** Update mapping handling to write into `meta.mapping` objects on the raw file and to reapply mappings to the asset pool (including a "Zuordnungen aktualisieren" button hook).
 6.  **Asset Pool Service:** Replace `lib/assetPool.js` with a file-based helper that can create, update-one, update-many, and read assets (with filters and pagination) to match the current asset pool list/edit functionality.
-7.  **Measure Import & Hashing:** Add a measure import path that writes the hashed rows into the single `storage/measures.json`; if that file already exists, archive it first to `storage/archived-measures/{upload-id-or-timestamp}.json`.
-8.  **Measure Archiving:** Ensure the upload endpoint moves the previous `storage/measures.json` into `storage/archived-measures/` before writing a new version, keeping the same hash-keyed structure.
-9.  **Measure Access Layer:** Refactor `MeasuresController` and `assetStructure` loaders to consume the hash-keyed `storage/measures.json` (and optional filters) instead of normalized tables.
-10. **Migration or Reset:** Provide scripts to convert existing asset `raw_tables/raw_rows/raw_mappings` data and measure `measure_*` tables into the new per-upload and active files, or explicitly start with empty directories.
-11. **Ignore Other Domains:** Group-related and category-adjacent tables remain out of scope for this refactor unless they consume asset or measure data directly.
+7.  **Asset Pool API Layer:** Update `AssetPoolController` to use the new file-backed helper, drop dependencies on `asset_pool_fields/asset_pool_cells/raw_mappings`, and return archive-aware asset rows that align with the new document schema.【F:api/v1/controllers/AssetPoolController.js†L34-L198】
+8.  **Raw View Routes:** Update the raw-table view controller/template to resolve per-upload documents (active vs. archived) and pass the correct identifiers to the client-side app entry point.【F:views/controller/assetPool.controller.js†L17-L30】【F:views/templates/raw-table.hbs†L1-L37】
+9.  **Frontend Asset Pool & Raw Imports:** Refactor `public/client.js` asset-pool and raw-import flows to use the new endpoints, asset IDs, and archive semantics (e.g., no table IDs, mappings embedded in raw asset meta, and archive actions triggering pool updates).【F:public/client.js†L2358-L2509】
+10. **Measure Import & Hashing:** Add a measure import path that writes the hashed rows into the single `storage/measures.json`; if that file already exists, archive it first to `storage/archived-measures/{upload-id-or-timestamp}.json`.
+11. **Measure Archiving & Access:** Ensure the upload endpoint moves the previous `storage/measures.json` into `storage/archived-measures/` before writing a new version, and update `MeasuresController`/frontend consumers to read the hash-keyed document and its archive metadata instead of normalized tables.【F:api/v1/controllers/MeasuresController.js†L1-L209】【F:public/client.js†L4012-L4050】【F:public/client.js†L4081-L4182】
+12. **Migration or Reset:** Provide scripts to convert existing asset `raw_tables/raw_rows/raw_mappings` data and measure `measure_*` tables into the new per-upload and active files, or explicitly start with empty directories.
+13. **Ignore Other Domains:** Group-related and category-adjacent tables remain out of scope for this refactor unless they consume asset or measure data directly.
 
 ---
 
