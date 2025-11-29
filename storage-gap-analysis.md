@@ -6,7 +6,7 @@ The current application storage architecture operates as a **pseudo-relational d
 
 The **Target Vision** requires a **document-oriented storage** approach for both assets and measures:
 * **Assets:** Each uploaded Excel file becomes a self-contained `raw-asset-data` document stored under `storage/raw-assets` and stays there until a user explicitly archives it. Archiving moves the file to `storage/archived-raw-assets`, and all related asset IDs in the pool are marked `archived: true`. Meta data (`title`, `mapping` object) and raw rows start from the second spreadsheet row. A central `asset-pool.json` aggregates every asset by UUID/ID key and supports updates and pagination-friendly access (no dedicated archive/delete helper flows beyond the existing editing experience).
-* **Measures:** There is always a single active measures file named `storage/measures.json` that holds current entries keyed by a hash derived from concatenating row values. When a measures upload endpoint receives a new file, it checks whether `storage/measures.json` already exists; if so, that existing file is moved into `storage/archived-measures/` before the new content overwrites `storage/measures.json`. Archive files keep the same hash-keyed structure as the active file.
+* **Measures:** There is always a single active measures file named `storage/measures.json` that holds current entries keyed by a deterministic hash derived from concatenating row values. The hash is the stable lookup key for a specific row—consumers should address rows by this hash rather than by index, which also makes it trivial to diff active versus archived uploads or detect duplicates. When a measures upload endpoint receives a new file, it checks whether `storage/measures.json` already exists; if so, that existing file is moved into `storage/archived-measures/` before the new content overwrites `storage/measures.json`. Archive files keep the same hash-keyed structure as the active file.
 
 **Key Finding:** The current architecture is fundamentally incompatible with the Target Vision and requires a complete refactor of the storage layer (`lib/storage.js`), the raw upload controller (`api/v1/controllers/RawTablesController.js`), the asset pool utilities (`lib/assetPool.js`), and the measure ingestion/storage surfaces (`api/v1/controllers/MeasuresController.js`, `lib/assetStructure.js`).
 
@@ -71,7 +71,7 @@ Data is shredded across three separate files tied together by `raw_table_id` key
   * Controllers and loaders read/write normalized rows: `api/v1/controllers/MeasuresController.js` and `lib/assetStructure.js`.【F:api/v1/controllers/MeasuresController.js†L40-L288】【F:lib/assetStructure.js†L61-L382】
 
 **Target Vision (Denormalized / Document):**
-* A single active measures document `storage/measures.json` holds hash-keyed rows derived by concatenating row values.
+* A single active measures document `storage/measures.json` holds hash-keyed rows derived by concatenating row values; the hash acts as the canonical row identifier used by readers, not just a generated value stored in the payload.
 * When a measures upload arrives via the dedicated endpoint, check for an existing `storage/measures.json`; if present, move it to `storage/archived-measures/{upload-id-or-timestamp}.json` before writing the new content.
 * Archived measure uploads keep the same hash-keyed structure as the active file.
 
@@ -187,16 +187,13 @@ Same shape as the active raw asset file. Asset IDs referenced here must be marke
 ```json
 {
   "uploadedAt": "ISO-8601 string",
-  "rows": [
-    {
-      "hash": "3f785b...",
-      "columns": {
-        "Measure": "Example measure",
-        "Value": 10,
-        "Unit": "%"
-      }
+  "data": {
+    "3f785b...": {
+      "Measure": "Example measure",
+      "Value": 10,
+      "Unit": "%"
     }
-  ]
+  }
 }
 ```
 If `storage/measures.json` already exists when a new measures upload arrives, move the existing file to `storage/archived-measures/{upload-id-or-timestamp}.json` before writing the new document.
@@ -205,16 +202,13 @@ If `storage/measures.json` already exists when a new measures upload arrives, mo
 ```json
 {
   "uploadedAt": "ISO-8601 string",
-  "rows": [
-    {
-      "hash": "3f785b...",
-      "columns": {
-        "Measure": "Example measure",
-        "Value": 10,
-        "Unit": "%"
-      }
+  "data": {
+    "3f785b...": {
+      "Measure": "Example measure",
+      "Value": 10,
+      "Unit": "%"
     }
-  ]
+  }
 }
 ```
 
