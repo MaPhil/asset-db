@@ -58,7 +58,7 @@ Data is shredded across three separate files tied together by `raw_table_id` key
 * Storage still references `unified_assets.json`, but no JSON object keyed by asset ID exists.
 
 **Target Vision:**
-* `storage/asset-pool.json` should be an object: `{ "550e8400...": { ...row data..., "archived": false }, ... }`.
+* `storage/asset-pool.json` should be an object: `{ "550e8400...": { ...row data..., "archived": false }, ... }` with embedded implementation-measure links and risk flags (integrity/availability/confidentiality) to align with asset group/sub-category semantics.
 * When a raw upload is imported or mappings change, cloned row data (with asset IDs) are created/updated in the pool. Archiving a raw file flips `archived: true` for the affected asset IDs, and re-importing the same asset IDs resets `archived: false`.
 
 **Gap:** There is no persisted asset-pool object keyed by asset ID, and the current view builder cannot support archive state or per-asset updates.
@@ -72,10 +72,27 @@ Data is shredded across three separate files tied together by `raw_table_id` key
 
 **Target Vision (Denormalized / Document):**
 * A single active measures document `storage/measures.json` holds hash-keyed rows derived by concatenating row values; the hash acts as the canonical row identifier used by readers, not just a generated value stored in the payload.
+* The measures upload form must capture a **measure ID** for each incoming Excel. The measure ID is the canonical identifier for the measure across versions, while the hash remains the unique identifier for a specific versioned instance of that measure (the hash changes when the row content changes; the measure ID does not).
 * When a measures upload arrives via the dedicated endpoint, check for an existing `storage/measures.json`; if present, move it to `storage/archived-measures/{upload-id-or-timestamp}.json` before writing the new content.
 * Archived measure uploads keep the same hash-keyed structure as the active file.
 
 **Gap:** Measure data is split across normalized tables with no hash-keyed active store or archival process that moves the previous `storage/measures.json` into an archive folder.
+
+#### Measure Mapping Document
+To connect stable measure IDs with their active and historical hashes, introduce `storage/measure_mapping.json` keyed by measure ID. Each measure ID entry tracks the currently active measure hash plus any archived hashes keyed by upload timestamp, enabling lookups by stable measure ID while preserving version history.
+
+```json
+{
+  "measureId": {
+    "active": "hash_of_active_measure",
+    "archived": {
+      "date_dd_mm_yyyy_hh_mm": "hash_of_this_archived_measure"
+    }
+  }
+}
+```
+* **Active vs. archived:** `active` points at the hash stored in `storage/measures.json`; `archived` enumerates superseded hashes saved from prior uploads by timestamp.
+* **Lookup contract:** Clients address measures either by hash (for a concrete version) or by measure ID (to follow the active hash via this mapping). The upload handler must update both `storage/measures.json` and `storage/measure_mapping.json` in tandem.
 
 ---
 
@@ -179,6 +196,28 @@ Same shape as the active raw asset file. Asset IDs referenced here must be marke
     "fields": {
       "name": "Example name",
       "category": "Example category"
+    },
+    "implementation_measures": {"measure_id": "implementation_measure_id"},
+    "name": "string",
+    "description": "string",
+    "owner": "string",
+    "integrety": {
+      "high": false,
+      "middle": false,
+      "low": false,
+      "very_high": false
+    },
+    "availability": {
+      "high": false,
+      "middle": false,
+      "low": false,
+      "very_high": false
+    },
+    "confidentiality": {
+      "high": false,
+      "middle": false,
+      "low": false,
+      "very_high": false
     }
   },
   "4c9d7fa2-3f11-4e5a-b7a4-1b21c4c1c9b5": {
@@ -191,7 +230,100 @@ Same shape as the active raw asset file. Asset IDs referenced here must be marke
 }
 ```
 
-### D. `storage/measures.json`
+### D. `storage/asset_sub_categories.json`
+Asset sub-categories remain sourced from measure imports, but each entry now groups the asset groups created within that sub-category and embeds implementation measure references plus CIA/risk flags.
+
+```json
+{
+  "groupId": {
+    "groups": ["groupIds"],
+    "sub_topic": "string_from_the_measure_column_sub_topic",
+    "implementation_measures": {"measure_id": "implementation_measure_id"},
+    "name": "string",
+    "description": "string",
+    "owner": "string",
+    "integrety": {
+      "high": false,
+      "middle": false,
+      "low": false,
+      "very_high": false
+    },
+    "availability": {
+      "high": false,
+      "middle": false,
+      "low": false,
+      "very_high": false
+    },
+    "confidentiality": {
+      "high": false,
+      "middle": false,
+      "low": false,
+      "very_high": false
+    }
+  }
+}
+```
+
+* **Creation flow:** Asset sub-categories are still populated via measures import (using the Excel sub-topic column); asset groups are now created within the sub-category view and must reference the owning sub-category ID.
+
+### E. `storage/asset_groups.json`
+Asset groups keep their creation flow but now live within a sub-category and inherit the richer metadata structure with implementation measures and CIA/risk flags.
+
+```json
+{
+  "groupId": {
+    "assets": ["ids"],
+    "selector": [ { "...": "selector_data" } ],
+    "asset_sub_category": "string_from_the_measure_column_asset_sub_category",
+    "implementation_measures": {"measure_id": "implementation_measure_id"},
+    "name": "string",
+    "description": "string",
+    "owner": "string",
+    "integrety": {
+      "high": false,
+      "middle": false,
+      "low": false,
+      "very_high": false
+    },
+    "availability": {
+      "high": false,
+      "middle": false,
+      "low": false,
+      "very_high": false
+    },
+    "confidentiality": {
+      "high": false,
+      "middle": false,
+      "low": false,
+      "very_high": false
+    }
+  }
+}
+```
+
+* **Creation flow:** Groups are created inside the asset sub-category view and must carry the `asset_sub_category` pointer plus optional selectors and linked assets.
+
+### F. `implementation_measures`
+Implementation measures represent concrete work items against assets, groups, or sub-categories while retaining linkage to both the stable measure ID and the versioned measure hash.
+
+```json
+{
+  "implementation_measure_id": {
+    "measure_id": "id of overal measure",
+    "measure_hash": {
+      "current": "hash_of_current_measure",
+      "previous": "hash_of_previous_measure"
+    },
+    "reviewed": false,
+    "reviewer": "string",
+    "source": "either group or asset or asset sub category id"
+  }
+}
+```
+* **Version awareness:** Persist both the current and prior measure hashes to signal version changes tied to the same measure ID.
+* **Scope linkage:** The `source` value must reference the asset, group, or sub-category the implementation measure applies to.
+
+### G. `storage/measures.json`
 ```json
 {
   "uploadedAt": "ISO-8601 string",
@@ -206,7 +338,7 @@ Same shape as the active raw asset file. Asset IDs referenced here must be marke
 ```
 If `storage/measures.json` already exists when a new measures upload arrives, move the existing file to `storage/archived-measures/{upload-id-or-timestamp}.json` before writing the new document.
 
-### E. `storage/archived-measures/{upload-id}.json`
+### H. `storage/archived-measures/{upload-id}.json`
 ```json
 {
   "uploadedAt": "ISO-8601 string",
@@ -222,7 +354,7 @@ If `storage/measures.json` already exists when a new measures upload arrives, mo
 
 Same shape as the active measures document, representing superseded uploads moved out of `storage/measures.json`.
 
-### F. `storage/asset_pool_manipulator.json`
+### I. `storage/asset_pool_manipulator.json`
 ```json
 {
   "fields": [
