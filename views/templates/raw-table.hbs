@@ -19,37 +19,33 @@
   </aside>
   <section class="asset-pool-content" data-region="content">
     <header class="page-header">
-      <div>
-        {{#if missing}}
-          <h1 class="page-title">Rohdatentabelle nicht gefunden</h1>
-          <p class="page-subtitle">Diese Rohdatentabelle wurde möglicherweise entfernt. Bitte wählen Sie eine andere Tabelle.</p>
-        {{else}}
-          <h1 class="page-title">{{rawTableTitle}}</h1>
-          <div class="page-meta">
-            <span class="badge" data-raw-meta></span>
-          </div>
-        {{/if}}
+      <div data-raw-heading {{#if missing}}hidden{{/if}}>
+        <h1 class="page-title" data-raw-title>{{rawTableTitle}}</h1>
+        <div class="page-meta">
+          <span class="badge" data-raw-meta></span>
+        </div>
       </div>
-      <div class="page-actions">
-        {{#unless missing}}
-          <button class="button button--ghost" type="button" data-archive-raw>Rohdatentabelle archivieren</button>
-          <button class="button button--ghost" type="button" data-edit-mapping>Bearbeiten</button>
-        {{/unless}}
+      <div class="page-actions" data-raw-actions {{#if missing}}hidden{{/if}}>
+        <button class="button button--ghost" type="button" data-archive-raw>Rohdatentabelle archivieren</button>
+        <button class="button button--ghost" type="button" data-edit-mapping>Bearbeiten</button>
+      </div>
+      <div data-raw-missing {{#unless missing}}hidden{{/unless}}>
+        <h1 class="page-title">Rohdatentabelle nicht gefunden</h1>
+        <p class="page-subtitle">Diese Rohdatentabelle wurde möglicherweise entfernt. Bitte wählen Sie eine andere Tabelle aus der Liste.</p>
       </div>
     </header>
     <div class="asset-pool-body" data-raw-body>
-      {{#if missing}}
-        <div class="card card--empty">
-          <h2>Rohdatentabelle nicht verfügbar</h2>
-          <p>Die angeforderte Rohdatentabelle wurde nicht gefunden. Bitte wählen Sie eine andere Tabelle aus der Liste.</p>
-        </div>
-      {{else}}
+      <div class="card card--empty" data-raw-not-found {{#unless missing}}hidden{{/unless}}>
+        <h2>Rohdatentabelle nicht verfügbar</h2>
+        <p>Die angeforderte Rohdatentabelle wurde nicht gefunden. Bitte wählen Sie eine andere Tabelle aus der Liste.</p>
+      </div>
+      <div data-raw-content {{#if missing}}hidden{{/if}}>
         <div class="table-container" data-raw-table {{#unless hasRows}}hidden{{/unless}}></div>
         <div class="card card--empty" data-raw-empty {{#if hasRows}}hidden{{/if}}>
           <h2>Datei enthielt keine Zeilen</h2>
           <p>Bitte erneut importieren.</p>
         </div>
-      {{/if}}
+      </div>
     </div>
   </section>
 </div>
