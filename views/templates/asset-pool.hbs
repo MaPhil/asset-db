@@ -27,15 +27,6 @@
           <button
             class="button button--ghost"
             type="button"
-            data-open-asset-type-modal
-            aria-haspopup="dialog"
-            aria-expanded="false"
-          >
-            Feld für Asset-Typ festlegen
-          </button>
-          <button
-            class="button button--ghost"
-            type="button"
             data-open-field-manager
             aria-haspopup="dialog"
             aria-expanded="false"
@@ -115,34 +106,6 @@
     <footer class="modal-footer">
       <button class="button button--ghost" type="button" data-close-field-manager>Schließen</button>
     </footer>
-  </div>
-</div>
-
-<div class="modal" data-asset-type-modal hidden aria-hidden="true">
-  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-type-modal-title">
-    <header class="modal-header">
-      <h2 id="asset-type-modal-title">Feld für Asset-Typ auswählen</h2>
-      <button class="icon-button" type="button" data-close-asset-type-modal aria-label="Dialog zum Feld für Asset-Typ schließen">&times;</button>
-    </header>
-    <div class="modal-body">
-      <p class="modal-description">
-        Wählen Sie, welches Asset-Pool-Feld die Asset-Typen im Bereich Asset-Struktur füllen soll.
-      </p>
-      <div class="form-field">
-        <label for="asset-type-field-select">Feld für Asset-Typ</label>
-        <select id="asset-type-field-select" name="assetTypeField" data-asset-type-field-select>
-          <option value="">Feld auswählen</option>
-        </select>
-        <p class="helper-text" data-asset-type-field-helper>
-          Nur zugeordnete Felder mit Daten erscheinen in dieser Liste.
-        </p>
-      </div>
-      <p class="form-error" data-asset-type-field-error hidden></p>
-    </div>
-    <div class="modal-footer">
-      <button class="button button--ghost" type="button" data-cancel-asset-type-modal>Abbrechen</button>
-      <button class="button" type="button" data-save-asset-type-field>Speichern</button>
-    </div>
   </div>
 </div>
 

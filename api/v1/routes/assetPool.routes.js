@@ -16,13 +16,4 @@ router.put(
   '/rows/:rowId/fields/:field',
   asyncHandler(AssetPoolController.updateFieldValue)
 );
-router.get(
-  '/settings/asset-type-field',
-  asyncHandler(AssetPoolController.getAssetTypeField)
-);
-router.put(
-  '/settings/asset-type-field',
-  asyncHandler(AssetPoolController.updateAssetTypeField)
-);
-
 export default router;

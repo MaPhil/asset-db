@@ -1,9 +1,17 @@
 import fs from 'fs';
+import path from 'path';
+import { randomUUID } from 'crypto';
 import XLSX from 'xlsx';
 
-import { store } from '../../../lib/storage.js';
 import { createPreview, deletePreview, readPreview } from '../../../lib/rawPreview.js';
-import { getAssetFieldSuggestions, getAssetPoolView } from '../../../lib/assetPool.js';
+import {
+  getAssetFieldSuggestions,
+  getAssetPoolView,
+  upsertAssets,
+  updateAssets
+} from '../../../lib/assetPool.js';
+import { archiveRawAsset, listRawAssets, readRawAsset, saveRawAsset } from '../../../lib/rawAssetStore.js';
+import { ARCHIVED_RAW_ASSETS_DIR, RAW_ASSETS_DIR } from '../../../lib/storage.js';
 import { logger } from '../../../lib/logger.js';
 
 function sanitizeHeader(value, index) {
@@ -118,60 +126,134 @@ function removeTempFile(filePath) {
   }
 }
 
+function resolveAssetId(row, idStrategy, fallbackIndex) {
+  if (row && row.__assetId) {
+    return row.__assetId;
+  }
+  if (idStrategy?.type === 'column' && idStrategy.column) {
+    const value = row[idStrategy.column];
+    if (value !== undefined && value !== null && String(value).trim()) {
+      return String(value).trim();
+    }
+  }
+  return randomUUID();
+}
+
+function mappingPairsToObject(pairs) {
+  return pairs.reduce((acc, pair) => {
+    acc[pair.rawHeader] = pair.assetField;
+    return acc;
+  }, {});
+}
+
+function buildAssetPoolEntries({ uploadId, rows, mapping, idStrategy }) {
+  const entries = [];
+  rows.forEach((row, index) => {
+    const assetId = resolveAssetId(row, idStrategy, index);
+    const data = { archived: false, uploadId, rowIndex: index };
+    Object.entries(mapping).forEach(([rawHeader, assetField]) => {
+      data[assetField] = row[rawHeader];
+    });
+    entries.push({ id: assetId, data });
+  });
+  return entries;
+}
+
+function archiveRawTable(id) {
+  const doc = readRawAsset(id, { archivedPreferred: false });
+  if (!doc) {
+    return { status: 404, error: 'Roh-Tabelle nicht gefunden.' };
+  }
+
+  const activePath = path.join(RAW_ASSETS_DIR, `${id}.json`);
+  if (!fs.existsSync(activePath)) {
+    return { status: 400, error: 'Roh-Tabelle ist bereits archiviert.' };
+  }
+
+  const archivedDoc = archiveRawAsset(id) || doc;
+  const assetIds = (archivedDoc.data || [])
+    .map((row, index) => row.__assetId || resolveAssetId(row, archivedDoc.meta?.idStrategy, index))
+    .filter(Boolean);
+
+  if (assetIds.length) {
+    updateAssets(assetIds, { archived: true });
+  }
+
+  return { status: 200, payload: { ok: true, assetCount: assetIds.length } };
+}
+
 export const RawTablesController = {
   list: (req, res) => {
     logger.debug('Roh-Tabellen werden aufgelistet');
-    const tables = store.get('raw_tables');
-    const rowsByTable = store.get('raw_rows').rows.reduce((acc, row) => {
-      const key = row.raw_table_id;
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {});
+    const { active, archived } = listRawAssets({ includeArchived: true });
+    const items = [];
 
-    const response = tables.rows.map((table) => ({
-      id: table.id,
-      title: table.title,
-      uploadedAt: table.uploadedAt,
-      sourceFileName: table.sourceFileName,
-      description: table.description || '',
-      rowCount: rowsByTable[table.id] || 0
-    }));
+    active.forEach((id) => {
+      const doc = readRawAsset(id, { archivedPreferred: false });
+      if (!doc) return;
+      items.push({
+        id,
+        title: doc.meta?.title || id,
+        uploadedAt: doc.meta?.uploadedAt,
+        rowCount: Array.isArray(doc.data) ? doc.data.length : 0,
+        archived: false
+      });
+    });
 
-    res.json(response);
+    archived.forEach((id) => {
+      const doc = readRawAsset(id, { archivedPreferred: true });
+      if (!doc) return;
+      items.push({
+        id,
+        title: doc.meta?.title || id,
+        uploadedAt: doc.meta?.uploadedAt,
+        rowCount: Array.isArray(doc.data) ? doc.data.length : 0,
+        archived: true
+      });
+    });
+
+    items.sort((a, b) => (a.uploadedAt || '').localeCompare(b.uploadedAt || ''));
+
+    res.json(items);
   },
 
   detail: (req, res) => {
-    const id = Number(req.params.id);
-    const table = store.get('raw_tables').rows.find((entry) => entry.id === id);
-    if (!table) {
+    const id = req.params.id;
+    const activePath = path.join(RAW_ASSETS_DIR, `${id}.json`);
+    const archivedPath = path.join(ARCHIVED_RAW_ASSETS_DIR, `${id}.json`);
+    const doc = readRawAsset(id, { archivedPreferred: !fs.existsSync(activePath) });
+
+    if (!doc) {
       logger.warn('Roh-Tabelle nicht gefunden', { rawTableId: id });
       return res.status(404).json({ error: 'Nicht gefunden.' });
     }
 
-    const normalizedTable = {
-      ...table,
-      description: table.description || ''
-    };
+    const mappingPairs = Object.entries(doc.meta?.mapping || {}).map(([rawHeader, assetField]) => ({
+      rawHeader,
+      assetField
+    }));
 
-    const rows = store
-      .get('raw_rows')
-      .rows.filter((row) => row.raw_table_id === id)
-      .sort((a, b) => a.row_index - b.row_index)
-      .map((row) => ({ rowKey: row.row_key, rowIndex: row.row_index, data: row.data }));
-
-    const mapping = store.get('raw_mappings').rows.find((entry) => entry.raw_table_id === id);
-
-    logger.debug('Details der Roh-Tabelle abgerufen', {
-      rawTableId: id,
-      rowCount: rows.length,
-      hasMapping: Boolean(mapping)
-    });
+    const rows = Array.isArray(doc.data)
+      ? doc.data.map((row, index) => ({
+          rowKey: row.__assetId || index,
+          rowIndex: index,
+          data: row
+        }))
+      : [];
 
     res.json({
-      table: normalizedTable,
+      table: {
+        id,
+        title: doc.meta?.title || '',
+        description: doc.meta?.description || '',
+        uploadedAt: doc.meta?.uploadedAt,
+        sourceFileName: doc.meta?.sourceFileName,
+        headers: doc.meta?.headers || [],
+        archived: !fs.existsSync(activePath) && fs.existsSync(archivedPath)
+      },
       rows,
-      mapping: mapping ? mapping.pairs || [] : [],
-      assetPool: getAssetPoolView()
+      mapping: mappingPairs,
+      assetPool: getAssetPoolView({ includeArchived: true })
     });
   },
 
@@ -203,8 +285,7 @@ export const RawTablesController = {
     }
 
     try {
-      let xlsx_file = fs.readFileSync(filePath)
-      workbook = XLSX.read(xlsx_file);
+      const workbook = XLSX.read(file.buffer || fs.readFileSync(file.path));
       const sheetName = workbook.SheetNames[0];
       if (!sheetName) {
         removeTempFile(file.path);
@@ -262,11 +343,13 @@ export const RawTablesController = {
       }
 
       const previewPayload = {
+        uploadId: randomUUID(),
         title: trimmedTitle,
         sourceFileName: file.originalname,
         uploadedAt: new Date().toISOString(),
         headers: rawHeaders,
         idColumn: normalizedIdColumn || null,
+        idStrategy: normalizedIdColumn ? { type: 'column', column: normalizedIdColumn } : { type: 'uuid' },
         duplicatePolicy,
         rows: processed.rows
       };
@@ -290,7 +373,8 @@ export const RawTablesController = {
         rowCount: processed.rows.length,
         duplicatePolicy,
         idColumn: previewPayload.idColumn,
-        assetFieldSuggestions: getAssetFieldSuggestions()
+        assetFieldSuggestions: getAssetFieldSuggestions(),
+        idStrategy: previewPayload.idStrategy
       });
     } catch (err) {
       removeTempFile(file?.path);
@@ -342,45 +426,59 @@ export const RawTablesController = {
       return res.status(400).json({ error: 'Zuordnungen verweisen auf unbekannte Kopfzeilen.' });
     }
 
-    const tableId = store.insert('raw_tables', {
-      title: preview.title,
-      sourceFileName: preview.sourceFileName,
-      uploadedAt: preview.uploadedAt,
-      headers: preview.headers,
-      idColumn: preview.idColumn,
-      duplicatePolicy: preview.duplicatePolicy,
-      description: ''
-    });
+    const mappingObject = mappingPairsToObject(validPairs);
 
-    for (const row of preview.rows) {
-      store.insert('raw_rows', {
-        raw_table_id: tableId,
-        row_index: row.row_index,
-        row_key: row.row_key,
-        data: row.data
+    const uploadId = preview.uploadId || randomUUID();
+    const idStrategy = preview.idStrategy || (preview.idColumn ? { type: 'column', column: preview.idColumn } : { type: 'uuid' });
+
+    const storedRows = [];
+    const entries = [];
+
+    preview.rows.forEach((row, index) => {
+      const assetId = resolveAssetId(row.data, idStrategy, index);
+      const dataRecord = { ...row.data, __assetId: assetId };
+      storedRows.push(dataRecord);
+
+      const assetData = { archived: false, uploadId, rowIndex: index };
+      Object.entries(mappingObject).forEach(([rawHeader, assetField]) => {
+        assetData[assetField] = row.data[rawHeader];
       });
-    }
 
-    store.insert('raw_mappings', {
-      raw_table_id: tableId,
-      pairs: validPairs
+      entries.push({ id: assetId, data: assetData });
     });
+
+    saveRawAsset(uploadId, {
+      meta: {
+        uploadId,
+        title: preview.title,
+        sourceFileName: preview.sourceFileName,
+        uploadedAt: preview.uploadedAt,
+        headers: preview.headers,
+        idColumn: preview.idColumn,
+        idStrategy,
+        duplicatePolicy: preview.duplicatePolicy,
+        mapping: mappingObject
+      },
+      data: storedRows
+    });
+
+    upsertAssets(entries);
 
     deletePreview(previewId);
 
     logger.info('Roh-Tabelle erfolgreich importiert', {
-      rawTableId: tableId,
-      rowCount: preview.rows.length,
+      rawTableId: uploadId,
+      rowCount: storedRows.length,
       mappingCount: validPairs.length
     });
 
-    res.json({ ok: true, rawTableId: tableId });
+    res.json({ ok: true, rawTableId: uploadId });
   },
 
   updateMapping: (req, res) => {
-    const id = Number(req.params.id);
-    const table = store.get('raw_tables').rows.find((entry) => entry.id === id);
-    if (!table) {
+    const id = req.params.id;
+    const doc = readRawAsset(id, { archivedPreferred: false });
+    if (!doc) {
       logger.warn('Versuch, Zuordnung für fehlende Roh-Tabelle zu aktualisieren', {
         rawTableId: id
       });
@@ -403,7 +501,7 @@ export const RawTablesController = {
       return res.status(400).json({ error: 'Bitte ordnen Sie mindestens eine Spalte zu.' });
     }
 
-    const invalidHeaders = pairs.filter((pair) => !table.headers.includes(pair.rawHeader));
+    const invalidHeaders = pairs.filter((pair) => !doc.meta?.headers?.includes(pair.rawHeader));
     if (invalidHeaders.length) {
       logger.warn('Aktualisierung der Roh-Tabellen-Zuordnung wegen ungültiger Kopfzeilen abgelehnt', {
         rawTableId: id,
@@ -412,15 +510,17 @@ export const RawTablesController = {
       return res.status(400).json({ error: 'Zuordnungen verweisen auf unbekannte Kopfzeilen.' });
     }
 
-    const mappingStore = store.get('raw_mappings');
-    const existing = mappingStore.rows.find((entry) => entry.raw_table_id === id);
+    doc.meta.mapping = mappingPairsToObject(pairs);
+    saveRawAsset(id, doc);
 
-    if (existing) {
-      existing.pairs = pairs;
-      store.set('raw_mappings', mappingStore);
-    } else {
-      store.insert('raw_mappings', { raw_table_id: id, pairs });
-    }
+    const entries = buildAssetPoolEntries({
+      uploadId: doc.meta.uploadId || id,
+      rows: doc.data || [],
+      mapping: doc.meta.mapping,
+      idStrategy: doc.meta.idStrategy || (doc.meta.idColumn ? { type: 'column', column: doc.meta.idColumn } : { type: 'uuid' })
+    });
+
+    upsertAssets(entries);
 
     logger.info('Zuordnung der Roh-Tabelle aktualisiert', { rawTableId: id, mappingCount: pairs.length });
 
@@ -428,10 +528,9 @@ export const RawTablesController = {
   },
 
   updateDetails: (req, res) => {
-    const id = Number(req.params.id);
-    const tables = store.get('raw_tables');
-    const table = tables.rows.find((entry) => entry.id === id);
-    if (!table) {
+    const id = req.params.id;
+    const doc = readRawAsset(id, { archivedPreferred: false });
+    if (!doc) {
       logger.warn('Versuch, Details für fehlende Roh-Tabelle zu aktualisieren', { rawTableId: id });
       return res.status(404).json({ error: 'Roh-Tabelle nicht gefunden.' });
     }
@@ -446,48 +545,46 @@ export const RawTablesController = {
       return res.status(400).json({ fieldErrors: { title: 'Name ist erforderlich.' } });
     }
 
-    table.title = title;
-    table.description = description;
-    store.set('raw_tables', tables);
+    doc.meta.title = title;
+    doc.meta.description = description;
+    saveRawAsset(id, doc);
 
     logger.info('Details der Roh-Tabelle aktualisiert', { rawTableId: id });
 
     res.json({
       ok: true,
       table: {
-        ...table,
+        ...doc.meta,
+        id,
         description
       }
     });
   },
 
+  archive: (req, res) => {
+    const id = req.params.id;
+    const result = archiveRawTable(id);
+    if (result.status !== 200) {
+      logger.warn('Roh-Tabelle konnte nicht archiviert werden', { rawTableId: id, error: result.error });
+      return res.status(result.status).json({ error: result.error });
+    }
+
+    logger.info('Roh-Tabelle archiviert', { rawTableId: id, assetCount: result.payload.assetCount });
+    res.json(result.payload);
+  },
+
   delete: (req, res) => {
-    const id = Number(req.params.id);
-    const tables = store.get('raw_tables');
-    const exists = tables.rows.some((entry) => entry.id === id);
-    if (!exists) {
-      logger.warn('Versuch, fehlende Roh-Tabelle zu löschen', { rawTableId: id });
-      return res.status(404).json({ error: 'Roh-Tabelle nicht gefunden.' });
+    const id = req.params.id;
+    const result = archiveRawTable(id);
+    if (result.status !== 200) {
+      logger.warn('Versuch, fehlende Roh-Tabelle zu löschen', { rawTableId: id, error: result.error });
+      return res.status(result.status).json({ error: result.error });
     }
 
-    store.remove('raw_tables', id);
-
-    const rows = store.get('raw_rows');
-    const filteredRows = rows.rows.filter((row) => row.raw_table_id !== id);
-    if (filteredRows.length !== rows.rows.length) {
-      rows.rows = filteredRows;
-      store.set('raw_rows', rows);
-    }
-
-    const mappings = store.get('raw_mappings');
-    const filteredMappings = mappings.rows.filter((entry) => entry.raw_table_id !== id);
-    if (filteredMappings.length !== mappings.rows.length) {
-      mappings.rows = filteredMappings;
-      store.set('raw_mappings', mappings);
-    }
-
-    logger.info('Roh-Tabelle gelöscht', { rawTableId: id });
-
-    res.json({ ok: true });
+    logger.info('Roh-Tabelle archiviert (Delete-Endpunkt)', {
+      rawTableId: id,
+      assetCount: result.payload.assetCount
+    });
+    res.json(result.payload);
   }
 };
