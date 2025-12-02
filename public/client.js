@@ -1396,7 +1396,9 @@ function renderAssetPool(root) {
   const rows = Array.isArray(view?.rows) ? view.rows : [];
   const fieldStats = Array.isArray(view?.fieldStats) ? view.fieldStats : [];
   const fieldSettings = view?.fieldSettings || {};
-  const columns = fieldStats.map((stat) => stat.field);
+  const columns = Array.isArray(view?.columns) && view.columns.length
+    ? view.columns
+    : fieldStats.map((stat) => stat.field);
 
   emptyState.hidden = true;
   container.hidden = false;
@@ -1423,7 +1425,7 @@ function renderAssetPool(root) {
   const start = (state.assetPoolPage - 1) * PAGE_SIZE;
   const pageRows = sortedRows.slice(start, start + PAGE_SIZE);
 
-  const headers = columns.map((col) => ({ key: col, label: col }));
+  const headers = [{ key: 'id', label: 'Hash' }, ...columns.map((col) => ({ key: col, label: col }))];
   const editableFields = new Set(columns.filter((key) => fieldSettings?.[key]?.editable));
 
   const tableWrapper = document.createElement('div');
