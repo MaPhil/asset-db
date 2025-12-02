@@ -3,7 +3,8 @@ import {
   getAssetFieldSuggestions,
   getAssetPoolView,
   removeFieldFromAssets,
-  updateAsset
+  updateAsset,
+  updateFieldEditable
 } from '../../../lib/assetPool.js';
 import { logger } from '../../../lib/logger.js';
 
@@ -22,10 +23,9 @@ const hasMeaningfulValue = (value) => {
 export const AssetPoolController = {
   view: (req, res) => {
     logger.debug('Asset-Pool-Ansicht wird abgerufen');
-    const includeArchived = req.query?.includeArchived !== 'false';
     const page = Number(req.query?.page) || 1;
     const pageSize = Number(req.query?.pageSize) || 50;
-    const view = getAssetPoolView({ includeArchived, page, pageSize });
+    const view = getAssetPoolView({ page, pageSize });
     res.json({ ...view, suggestions: getAssetFieldSuggestions() });
   },
   addField: (req, res) => {
@@ -58,7 +58,15 @@ export const AssetPoolController = {
 
     res.json({ ok: true });
   },
-  updateFieldEditable: (_req, res) => {
+  updateFieldEditable: (req, res) => {
+    const field = normalizeFieldName(req.params.field);
+    if (!field) {
+      logger.warn('Versuch, Bearbeitbarkeit ohne Feldnamen zu setzen', { path: req.originalUrl });
+      return res.status(400).json({ error: 'Feldname ist erforderlich.' });
+    }
+    const editable = Boolean(req.body?.editable);
+    updateFieldEditable(field, editable);
+    logger.info('Asset-Pool-Feldbearbeitbarkeit aktualisiert', { field, editable });
     res.json({ ok: true });
   },
   updateFieldValue: (req, res) => {
