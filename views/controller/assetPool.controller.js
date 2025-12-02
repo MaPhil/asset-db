@@ -1,4 +1,4 @@
-import { store } from '../../lib/storage.js';
+import { readRawAsset } from '../../lib/rawAssetStore.js';
 
 export const redirectToAssetPool = (req, res) => {
   res.redirect('/asset-pool');
@@ -15,16 +15,15 @@ export const renderAssetPool = (req, res) => {
 };
 
 export const renderRawTable = (req, res) => {
-  const rawTableId = Number(req.params.id);
-  const rawTable = store.get('raw_tables').rows.find((row) => row.id === rawTableId);
+  const rawTableId = req.params.id;
+  const rawTable = readRawAsset(rawTableId, { archivedPreferred: true });
   const status = rawTable ? 200 : 404;
-  const hasRows =
-    rawTable && store.get('raw_rows').rows.some((row) => row.raw_table_id === rawTableId);
+  const hasRows = Array.isArray(rawTable?.data) && rawTable.data.length > 0;
 
   res.status(status).render('raw-table', {
     nav: 'assetPool',
     rawTableId,
-    rawTableTitle: rawTable?.title || null,
+    rawTableTitle: rawTable?.meta?.title || null,
     missing: !rawTable,
     hasRows: Boolean(hasRows)
   });

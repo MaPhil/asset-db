@@ -27,7 +27,7 @@ const TOAST_STORAGE_KEY = 'assetPoolToast';
 const state = {
   rawTables: [],
   assetPool: null,
-  assetPoolSort: { key: '__rowId', direction: 'asc' },
+  assetPoolSort: { key: 'id', direction: 'asc' },
   assetPoolPage: 1,
   assetPoolView: 'overview',
   assetFieldSuggestions: [],
@@ -110,6 +110,7 @@ const state = {
 
 const measuresState = {
   entries: [],
+  headers: [],
   filters: { topic: '', subTopic: '', category: '' },
   options: { topics: [], subTopics: [], categories: [] },
   version: null,
@@ -306,7 +307,7 @@ function renderSidebar(root) {
     return;
   }
 
-  const activeId = Number(root.dataset.rawTableId || '0');
+  const activeId = root.dataset.rawTableId || '';
   const view = root.dataset.view;
 
   state.rawTables.forEach((table) => {
@@ -314,7 +315,10 @@ function renderSidebar(root) {
     link.href = `/asset-pool/raw/${table.id}`;
     link.className = 'sidebar-link';
     link.textContent = table.title;
-    if (view === 'raw' && table.id === activeId) {
+    if (table.archived) {
+      link.textContent += ' (archiviert)';
+    }
+    if (view === 'raw' && String(table.id) === String(activeId)) {
       link.dataset.active = 'true';
     }
     list.appendChild(link);
@@ -1587,18 +1591,8 @@ function applyAssetPoolSort(rows) {
   if (!key) return rows.slice();
 
   const sorted = rows.slice().sort((a, b) => {
-    let aValue;
-    let bValue;
-    if (key === '__rowId') {
-      aValue = a.id;
-      bValue = b.id;
-    } else if (key === '__table') {
-      aValue = a.rawTableTitle;
-      bValue = b.rawTableTitle;
-    } else {
-      aValue = a.values?.[key];
-      bValue = b.values?.[key];
-    }
+    const aValue = key === 'id' ? a.id : a[key];
+    const bValue = key === 'id' ? b.id : b[key];
 
     const aStr = aValue === null || aValue === undefined ? '' : String(aValue).toLowerCase();
     const bStr = bValue === null || bValue === undefined ? '' : String(bValue).toLowerCase();
@@ -1616,17 +1610,10 @@ function renderAssetPool(root) {
   const container = select(root, '[data-asset-pool-table]');
   if (!container || !emptyState) return;
 
-  if (!state.rawTables.length) {
-    emptyState.hidden = false;
-    container.hidden = true;
-    container.innerHTML = '';
-    return;
-  }
-
   const view = state.assetPool;
-  const columns = Array.isArray(view?.columns) ? view.columns : [];
   const rows = Array.isArray(view?.rows) ? view.rows : [];
-  const fieldSettings = view?.fieldSettings || {};
+  const fieldStats = Array.isArray(view?.fieldStats) ? view.fieldStats : [];
+  const columns = fieldStats.map((stat) => stat.field);
 
   emptyState.hidden = true;
   container.hidden = false;
@@ -1653,6 +1640,13 @@ function renderAssetPool(root) {
   const start = (state.assetPoolPage - 1) * PAGE_SIZE;
   const pageRows = sortedRows.slice(start, start + PAGE_SIZE);
 
+  const headers = [
+    { key: 'id', label: 'Asset-ID' },
+    { key: 'archived', label: 'Archiviert?' },
+    ...columns.map((col) => ({ key: col, label: col }))
+  ];
+  const editableFields = new Set(headers.map((header) => header.key).filter((key) => !['id', 'archived', 'uploadId', 'rowIndex'].includes(key)));
+
   const tableWrapper = document.createElement('div');
   tableWrapper.className = 'table-wrapper';
   const tableScroller = document.createElement('div');
@@ -1662,12 +1656,6 @@ function renderAssetPool(root) {
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  const headers = [
-    { key: '__rowId', label: 'Zeilen-ID' },
-    { key: '__table', label: 'Rohdatentabelle' },
-    ...columns.map((col) => ({ key: col, label: col }))
-  ];
-
   headers.forEach((header) => {
     const th = document.createElement('th');
     const button = document.createElement('button');
@@ -1699,19 +1687,20 @@ function renderAssetPool(root) {
   } else {
     pageRows.forEach((row) => {
       const tr = document.createElement('tr');
-      const rowIdCell = document.createElement('td');
-      rowIdCell.textContent = row.id;
-      tr.appendChild(rowIdCell);
-
-      const tableCell = document.createElement('td');
-      tableCell.textContent = row.rawTableTitle || `Rohdatentabelle ${row.rawTableId}`;
-      tr.appendChild(tableCell);
-
-      columns.forEach((column) => {
+      headers.forEach((header) => {
         const cell = document.createElement('td');
-        const value = row.values?.[column];
-        const config = fieldSettings[column] || {};
-        if (config.editable) {
+        if (header.key === 'id') {
+          cell.textContent = row.id;
+          tr.appendChild(cell);
+          return;
+        }
+        if (header.key === 'archived') {
+          cell.textContent = row.archived ? 'Ja' : 'Nein';
+          tr.appendChild(cell);
+          return;
+        }
+        const value = row[header.key];
+        if (editableFields.has(header.key)) {
           const wrapper = document.createElement('div');
           wrapper.className = 'editable-cell';
 
@@ -1725,13 +1714,11 @@ function renderAssetPool(root) {
           save.type = 'button';
           save.className = 'button button--ghost editable-cell__button';
           save.textContent = 'Speichern';
-          save.addEventListener('click', () =>
-            handleEditableCellSave(row.id, column, input, save)
-          );
+          save.addEventListener('click', () => handleEditableCellSave(row.id, header.key, input, save));
           input.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
               event.preventDefault();
-              handleEditableCellSave(row.id, column, input, save);
+              handleEditableCellSave(row.id, header.key, input, save);
             }
           });
 
@@ -1835,7 +1822,7 @@ function renderRawTable(root) {
   if (missing) {
     return;
   }
-  const rawTableId = Number(root.dataset.rawTableId || '0');
+  const rawTableId = root.dataset.rawTableId || '';
   if (!rawTableId) {
     return;
   }
@@ -1852,7 +1839,9 @@ function renderRawTable(root) {
       const statNames = fieldStats.map((stat) => stat.field);
       state.assetFieldSuggestions = Array.from(new Set([...statNames, ...state.assetFieldSuggestions]));
       if (metaBadge) {
-        metaBadge.textContent = `${formatDate(data.table.uploadedAt)} · ${data.table.sourceFileName}`;
+        const archivedLabel = data.table.archived ? ' · Archiviert' : '';
+        const sourceLabel = data.table.sourceFileName ? ` · ${data.table.sourceFileName}` : '';
+        metaBadge.textContent = `${formatDate(data.table.uploadedAt)}${sourceLabel}${archivedLabel}`;
       }
       if (titleEl) {
         titleEl.textContent = data.table.title;
@@ -2334,7 +2323,7 @@ function renderEditModal({ table, pairs }) {
           } catch (err) {
             // Storage might be unavailable; ignore.
           }
-          const next = state.rawTables[0];
+          const next = state.rawTables.find((entry) => !entry.archived) || state.rawTables[0];
           if (next) {
             window.location.href = `/asset-pool/raw/${next.id}`;
           } else {
@@ -2497,10 +2486,11 @@ async function refreshAssetPool() {
     const data = await fetchJson(API.assetPool);
     state.assetPool = data;
     const fieldStats = Array.isArray(data?.fieldStats) ? data.fieldStats : [];
+    const suggestionSource = Array.isArray(data?.suggestions) ? data.suggestions : [];
     const statNames = fieldStats.map((stat) => stat.field);
     const statSet = new Set(statNames);
     const preserved = state.assetFieldSuggestions.filter((field) => statSet.has(field));
-    state.assetFieldSuggestions = Array.from(new Set([...preserved, ...statNames]));
+    state.assetFieldSuggestions = Array.from(new Set([...preserved, ...statNames, ...suggestionSource]));
     const root = document.querySelector('[data-app="asset-pool"]');
     if (root) {
       if (state.assetPoolView === 'overview') {
@@ -3762,39 +3752,6 @@ function setupGroupSelectorInterface(root) {
   setupGroupSelectorAssetsModal(root);
 }
 
-const measureCellReaders = [
-  (entry) => joinMeasureList(entry?.topics),
-  (entry) => joinMeasureList(entry?.subTopics),
-  (entry) => joinMeasureList(entry?.categories),
-  (entry) => safeMeasureValue(entry?.identifier),
-  (entry) => safeMeasureValue(entry?.confidentiality?.low),
-  (entry) => safeMeasureValue(entry?.confidentiality?.medium),
-  (entry) => safeMeasureValue(entry?.confidentiality?.high),
-  (entry) => safeMeasureValue(entry?.confidentiality?.veryHigh),
-  (entry) => safeMeasureValue(entry?.integrity?.low),
-  (entry) => safeMeasureValue(entry?.integrity?.medium),
-  (entry) => safeMeasureValue(entry?.integrity?.high),
-  (entry) => safeMeasureValue(entry?.integrity?.veryHigh),
-  (entry) => safeMeasureValue(entry?.availability?.low),
-  (entry) => safeMeasureValue(entry?.availability?.medium),
-  (entry) => safeMeasureValue(entry?.availability?.high),
-  (entry) => safeMeasureValue(entry?.availability?.veryHigh),
-  (entry) => safeMeasureValue(entry?.requirements),
-  (entry) => safeMeasureValue(entry?.explanation),
-  (entry) => safeMeasureValue(entry?.documentation),
-  (entry) => safeMeasureValue(entry?.standardAnswer)
-];
-
-function joinMeasureList(values) {
-  if (!Array.isArray(values)) {
-    return '';
-  }
-  return values
-    .map((value) => safeMeasureValue(value))
-    .filter((value) => value.length > 0)
-    .join(', ');
-}
-
 function safeMeasureValue(value) {
   if (value === undefined || value === null) {
     return '';
@@ -3805,15 +3762,35 @@ function safeMeasureValue(value) {
   return String(value).trim();
 }
 
-function createMeasureRow(entry) {
+function getMeasureHeaders() {
+  const configured = Array.isArray(measuresState.headers)
+    ? measuresState.headers.filter((header) => typeof header === 'string' && header.trim())
+    : [];
+  if (configured.length) {
+    return configured;
+  }
+  const entries = Array.isArray(measuresState.entries) ? measuresState.entries : [];
+  const dynamic = new Set();
+  entries.forEach((entry) => {
+    Object.keys(entry || {}).forEach((key) => {
+      if (key !== 'id') {
+        dynamic.add(key);
+      }
+    });
+  });
+  return Array.from(dynamic);
+}
+
+function createMeasureRow(entry, headers) {
   const row = document.createElement('tr');
-  measureCellReaders.forEach((reader, index) => {
+  headers.forEach((headerKey) => {
     const cell = document.createElement('td');
-    cell.className = 'measure-table__cell';
-    if (index <= 2 || index >= 16) {
-      cell.classList.add('measure-table__cell--wrap');
+    cell.className = 'measure-table__cell measure-table__cell--wrap';
+    if (headerKey === 'id') {
+      cell.textContent = safeMeasureValue(entry.id);
+    } else {
+      cell.textContent = safeMeasureValue(entry?.[headerKey]);
     }
-    cell.textContent = safeMeasureValue(reader(entry));
     row.appendChild(cell);
   });
   return row;
@@ -3896,32 +3873,30 @@ function renderMeasuresMeta(root) {
   }
 
   const version = measuresState.version;
-  if (!version || !version.versionDate) {
+  if (!version || !version.uploadedAt) {
     metaEl.textContent = 'Es wurde noch keine Maßnahmen-Version importiert.';
     return;
   }
 
   const parts = [];
-  const formattedDate = formatMeasureDateTime(version.versionDate);
+  const formattedDate = formatMeasureDateTime(version.uploadedAt);
   if (formattedDate) {
     parts.push(`Version vom ${formattedDate}`);
   }
 
-  let measureCount = Number(version.measureCount);
-  if (!Number.isFinite(measureCount)) {
-    measureCount = Array.isArray(measuresState.entries) ? measuresState.entries.length : 0;
-  }
-  if (Number.isFinite(measureCount)) {
-    parts.push(`${measureCount} Maßnahme${measureCount === 1 ? '' : 'n'}`);
+  const measureCount = Number.isFinite(Number(version.measureCount))
+    ? Number(version.measureCount)
+    : Array.isArray(measuresState.entries)
+      ? measuresState.entries.length
+      : 0;
+  parts.push(`${measureCount} Maßnahme${measureCount === 1 ? '' : 'n'}`);
+
+  if (version.sourceFileName) {
+    parts.push(`Datei: ${version.sourceFileName}`);
   }
 
-  const changeCount = Number(version.changeCount);
-  if (Number.isFinite(changeCount)) {
-    parts.push(`Änderungen: ${changeCount}`);
-  }
-
-  if (version.sourceFilename) {
-    parts.push(`Datei: ${version.sourceFilename}`);
+  if (version.uploadId) {
+    parts.push(`Upload-ID: ${version.uploadId}`);
   }
 
   metaEl.textContent = parts.join(' • ');
@@ -3995,10 +3970,23 @@ function renderMeasuresTable(root) {
   if (emptyEl) {
     emptyEl.hidden = true;
   }
+  const headers = ['id', ...getMeasureHeaders()];
+  const table = container ? container.querySelector('table') : null;
+  const tableHead = table ? table.querySelector('thead') : null;
+  if (tableHead) {
+    const headRow = document.createElement('tr');
+    headers.forEach((header) => {
+      const th = document.createElement('th');
+      th.textContent = header === 'id' ? 'Hash' : header;
+      headRow.appendChild(th);
+    });
+    tableHead.innerHTML = '';
+    tableHead.appendChild(headRow);
+  }
   if (tbody) {
     tbody.innerHTML = '';
     entries.forEach((entry) => {
-      tbody.appendChild(createMeasureRow(entry));
+      tbody.appendChild(createMeasureRow(entry, headers));
     });
   }
 }
@@ -4032,6 +4020,7 @@ async function refreshMeasures(root) {
   try {
     const payload = await fetchJson(url);
     measuresState.entries = Array.isArray(payload?.measures) ? payload.measures : [];
+    measuresState.headers = Array.isArray(payload?.headers) ? payload.headers : [];
     measuresState.options = {
       topics: Array.isArray(payload?.filters?.topics) ? payload.filters.topics : [],
       subTopics: Array.isArray(payload?.filters?.subTopics) ? payload.filters.subTopics : [],
@@ -4040,6 +4029,7 @@ async function refreshMeasures(root) {
     measuresState.version = payload?.version || null;
   } catch (error) {
     measuresState.entries = [];
+    measuresState.headers = [];
     measuresState.options = { topics: [], subTopics: [], categories: [] };
     measuresState.version = previousVersion;
     measuresState.error = error?.payload?.error || error.message;
