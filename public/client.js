@@ -1600,10 +1600,6 @@ async function handleEditableCellSave(rowId, field, input, button) {
 }
 
 function renderRawTable(root) {
-  const missing = root.dataset.missing === 'true';
-  if (missing) {
-    return;
-  }
   const rawTableId = root.dataset.rawTableId || '';
   if (!rawTableId) {
     return;
@@ -1614,9 +1610,54 @@ function renderRawTable(root) {
   const emptyCard = select(root, '[data-raw-empty]');
   const titleEl = select(root, '.page-title');
   const archiveButton = select(root, '[data-archive-raw]');
+  const heading = select(root, '[data-raw-heading]');
+  const missingBlock = select(root, '[data-raw-missing]');
+  const notFoundCard = select(root, '[data-raw-not-found]');
+  const contentWrapper = select(root, '[data-raw-content]');
+  const actionBar = select(root, '[data-raw-actions]');
+
+  const setHidden = (el, hidden) => {
+    if (!el) return;
+    el.hidden = hidden;
+    el.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+  };
+
+  const showPresentState = () => {
+    setHidden(heading, false);
+    setHidden(actionBar, false);
+    setHidden(contentWrapper, false);
+    setHidden(missingBlock, true);
+    setHidden(notFoundCard, true);
+  };
+
+  const showMissingState = (message) => {
+    setHidden(heading, true);
+    setHidden(actionBar, true);
+    setHidden(contentWrapper, true);
+    setHidden(missingBlock, false);
+    setHidden(notFoundCard, false);
+    if (metaBadge) {
+      metaBadge.textContent = '';
+    }
+    if (tableContainer) {
+      tableContainer.hidden = true;
+      tableContainer.setAttribute('aria-hidden', 'true');
+      tableContainer.innerHTML = '';
+    }
+    if (emptyCard) {
+      emptyCard.hidden = true;
+      emptyCard.setAttribute('aria-hidden', 'true');
+    }
+    if (titleEl && message) {
+      titleEl.textContent = message;
+    }
+  };
+
+  showPresentState();
 
   fetchJson(`${API.rawTables}/${rawTableId}`)
     .then((data) => {
+      showPresentState();
       state.currentRawDetail = data;
       const fieldStats = Array.isArray(data.assetPool?.fieldStats) ? data.assetPool.fieldStats : [];
       const statNames = fieldStats.map((stat) => stat.field);
@@ -1689,21 +1730,11 @@ function renderRawTable(root) {
         tableContainer.appendChild(wrapper);
       }
     })
-    .catch(() => {
+    .catch((err) => {
       state.currentRawDetail = null;
-      if (titleEl) {
-        titleEl.textContent = 'Rohdatentabelle nicht verfügbar';
-      }
-      if (metaBadge) {
-        metaBadge.textContent = '';
-      }
-      if (tableContainer) {
-        tableContainer.hidden = true;
-        tableContainer.innerHTML = '';
-      }
-      if (emptyCard) {
-        emptyCard.hidden = false;
-      }
+      showMissingState('Rohdatentabelle nicht gefunden');
+      const message = err?.payload?.error || err?.message;
+      showToast(message || 'Rohdatentabelle konnte nicht geladen werden.');
     });
 }
 

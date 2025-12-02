@@ -17,14 +17,13 @@ export const renderAssetPool = (req, res) => {
 export const renderRawTable = (req, res) => {
   const rawTableId = req.params.id;
   const rawTable = readRawAsset(rawTableId, { archivedPreferred: true });
-  const status = rawTable ? 200 : 404;
   const hasRows = Array.isArray(rawTable?.data) && rawTable.data.length > 0;
 
-  res.status(status).render('raw-table', {
+  res.status(200).render('raw-table', {
     nav: 'assetPool',
     rawTableId,
-    rawTableTitle: rawTable?.meta?.title || null,
-    missing: !rawTable,
+    rawTableTitle: rawTable?.meta?.title || rawTableId,
+    missing: false,
     hasRows: Boolean(hasRows)
   });
 };
