@@ -159,6 +159,29 @@ function buildAssetPoolEntries({ uploadId, rows, mapping, idStrategy }) {
   return entries;
 }
 
+function archiveRawTable(id) {
+  const doc = readRawAsset(id, { archivedPreferred: false });
+  if (!doc) {
+    return { status: 404, error: 'Roh-Tabelle nicht gefunden.' };
+  }
+
+  const activePath = path.join(RAW_ASSETS_DIR, `${id}.json`);
+  if (!fs.existsSync(activePath)) {
+    return { status: 400, error: 'Roh-Tabelle ist bereits archiviert.' };
+  }
+
+  const archivedDoc = archiveRawAsset(id) || doc;
+  const assetIds = (archivedDoc.data || [])
+    .map((row, index) => row.__assetId || resolveAssetId(row, archivedDoc.meta?.idStrategy, index))
+    .filter(Boolean);
+
+  if (assetIds.length) {
+    updateAssets(assetIds, { archived: true });
+  }
+
+  return { status: 200, payload: { ok: true, assetCount: assetIds.length } };
+}
+
 export const RawTablesController = {
   list: (req, res) => {
     logger.debug('Roh-Tabellen werden aufgelistet');
@@ -538,25 +561,30 @@ export const RawTablesController = {
     });
   },
 
+  archive: (req, res) => {
+    const id = req.params.id;
+    const result = archiveRawTable(id);
+    if (result.status !== 200) {
+      logger.warn('Roh-Tabelle konnte nicht archiviert werden', { rawTableId: id, error: result.error });
+      return res.status(result.status).json({ error: result.error });
+    }
+
+    logger.info('Roh-Tabelle archiviert', { rawTableId: id, assetCount: result.payload.assetCount });
+    res.json(result.payload);
+  },
+
   delete: (req, res) => {
     const id = req.params.id;
-    const doc = readRawAsset(id, { archivedPreferred: false });
-    if (!doc) {
-      logger.warn('Versuch, fehlende Roh-Tabelle zu löschen', { rawTableId: id });
-      return res.status(404).json({ error: 'Roh-Tabelle nicht gefunden.' });
+    const result = archiveRawTable(id);
+    if (result.status !== 200) {
+      logger.warn('Versuch, fehlende Roh-Tabelle zu löschen', { rawTableId: id, error: result.error });
+      return res.status(result.status).json({ error: result.error });
     }
 
-    const archivedDoc = archiveRawAsset(id) || doc;
-    const assetIds = (archivedDoc.data || [])
-      .map((row, index) => row.__assetId || resolveAssetId(row, archivedDoc.meta?.idStrategy, index))
-      .filter(Boolean);
-
-    if (assetIds.length) {
-      updateAssets(assetIds, { archived: true });
-    }
-
-    logger.info('Roh-Tabelle archiviert', { rawTableId: id, assetCount: assetIds.length });
-
-    res.json({ ok: true });
+    logger.info('Roh-Tabelle archiviert (Delete-Endpunkt)', {
+      rawTableId: id,
+      assetCount: result.payload.assetCount
+    });
+    res.json(result.payload);
   }
 };

@@ -6,7 +6,6 @@ const API = {
     `/api/v1/asset-pool/fields/${encodeURIComponent(field)}/editable`,
   assetPoolFieldValue: (rowId, field) =>
     `/api/v1/asset-pool/rows/${encodeURIComponent(rowId)}/fields/${encodeURIComponent(field)}`,
-  assetTypeField: '/api/v1/asset-pool/settings/asset-type-field',
   manipulators: '/api/v1/manipulators',
   manipulator: (id) => `/api/v1/manipulators/${encodeURIComponent(id)}`,
   categories: '/api/v1/categories',
@@ -49,12 +48,6 @@ const state = {
     trigger: null,
     isAdding: false,
     newFieldValue: ''
-  },
-  assetTypeFieldModal: {
-    isOpen: false,
-    isSaving: false,
-    trigger: null,
-    error: null
   },
   manipulators: {
     entries: [],
@@ -177,7 +170,6 @@ function unlockBodyScrollIfIdle() {
   const anyModalOpen =
     state.modal.isOpen ||
     state.fieldManager.isOpen ||
-    state.assetTypeFieldModal.isOpen ||
     state.manipulators?.modal?.isOpen ||
     state.groupSelector?.editor?.isOpen ||
     state.groupSelector?.viewer?.isOpen ||
@@ -1361,216 +1353,6 @@ function setupFieldManager(root) {
   }
 }
 
-function populateAssetTypeFieldSelect(modal) {
-  const selectEl = select(modal, '[data-asset-type-field-select]');
-  const helper = select(modal, '[data-asset-type-field-helper]');
-  const errorEl = select(modal, '[data-asset-type-field-error]');
-  const saveButton = select(modal, '[data-save-asset-type-field]');
-  if (!selectEl || !helper) {
-    return;
-  }
-
-  const stats = Array.isArray(state.assetPool?.fieldStats) ? state.assetPool.fieldStats : [];
-  const current = state.assetPool?.assetTypeField || '';
-  const options = [];
-  const seen = new Set();
-
-  stats.forEach((stat) => {
-    const field = stat?.field;
-    if (!field) {
-      return;
-    }
-    if (seen.has(field)) {
-      return;
-    }
-    seen.add(field);
-    options.push({ name: field, missing: false });
-  });
-
-  if (current && !seen.has(current)) {
-    options.unshift({ name: current, missing: true });
-  }
-
-  selectEl.innerHTML = '';
-  const placeholder = document.createElement('option');
-  placeholder.value = '';
-  placeholder.textContent = 'Feld auswählen';
-  selectEl.appendChild(placeholder);
-
-  options.forEach((option) => {
-    const opt = document.createElement('option');
-    opt.value = option.name;
-    opt.textContent = option.missing
-      ? `${option.name} (no longer available)`
-      : option.name;
-    selectEl.appendChild(opt);
-  });
-
-  selectEl.value = current || '';
-  selectEl.disabled = options.length === 0;
-
-  helper.textContent = options.length
-    ? 'Nur zugeordnete Felder mit Daten erscheinen in dieser Liste.'
-    : 'Fügen Sie Felder hinzu, um einen Asset-Typ auszuwählen.';
-
-  if (errorEl) {
-    if (state.assetTypeFieldModal.error) {
-      errorEl.hidden = false;
-      errorEl.textContent = state.assetTypeFieldModal.error;
-    } else {
-      errorEl.hidden = true;
-      errorEl.textContent = '';
-    }
-  }
-
-  if (saveButton) {
-    saveButton.disabled = state.assetTypeFieldModal.isSaving;
-  }
-}
-
-function openAssetTypeFieldModal(trigger) {
-  const modal = document.querySelector('[data-asset-type-modal]');
-  if (!modal || state.assetTypeFieldModal.isOpen) {
-    return;
-  }
-
-  state.assetTypeFieldModal.isOpen = true;
-  state.assetTypeFieldModal.trigger = trigger || null;
-  state.assetTypeFieldModal.error = null;
-
-  trigger?.setAttribute('aria-expanded', 'true');
-
-  populateAssetTypeFieldSelect(modal);
-
-  modal.hidden = false;
-  modal.removeAttribute('aria-hidden');
-  if (!modal.hasAttribute('tabindex')) {
-    modal.setAttribute('tabindex', '-1');
-  }
-  modal.focus?.();
-
-  if (!state.modal.isOpen) {
-    lockBodyScroll();
-  }
-}
-
-function closeAssetTypeFieldModal() {
-  if (!state.assetTypeFieldModal.isOpen) {
-    return;
-  }
-
-  const modal = document.querySelector('[data-asset-type-modal]');
-  state.assetTypeFieldModal.isOpen = false;
-  state.assetTypeFieldModal.isSaving = false;
-
-  if (modal) {
-    modal.hidden = true;
-    modal.setAttribute('aria-hidden', 'true');
-  }
-
-  const trigger = state.assetTypeFieldModal.trigger;
-  if (trigger) {
-    trigger.setAttribute('aria-expanded', 'false');
-    if (typeof trigger.focus === 'function') {
-      trigger.focus();
-    }
-  }
-
-  state.assetTypeFieldModal.trigger = null;
-  state.assetTypeFieldModal.error = null;
-
-  if (!state.modal.isOpen) {
-    unlockBodyScrollIfIdle();
-  }
-}
-
-function setupAssetTypeFieldModal(root) {
-  const trigger = select(root, '[data-open-asset-type-modal]');
-  const modal = document.querySelector('[data-asset-type-modal]');
-  if (!trigger || !modal) {
-    return;
-  }
-
-  const saveButton = select(modal, '[data-save-asset-type-field]');
-  const cancelButton = select(modal, '[data-cancel-asset-type-modal]');
-  const closeButton = select(modal, '[data-close-asset-type-modal]');
-  const selectEl = select(modal, '[data-asset-type-field-select]');
-  const errorEl = select(modal, '[data-asset-type-field-error]');
-
-  trigger.addEventListener('click', () => {
-    if (state.assetTypeFieldModal.isOpen) {
-      closeAssetTypeFieldModal();
-    } else {
-      openAssetTypeFieldModal(trigger);
-    }
-  });
-
-  cancelButton?.addEventListener('click', () => closeAssetTypeFieldModal());
-  closeButton?.addEventListener('click', () => closeAssetTypeFieldModal());
-
-  modal.addEventListener('click', (event) => {
-    if (event.target === modal) {
-      closeAssetTypeFieldModal();
-    }
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && state.assetTypeFieldModal.isOpen) {
-      closeAssetTypeFieldModal();
-    }
-  });
-
-  saveButton?.addEventListener('click', async () => {
-    if (state.assetTypeFieldModal.isSaving) {
-      return;
-    }
-
-    if (!selectEl) {
-      return;
-    }
-
-    state.assetTypeFieldModal.isSaving = true;
-    state.assetTypeFieldModal.error = null;
-    if (errorEl) {
-      errorEl.hidden = true;
-      errorEl.textContent = '';
-    }
-    saveButton.disabled = true;
-
-    const value = selectEl.disabled ? '' : selectEl.value;
-    const payload = { field: value || null };
-
-    try {
-      const result = await fetchJson(API.assetTypeField, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      await refreshAssetPool();
-      const field = result?.field;
-      if (field) {
-        showToast(`Feld für Asset-Typ auf „${field}“ gesetzt.`);
-      } else {
-        showToast('Feld für Asset-Typ gelöscht.');
-      }
-      closeAssetTypeFieldModal();
-    } catch (error) {
-      const message = error?.payload?.error || error?.message || 'Speichern des Felds für Asset-Typ fehlgeschlagen.';
-      state.assetTypeFieldModal.error = message;
-      if (errorEl) {
-        errorEl.hidden = false;
-        errorEl.textContent = message;
-      }
-    } finally {
-      state.assetTypeFieldModal.isSaving = false;
-      saveButton.disabled = false;
-      if (state.assetTypeFieldModal.isOpen) {
-        populateAssetTypeFieldSelect(modal);
-      }
-    }
-  });
-}
-
 function formatDate(value) {
   if (!value) return '';
   const date = new Date(value);
@@ -1831,6 +1613,7 @@ function renderRawTable(root) {
   const tableContainer = select(root, '[data-raw-table]');
   const emptyCard = select(root, '[data-raw-empty]');
   const titleEl = select(root, '.page-title');
+  const archiveButton = select(root, '[data-archive-raw]');
 
   fetchJson(`${API.rawTables}/${rawTableId}`)
     .then((data) => {
@@ -1845,6 +1628,12 @@ function renderRawTable(root) {
       }
       if (titleEl) {
         titleEl.textContent = data.table.title;
+      }
+      if (archiveButton) {
+        const archived = data.table.archived === true;
+        archiveButton.hidden = archived;
+        archiveButton.disabled = archived;
+        archiveButton.setAttribute('aria-hidden', archived ? 'true' : 'false');
       }
       const hasRows = data.rows.length > 0;
 
@@ -2697,6 +2486,40 @@ function setupCreateCategoryForm(root) {
       isSubmitting = false;
       saveButton.disabled = false;
       delete saveButton.dataset.loading;
+    }
+  });
+}
+
+function setupArchiveRaw(root) {
+  const button = select(root, '[data-archive-raw]');
+  if (!button) return;
+
+  button.addEventListener('click', async () => {
+    const rawTableId = state.currentRawDetail?.table?.id || root.dataset.rawTableId;
+    if (!rawTableId) {
+      return;
+    }
+
+    const confirmed = window.confirm('Diese Rohdatentabelle archivieren? Zugeordnete Assets werden ebenfalls archiviert.');
+    if (!confirmed) {
+      return;
+    }
+
+    button.disabled = true;
+    button.dataset.loading = 'true';
+
+    try {
+      await fetchJson(`${API.rawTables}/${rawTableId}/archive`, { method: 'POST' });
+      await refreshRawTables();
+      await refreshAssetPool();
+      renderRawTable(root);
+      showToast('Rohdatentabelle archiviert.');
+    } catch (error) {
+      const message = error?.payload?.error || error?.message || 'Archivierung der Rohdatentabelle fehlgeschlagen.';
+      showToast(message);
+    } finally {
+      delete button.dataset.loading;
+      button.disabled = false;
     }
   });
 }
@@ -4804,7 +4627,6 @@ async function initAssetPoolApp() {
   consumePendingToast();
   setupImportButtons(root);
   setupFieldManager(root);
-  setupAssetTypeFieldModal(root);
   setupCloseModal();
   renderSidebar(root);
   setupAssetPoolNavigation(root);
@@ -4821,6 +4643,7 @@ async function initAssetPoolApp() {
     renderManipulatorView(root);
   } else if (state.assetPoolView === 'raw') {
     setupEditMapping(root);
+    setupArchiveRaw(root);
     renderRawTable(root);
   }
 }

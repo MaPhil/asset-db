@@ -5,7 +5,6 @@ import {
   removeFieldFromAssets,
   updateAsset
 } from '../../../lib/assetPool.js';
-import { getAssetTypeField as getStoredAssetTypeField, setAssetTypeField } from '../../../lib/assetTypes.js';
 import { logger } from '../../../lib/logger.js';
 
 const normalizeFieldName = (value) => String(value ?? '').trim();
@@ -27,8 +26,7 @@ export const AssetPoolController = {
     const page = Number(req.query?.page) || 1;
     const pageSize = Number(req.query?.pageSize) || 50;
     const view = getAssetPoolView({ includeArchived, page, pageSize });
-    const assetTypeField = getStoredAssetTypeField();
-    res.json({ ...view, assetTypeField, suggestions: getAssetFieldSuggestions() });
+    res.json({ ...view, suggestions: getAssetFieldSuggestions() });
   },
   addField: (req, res) => {
     const field = normalizeFieldName(req.body?.field);
@@ -89,26 +87,5 @@ export const AssetPoolController = {
     logger.info('Asset-Pool-Feldwert gespeichert', { field, rowId });
 
     res.json({ field, rowId, value });
-  },
-  getAssetTypeField: (_req, res) => {
-    const field = getStoredAssetTypeField();
-    res.json({ field });
-  },
-  updateAssetTypeField: (req, res) => {
-    const rawField = req.body?.field;
-
-    if (rawField === undefined || rawField === null || rawField === '') {
-      setAssetTypeField(null);
-      return res.json({ field: null });
-    }
-
-    const field = String(rawField).trim();
-    if (!field) {
-      setAssetTypeField(null);
-      return res.json({ field: null });
-    }
-
-    const storedField = setAssetTypeField(field);
-    res.json({ field: storedField });
   }
 };
