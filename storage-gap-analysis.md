@@ -389,9 +389,9 @@ This replaces the current generic `manipulator` description with an asset-pool-s
 | asset_type_decisions.json | Held inferred/selected asset type decisions. | Capture any needed type directly on asset pool entries. | Delete after folding needed fields into `asset-pool.json`. |
 | categories.json | Shared category lookup for groups/assets. | Remains a shared taxonomy if the UI still needs it. | Modify later only if taxonomy model changes. |
 | group_asset_selectors.json | Linked groups to asset selection rules. | Still relevant for group features; independent of storage refactor. | Keep as-is for now. |
-| group_asset_types.json | Defined asset types per group. | Still relevant for group features; independent of storage refactor. | Keep as-is for now. |
-| group_categories.json | Defined categories per group. | Still relevant for group features; independent of storage refactor. | Keep as-is for now. |
-| groups.json | Stored group records. | Still relevant for group features; independent of storage refactor. | Keep as-is for now. |
+| group_asset_types.json | Defined asset types per group. | Replaced by intrinsic `assets` metadata inside `asset_groups.json`. | Delete after migrating any selectors/type hints into `asset_groups.json`. |
+| group_categories.json | Defined categories per group. | Redundant once `asset_groups.json` carries CIA/risk and implementation-measure metadata. | Delete and fold needed labels into `asset_groups.json`. |
+| groups.json | Stored group records. | Must align to the new `storage/asset_groups.json` schema (embedded assets/selectors, CIA/risk flags, implementation measures). | Replace with the new asset group documents; migrate legacy group rows into the new file. |
 | manipulators.json | Generic manipulator definitions. | Replace with `asset_pool_manipulator.json` focused on asset pool UI fields. | Modify/replace. |
 | mappings.json | Stored column mappings for assets. | Persist mappings inside each `raw-assets/{upload-id}.json` meta section. | Delete after migration. |
 | measure_categories.json | Lookup table for measure categories. | Superseded by flat measures rows in `measures.json`. | Delete. |
@@ -408,3 +408,13 @@ This replaces the current generic `manipulator` description with an asset-pool-s
 | source_rows.json | Normalized source rows. | Superseded by per-upload raw asset documents and archived copies. | Delete after migration. |
 | sources.json | Source metadata for uploads. | Capture source details inside raw asset meta or measure archive entries. | Delete after migrating needed fields. |
 | unified_assets.json | Legacy unified asset view. | Superseded entirely by `asset-pool.json`. | Delete. |
+
+---
+
+## 8. Frontend Impact for Asset Groups and New Storage Layout
+
+* **API contract updates:** The SPA screens that fetch `/api/v1/groups` and related group taxonomies must switch to the new `asset_groups.json` structure (embedded assets, selectors, CIA/risk flags, implementation measures) instead of the previous trio of `groups.json`, `group_categories.json`, and `group_asset_types.json`. Endpoints should return a single denormalized group document per ID, and client code must stop reading category/type tables.
+* **Creation & edit forms:** Group creation dialogs need fields for `asset_sub_category`, `assets`, selectors, CIA/risk toggles, and implementation measure references to match the `asset_groups.json` schema. Existing form controls for group category/type pickers can be removed or repurposed to edit the new properties.
+* **List/detail rendering:** Group list and detail views should render CIA/availability/confidentiality flags and implementation measure summaries from the new schema, and show embedded assets/selectors directly instead of resolving lookups through deleted auxiliary tables.
+* **Data migration awareness:** Client-side state hydration and cache keys should expect the new per-group shape so that once `groups.json` is replaced by `asset_groups.json`, the UI does not attempt to load or reconcile the removed category/type files. During transition, feature-flag or version checks can short-circuit legacy fetches.
+* **Asset-pool interplay:** Where group UIs previously derived member assets from `group_asset_types` or `group_categories`, they must now read the `assets` array inside each group document and respect archive semantics from `asset-pool.json` (e.g., show archived assets distinctly or filter them out based on `archived` flag).
