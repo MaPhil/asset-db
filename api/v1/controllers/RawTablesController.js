@@ -462,7 +462,7 @@ export const RawTablesController = {
       data: storedRows
     });
 
-    upsertAssets(entries);
+    upsertAssets(entries, { mapping: mappingObject, uploadId });
 
     deletePreview(previewId);
 
@@ -520,7 +520,7 @@ export const RawTablesController = {
       idStrategy: doc.meta.idStrategy || (doc.meta.idColumn ? { type: 'column', column: doc.meta.idColumn } : { type: 'uuid' })
     });
 
-    upsertAssets(entries);
+    upsertAssets(entries, { mapping: doc.meta.mapping, uploadId: doc.meta.uploadId || id });
 
     logger.info('Zuordnung der Roh-Tabelle aktualisiert', { rawTableId: id, mappingCount: pairs.length });
 
