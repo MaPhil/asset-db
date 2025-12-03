@@ -5,12 +5,137 @@ import XLSX from 'xlsx';
 
 import {
   ARCHIVED_MEASURES_DIR,
+  ASSET_SUB_CATEGORIES_FILE,
   MEASURES_FILE,
   ensureDirectoryExists,
   readJsonFile,
   writeJsonFile
 } from '../../../lib/storage.js';
 import { logger } from '../../../lib/logger.js';
+
+const normaliseText = (value) => {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (value == null) {
+    return '';
+  }
+
+  return String(value).trim();
+};
+
+const parseSemicolonList = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => normaliseText(entry))
+      .map((entry) => entry.replace(/^;+|;+$/g, ''))
+      .filter(Boolean);
+  }
+
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  return String(value)
+    .split(';')
+    .map((entry) => normaliseText(entry))
+    .map((entry) => entry.replace(/^;+|;+$/g, ''))
+    .filter(Boolean);
+};
+
+const parseAssetSubCategories = (value) => {
+  const entries = parseSemicolonList(value);
+  const result = [];
+
+  entries.forEach((entry) => {
+    let id = Number(entry);
+    if (!Number.isInteger(id) || id <= 0) {
+      const match = String(entry).match(/\d+/);
+      id = Number(match?.[0]);
+    }
+
+    if (Number.isInteger(id) && id > 0 && !result.some((item) => item.id === id)) {
+      result.push({ id, title: entry });
+    }
+  });
+
+  return result;
+};
+
+const writeAssetSubCategories = (uploadId, payload) => {
+  const assetSubCategoryMap = new Map();
+
+  payload.rows.forEach((row) => {
+    const topicTitles = parseSemicolonList(row?.Themengebiet);
+    const subTopicTitles = parseSemicolonList(row?.['Sub-Themengebiet']);
+    const categories = parseAssetSubCategories(row?.AssetUnterKategorien);
+
+    if (!categories.length) {
+      return;
+    }
+
+    const topicKeys = topicTitles.length ? topicTitles : [null];
+    const subTopicKeys = subTopicTitles.length ? subTopicTitles : [null];
+
+    categories.forEach((category) => {
+      const id = Number(category.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        return;
+      }
+
+      const record = assetSubCategoryMap.get(id) ?? {
+        id,
+        title: '',
+        name: '',
+        owner: '',
+        group_owner: '',
+        integrity: '',
+        availability: '',
+        confidentiality: '',
+        description: '',
+        links: new Set()
+      };
+
+      const resolvedTitle = normaliseText(category.title) || record.title || `AssetUnterKategorie ${id}`;
+      record.title = resolvedTitle;
+      record.name = resolvedTitle;
+
+      topicKeys.forEach((topic) => {
+        subTopicKeys.forEach((subTopic) => {
+          const topicKey = normaliseText(topic) || '__fallback__';
+          const subTopicKey = normaliseText(subTopic) || '__fallback__';
+          record.links.add(`${topicKey}||${subTopicKey}`);
+        });
+      });
+
+      assetSubCategoryMap.set(id, record);
+    });
+  });
+
+  const data = {};
+  assetSubCategoryMap.forEach((record, id) => {
+    const links = Array.from(record.links).map((key) => {
+      const [topic, subTopic] = key.split('||');
+      return {
+        topicTitle: topic === '__fallback__' ? null : topic,
+        subTopicTitle: subTopic === '__fallback__' ? null : subTopic
+      };
+    });
+
+    data[id] = { ...record, links };
+    delete data[id].links;
+  });
+
+  writeJsonFile(ASSET_SUB_CATEGORIES_FILE, {
+    meta: {
+      uploadId,
+      uploadedAt: payload.uploadedAt,
+      sourceFileName: payload.sourceFileName
+    },
+    data
+  });
+};
 
 function parseWorkbook(file) {
   const workbook = XLSX.read(file.buffer || fs.readFileSync(file.path));
@@ -101,6 +226,7 @@ export const MeasuresController = {
       const { headers, rows } = parseWorkbook(file);
       const uploadId = randomUUID();
       archiveExistingMeasures(uploadId);
+      const uploadedAt = new Date().toISOString();
 
       const data = {};
       const idHeader = headers.find((header) => header.trim().toLowerCase() === 'id');
@@ -116,12 +242,13 @@ export const MeasuresController = {
 
       const payload = {
         uploadId,
-        uploadedAt: new Date().toISOString(),
+        uploadedAt,
         sourceFileName: file.originalname,
         headers,
         data
       };
 
+      writeAssetSubCategories(uploadId, { rows, uploadedAt, sourceFileName: file.originalname });
       writeJsonFile(MEASURES_FILE, payload);
       res.json({
         ok: true,
