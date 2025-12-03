@@ -26,7 +26,7 @@ const TOAST_STORAGE_KEY = 'assetPoolToast';
 const state = {
   rawTables: [],
   assetPool: null,
-  assetPoolSort: { key: 'id', direction: 'asc' },
+  assetPoolSort: { key: null, direction: 'asc' },
   assetPoolPage: 1,
   assetPoolView: 'overview',
   assetFieldSuggestions: [],
@@ -1425,7 +1425,7 @@ function renderAssetPool(root) {
   const start = (state.assetPoolPage - 1) * PAGE_SIZE;
   const pageRows = sortedRows.slice(start, start + PAGE_SIZE);
 
-  const headers = [{ key: 'id', label: 'Hash' }, ...columns.map((col) => ({ key: col, label: col }))];
+  const headers = columns.map((col) => ({ key: col, label: col }));
   const editableFields = new Set(columns.filter((key) => fieldSettings?.[key]?.editable));
 
   const tableWrapper = document.createElement('div');
@@ -1470,16 +1470,6 @@ function renderAssetPool(root) {
       const tr = document.createElement('tr');
       headers.forEach((header) => {
         const cell = document.createElement('td');
-        if (header.key === 'id') {
-          cell.textContent = row.id;
-          tr.appendChild(cell);
-          return;
-        }
-        if (header.key === 'archived') {
-          cell.textContent = row.archived ? 'Ja' : 'Nein';
-          tr.appendChild(cell);
-          return;
-        }
         const value = row[header.key];
         if (editableFields.has(header.key)) {
           const wrapper = document.createElement('div');
