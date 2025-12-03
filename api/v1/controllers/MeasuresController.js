@@ -103,7 +103,13 @@ export const MeasuresController = {
       archiveExistingMeasures(uploadId);
 
       const data = {};
+      const idHeader = headers.find((header) => header.trim().toLowerCase() === 'id');
+
       rows.forEach((row) => {
+        const id = idHeader ? String(row[idHeader] ?? '').trim() : '';
+        if (!id) {
+          return;
+        }
         const hash = hashRow(headers, row);
         data[hash] = row;
       });
