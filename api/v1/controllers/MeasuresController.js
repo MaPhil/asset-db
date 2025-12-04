@@ -295,18 +295,50 @@ export const MeasuresController = {
 
     try {
       const { headers, rows } = parseWorkbook(file);
+      const idHeader = headers.find((header) => header.trim() === 'ID');
+      if (!idHeader) {
+        const error = new Error('Die Datei muss eine Spalte namens "ID" enthalten.');
+        error.status = 400;
+        throw error;
+      }
+
+      const seenIds = new Set();
+      const meaningfulRows = [];
+
+      rows.forEach((row, index) => {
+        const hasValues = headers.some((header) => normaliseText(row[header]));
+        if (!hasValues) {
+          return;
+        }
+
+        const id = normaliseText(row[idHeader]);
+        if (!id) {
+          const error = new Error(
+            `Zeile ${index + 2} enthält keine ID. Bitte stellen Sie sicher, dass jede Zeile eine eindeutige ID in der Spalte "ID" hat.`
+          );
+          error.status = 400;
+          throw error;
+        }
+
+        if (seenIds.has(id)) {
+          const error = new Error(
+            `Die ID "${id}" ist mehrfach vorhanden. Bitte stellen Sie sicher, dass jede Zeile eine eindeutige ID in der Spalte "ID" hat.`
+          );
+          error.status = 400;
+          throw error;
+        }
+
+        seenIds.add(id);
+        meaningfulRows.push(row);
+      });
+
       const uploadId = randomUUID();
       archiveExistingMeasures(uploadId);
       const uploadedAt = new Date().toISOString();
 
       const data = {};
-      const idHeader = headers.find((header) => header.trim().toLowerCase() === 'id');
 
-      rows.forEach((row) => {
-        const id = idHeader ? String(row[idHeader] ?? '').trim() : '';
-        if (!id) {
-          return;
-        }
+      meaningfulRows.forEach((row) => {
         const hash = hashRow(headers, row);
         data[hash] = row;
       });
@@ -320,7 +352,7 @@ export const MeasuresController = {
       };
 
       writeAssetSubCategories(uploadId, {
-        rows,
+        rows: meaningfulRows,
         headers,
         idHeader,
         uploadedAt,
