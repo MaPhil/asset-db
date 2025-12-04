@@ -26,18 +26,34 @@ const formatDateTime = (value) => {
   }
 };
 
+const getGroupCategoryIds = (group) => {
+  const raw = Array.isArray(group?.category_ids)
+    ? group.category_ids
+    : group?.category_id
+      ? [group.category_id]
+      : [];
+
+  return raw
+    .map((value) => Number(value))
+    .filter((value, index, array) => Number.isInteger(value) && value > 0 && array.indexOf(value) === index);
+};
+
+const getGroupsByCategoryId = (categoryId) => {
+  const groups = store.get('groups');
+  const rows = Array.isArray(groups?.rows) ? groups.rows : [];
+
+  return rows.filter((group) => getGroupCategoryIds(group).includes(categoryId));
+};
+
 const buildGroupCounts = () => {
-  const links = store.get('group_categories');
-  const rows = Array.isArray(links?.rows) ? links.rows : [];
+  const groups = store.get('groups');
+  const rows = Array.isArray(groups?.rows) ? groups.rows : [];
 
-  return rows.reduce((map, link) => {
-    const categoryId = Number(link?.category_id);
-    if (!Number.isInteger(categoryId) || categoryId <= 0) {
-      return map;
-    }
-
-    const current = map.get(categoryId) ?? 0;
-    map.set(categoryId, current + 1);
+  return rows.reduce((map, group) => {
+    getGroupCategoryIds(group).forEach((categoryId) => {
+      const current = map.get(categoryId) ?? 0;
+      map.set(categoryId, current + 1);
+    });
     return map;
   }, new Map());
 };
@@ -341,12 +357,7 @@ export const renderAssetStructureAssetSubCategory = (req, res) => {
     return res.status(404).send('AssetUnterKategorie nicht gefunden');
   }
 
-  const links = store
-    .get('group_categories')
-    .rows.filter((row) => Number(row.category_id) === assetSubCategoryId);
-  const groups = store
-    .get('groups')
-    .rows.filter((group) => links.some((link) => Number(link.group_id) === group.id));
+  const groups = getGroupsByCategoryId(assetSubCategoryId);
 
   const viewModel = {
     id: assetSubCategory.id,
