@@ -63,13 +63,43 @@ const parseAssetSubCategories = (value) => {
   return result;
 };
 
+const parseBooleanFlag = (value) => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return false;
+    }
+    const numeric = Number(trimmed);
+    if (!Number.isNaN(numeric)) {
+      return numeric > 0;
+    }
+    return ['true', 'yes', 'ja', 'x', 'checked'].includes(trimmed.toLowerCase());
+  }
+
+  if (typeof value === 'number') {
+    return value > 0;
+  }
+
+  return Boolean(value);
+};
+
+const buildRiskFlags = (row, prefix) => ({
+  low: parseBooleanFlag(row[`${prefix}_niedrig`]),
+  middle: parseBooleanFlag(row[`${prefix}_mittel`]),
+  high: parseBooleanFlag(row[`${prefix}_hoch`]),
+  very_high: parseBooleanFlag(row[`${prefix}_sehr_hoch`])
+});
+
 const writeAssetSubCategories = (uploadId, payload) => {
+  const existing = readJsonFile(ASSET_SUB_CATEGORIES_FILE, { data: {} });
   const assetSubCategoryMap = new Map();
 
   payload.rows.forEach((row) => {
     const topicTitles = parseSemicolonList(row?.Themengebiet);
     const subTopicTitles = parseSemicolonList(row?.['Sub-Themengebiet']);
     const categories = parseAssetSubCategories(row?.AssetUnterKategorien);
+    const measureId = payload.idHeader ? String(row[payload.idHeader] ?? '').trim() : '';
+    const measureHash = payload.headers ? hashRow(payload.headers, row) : '';
 
     if (!categories.length) {
       return;
@@ -84,22 +114,39 @@ const writeAssetSubCategories = (uploadId, payload) => {
         return;
       }
 
+      const previous = existing?.data?.[id] ?? {};
+      const existingLinks = Array.isArray(previous.links)
+        ? previous.links
+            .map((link) => `${normaliseText(link.topicTitle) || '__fallback__'}||${normaliseText(link.subTopicTitle) || '__fallback__'}`)
+        : [];
       const record = assetSubCategoryMap.get(id) ?? {
         id,
-        title: '',
-        name: '',
-        owner: '',
-        group_owner: '',
-        integrity: '',
-        availability: '',
-        confidentiality: '',
-        description: '',
-        links: new Set()
+        title: previous.title || '',
+        name: previous.name || '',
+        owner: previous.owner || '',
+        group_owner: previous.group_owner || '',
+        integrity: previous.integrity || {},
+        availability: previous.availability || {},
+        confidentiality: previous.confidentiality || {},
+        description: previous.description || '',
+        groups: Array.isArray(previous.groups) ? previous.groups : [],
+        implementation_measures: previous.implementation_measures || {},
+        measure_hashes: previous.measure_hashes || {},
+        links: new Set(existingLinks)
       };
 
       const resolvedTitle = normaliseText(category.title) || record.title || `AssetUnterKategorie ${id}`;
       record.title = resolvedTitle;
       record.name = resolvedTitle;
+
+      if (Array.isArray(subTopicTitles) && subTopicTitles.length) {
+        record.sub_topic = subTopicTitles[0];
+      }
+
+      record.description = normaliseText(row?.Sollanforderung) || record.description;
+      record.integrity = buildRiskFlags(row, 'Integrität');
+      record.availability = buildRiskFlags(row, 'Verfügbarkeit');
+      record.confidentiality = buildRiskFlags(row, 'Vertraulichkeit');
 
       topicKeys.forEach((topic) => {
         subTopicKeys.forEach((subTopic) => {
@@ -109,11 +156,22 @@ const writeAssetSubCategories = (uploadId, payload) => {
         });
       });
 
+      if (measureId && measureHash) {
+        const previousHash = record.measure_hashes?.[measureId]?.current || null;
+        record.measure_hashes[measureId] = {
+          previous:
+            previousHash && previousHash !== measureHash
+              ? previousHash
+              : record.measure_hashes?.[measureId]?.previous || null,
+          current: measureHash
+        };
+      }
+
       assetSubCategoryMap.set(id, record);
     });
   });
 
-  const data = {};
+  const data = { ...(existing.data || {}) };
   assetSubCategoryMap.forEach((record, id) => {
     const links = Array.from(record.links).map((key) => {
       const [topic, subTopic] = key.split('||');
@@ -123,15 +181,28 @@ const writeAssetSubCategories = (uploadId, payload) => {
       };
     });
 
-    data[id] = { ...record, links };
-    delete data[id].links;
+    data[id] = {
+      groups: Array.isArray(record.groups) ? record.groups : [],
+      sub_topic: normaliseText(record.sub_topic) || '',
+      implementation_measures: record.implementation_measures || {},
+      name: record.name || record.title || '',
+      description: record.description || '',
+      owner: record.owner || '',
+      integrety: record.integrity || {},
+      availability: record.availability || {},
+      confidentiality: record.confidentiality || {},
+      links,
+      measure_hashes: record.measure_hashes || {}
+    };
   });
 
   writeJsonFile(ASSET_SUB_CATEGORIES_FILE, {
     meta: {
+      ...(existing.meta || {}),
       uploadId,
       uploadedAt: payload.uploadedAt,
-      sourceFileName: payload.sourceFileName
+      sourceFileName: payload.sourceFileName,
+      updatedAt: new Date().toISOString()
     },
     data
   });
@@ -248,7 +319,13 @@ export const MeasuresController = {
         data
       };
 
-      writeAssetSubCategories(uploadId, { rows, uploadedAt, sourceFileName: file.originalname });
+      writeAssetSubCategories(uploadId, {
+        rows,
+        headers,
+        idHeader,
+        uploadedAt,
+        sourceFileName: file.originalname
+      });
       writeJsonFile(MEASURES_FILE, payload);
       res.json({
         ok: true,
