@@ -54,10 +54,15 @@ export const CategoriesController = {
       return res.status(404).json({ error: 'Nicht gefunden.' });
     }
 
-    const links = store.get('group_categories').rows.filter((row) => row.category_id === id);
-    const groups = store
-      .get('groups')
-      .rows.filter((group) => links.some((link) => link.group_id === group.id));
+    const groupsTable = store.get('groups');
+    const groups = (Array.isArray(groupsTable?.rows) ? groupsTable.rows : []).filter((group) => {
+      const ids = Array.isArray(group?.category_ids)
+        ? group.category_ids
+        : group?.category_id
+          ? [group.category_id]
+          : [];
+      return ids.some((value) => Number(value) === id);
+    });
 
     logger.debug('Kategorie abgerufen', { categoryId: id, groupCount: groups.length });
     res.json({ category, groups });

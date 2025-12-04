@@ -72,12 +72,6 @@ export const GroupsController = {
         });
     }
 
-    const groupCategoryTable = store.get('group_categories');
-    const filteredLinks = groupCategoryTable.rows.filter((row) => Number(row?.group_id) !== id);
-    if (filteredLinks.length !== groupCategoryTable.rows.length) {
-      store.set('group_categories', { ...groupCategoryTable, rows: filteredLinks });
-    }
-
     store.remove('groups', id);
     logger.info('Gruppe gelöscht', { groupId: id });
     res.json({ ok: true });
@@ -87,20 +81,35 @@ export const GroupsController = {
     const groupId = Number(req.params.id);
     const categoryId = Number(req.body.category_id);
     logger.debug('Kategorie wird mit Gruppe verknüpft', { groupId, categoryId });
-    const links = store.get('group_categories');
-    const exists = links.rows.some(
-      (row) => row.group_id === groupId && row.category_id === categoryId
-    );
+    const groupsTable = store.get('groups');
+    const groups = Array.isArray(groupsTable?.rows) ? groupsTable.rows : [];
+    const group = groups.find((row) => row.id === groupId);
 
-    if (!exists) {
-      const id = (links.meta.seq ?? 0) + 1;
-      links.meta.seq = id;
-      links.rows.push({ id, group_id: groupId, category_id: categoryId });
-      store.set('group_categories', links);
-      logger.info('Kategorie mit Gruppe verknüpft', { groupId, categoryId });
-    } else {
-      logger.debug('Kategorie bereits mit Gruppe verknüpft', { groupId, categoryId });
+    if (!group) {
+      logger.warn('Versuch, fehlende Gruppe zu verknüpfen', { groupId, categoryId });
+      return res.status(404).json({ error: 'Gruppe nicht gefunden.' });
     }
+
+    const categoryIds = Array.isArray(group?.category_ids)
+      ? group.category_ids
+      : group?.category_id
+        ? [group.category_id]
+        : [];
+
+    if (categoryIds.some((value) => Number(value) === categoryId)) {
+      logger.debug('Kategorie bereits mit Gruppe verknüpft', { groupId, categoryId });
+      return res.json({ ok: true });
+    }
+
+    const updatedCategories = [...categoryIds, categoryId].filter((value, index, array) => {
+      return Number.isInteger(Number(value)) && Number(value) > 0 && array.indexOf(value) === index;
+    });
+
+    store.update('groups', groupId, {
+      category_ids: updatedCategories,
+      updated_at: new Date().toISOString()
+    });
+    logger.info('Kategorie mit Gruppe verknüpft', { groupId, categoryId });
 
     res.json({ ok: true });
   }
