@@ -1,4 +1,4 @@
-import { store } from '../../lib/storage.js';
+import { ASSET_SUB_CATEGORIES_FILE, readJsonFile, store } from '../../lib/storage.js';
 import { logger } from '../../lib/logger.js';
 import { getIgnoredAssetSubCategoryIds } from '../../lib/assetCategories.js';
 import { getGroupAssetSelectorOverview } from '../../lib/groupAssetSelectors.js';
@@ -105,6 +105,52 @@ const normaliseMeasureFilterValue = (value) => {
   }
 
   return '';
+};
+
+const loadAssetSubCategoriesBySubTopicTitle = (subTopicTitle) => {
+  const payload = readJsonFile(ASSET_SUB_CATEGORIES_FILE, null);
+  const data = payload?.data;
+
+  if (!data || typeof data !== 'object' || !Object.keys(data).length) {
+    return [];
+  }
+
+  const normalisedTargetTitle = normaliseText(subTopicTitle);
+
+  return Object.values(data)
+    .map((row) => row || {})
+    .filter((row) => {
+      const id = Number(row?.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        return false;
+      }
+
+      const links = Array.isArray(row.links) ? row.links : [];
+      if (!links.length) {
+        return false;
+      }
+
+      return links.some((link) => normaliseText(link?.subTopicTitle) === normalisedTargetTitle);
+    })
+    .map((row) => {
+      const id = Number(row?.id);
+      const measureId = Number(row?.measure?.id);
+      const measureTitle = normaliseText(row?.measure?.title);
+
+      return {
+        id,
+        title: normaliseText(row?.title || row?.name) || `AssetUnterKategorie ${id}`,
+        owner: normaliseText(row?.owner) || normaliseText(row?.group_owner) || '—',
+        integrity: normaliseText(row?.integrity) || '—',
+        availability: normaliseText(row?.availability) || '—',
+        confidentiality: normaliseText(row?.confidentiality) || '—',
+        measure:
+          Number.isInteger(measureId) && measureId > 0
+            ? { id: measureId, title: measureTitle || '' }
+            : null
+      };
+    })
+    .sort((a, b) => a.title.localeCompare(b.title, 'de', { sensitivity: 'base', numeric: true }));
 };
 
 const buildMeasuresUrl = ({ topicId, subTopicId, assetSubCategoryId }) => {
@@ -261,27 +307,33 @@ export const renderAssetStructureSubTopic = (req, res) => {
   const groupCounts = buildGroupCounts();
   const ignoredAssetSubCategoryIds = getIgnoredAssetSubCategoryIds();
 
-  const assetSubCategories = subTopic.assetSubCategories.map((assetSubCategory) => {
-    const isIgnored = ignoredAssetSubCategoryIds.has(assetSubCategory.id);
+  const targetSubTopicTitle = subTopic.displayTitle || subTopic.title || SUB_TOPIC_FALLBACK_TITLE;
 
-    return {
-      id: assetSubCategory.id,
-      title:
-        assetSubCategory.title || assetSubCategory.name || `AssetUnterKategorie ${assetSubCategory.id}`,
-      owner:
-        normaliseText(assetSubCategory.owner) || normaliseText(assetSubCategory.group_owner) || '—',
-      integrity: normaliseText(assetSubCategory.integrity) || '—',
-      availability: normaliseText(assetSubCategory.availability) || '—',
-      confidentiality: normaliseText(assetSubCategory.confidentiality) || '—',
-      groupCount: groupCounts.get(assetSubCategory.id) ?? 0,
-      measuresUrl: buildMeasuresUrl({
-        topicId: topic?.measure?.id,
-        subTopicId: subTopic?.measure?.id,
-        assetSubCategoryId: assetSubCategory?.measure?.id
-      }),
-      isIgnored
-    };
-  });
+  const assetSubCategories = loadAssetSubCategoriesBySubTopicTitle(targetSubTopicTitle).map(
+    (assetSubCategory) => {
+      const isIgnored = ignoredAssetSubCategoryIds.has(assetSubCategory.id);
+
+      return {
+        id: assetSubCategory.id,
+        title:
+          assetSubCategory.title || assetSubCategory.name || `AssetUnterKategorie ${assetSubCategory.id}`,
+        owner:
+          normaliseText(assetSubCategory.owner) ||
+          normaliseText(assetSubCategory.group_owner) ||
+          '—',
+        integrity: normaliseText(assetSubCategory.integrity) || '—',
+        availability: normaliseText(assetSubCategory.availability) || '—',
+        confidentiality: normaliseText(assetSubCategory.confidentiality) || '—',
+        groupCount: groupCounts.get(assetSubCategory.id) ?? 0,
+        measuresUrl: buildMeasuresUrl({
+          topicId: topic?.measure?.id,
+          subTopicId: subTopic?.measure?.id,
+          assetSubCategoryId: assetSubCategory?.measure?.id
+        }),
+        isIgnored
+      };
+    }
+  );
 
   const visibleAssetSubCategoryCount = assetSubCategories.filter((entry) => !entry.isIgnored).length;
 
