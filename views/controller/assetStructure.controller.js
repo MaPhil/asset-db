@@ -117,11 +117,16 @@ const loadAssetSubCategoriesBySubTopicTitle = (subTopicTitle) => {
 
   const normalisedTargetTitle = normaliseText(subTopicTitle);
 
-  return Object.values(data)
-    .map((row) => row || {})
+  return Object.entries(data)
+    .map(([key, row]) => {
+      const idFromRow = Number(row?.id);
+      const idFromKey = Number(key);
+      const id = Number.isInteger(idFromRow) && idFromRow > 0 ? idFromRow : idFromKey;
+
+      return { id, ...(row || {}) };
+    })
     .filter((row) => {
-      const id = Number(row?.id);
-      if (!Number.isInteger(id) || id <= 0) {
+      if (!Number.isInteger(row.id) || row.id <= 0) {
         return false;
       }
 
@@ -133,13 +138,12 @@ const loadAssetSubCategoriesBySubTopicTitle = (subTopicTitle) => {
       return links.some((link) => normaliseText(link?.subTopicTitle) === normalisedTargetTitle);
     })
     .map((row) => {
-      const id = Number(row?.id);
       const measureId = Number(row?.measure?.id);
       const measureTitle = normaliseText(row?.measure?.title);
 
       return {
-        id,
-        title: normaliseText(row?.title || row?.name) || `AssetUnterKategorie ${id}`,
+        id: row.id,
+        title: normaliseText(row?.title || row?.name) || `AssetUnterKategorie ${row.id}`,
         owner: normaliseText(row?.owner) || normaliseText(row?.group_owner) || '—',
         integrity: normaliseText(row?.integrity) || '—',
         availability: normaliseText(row?.availability) || '—',
