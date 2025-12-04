@@ -25,33 +25,6 @@
     </nav>
 
     <div class="structure-body">
-      <section class="card structure-card" aria-labelledby="topic-details-title">
-        <div class="section-header">
-          <h2 class="section-title" id="topic-details-title">Themengebiet-Details</h2>
-          <button class="button" type="button">Änderungen speichern</button>
-        </div>
-        <form class="form-grid">
-          <div class="form-field">
-            <label for="topic-title">Titel</label>
-            <input id="topic-title" type="text" value="{{topic.displayTitle}}" disabled aria-disabled="true" />
-          </div>
-          <div class="form-field form-field--full">
-            <label for="topic-notes">Notizen</label>
-            <textarea id="topic-notes" name="notes" rows="4" placeholder="Eigene Hinweise oder Informationen ergänzen">{{notes}}</textarea>
-          </div>
-        </form>
-        <dl class="meta-grid">
-          <div class="meta-item">
-            <dt>Maßnahmen-Themengebiet</dt>
-            <dd>{{#if topic.measure.title}}{{topic.measure.title}}{{else}}—{{/if}}</dd>
-          </div>
-          <div class="meta-item">
-            <dt>Maßnahmen-ID</dt>
-            <dd>{{#if topic.measure.id}}{{topic.measure.id}}{{else}}—{{/if}}</dd>
-          </div>
-        </dl>
-      </section>
-
       <section class="structure-section" aria-labelledby="sub-topics-title">
         <div class="section-header">
           <h2 class="section-title" id="sub-topics-title">Sub-Themengebiete</h2>
