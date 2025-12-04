@@ -1,9 +1,6 @@
 import { store } from '../../lib/storage.js';
 import { logger } from '../../lib/logger.js';
-import {
-  getAssetCategoryOverview,
-  getIgnoredAssetSubCategoryIds
-} from '../../lib/assetCategories.js';
+import { getIgnoredAssetSubCategoryIds } from '../../lib/assetCategories.js';
 import { getGroupAssetSelectorOverview } from '../../lib/groupAssetSelectors.js';
 import {
   buildAssetStructure,
@@ -164,18 +161,6 @@ export const renderAssetStructure = (req, res) => {
     nav: 'assetStructure',
     topics: topicRows,
     topicCount: topicRows.length
-  });
-};
-
-export const renderAssetCategories = (req, res) => {
-  const overview = getAssetCategoryOverview();
-
-  res.render('asset-categories', {
-    nav: 'assetStructure',
-    categories: overview.categories,
-    assetCategoryState: overview,
-    categoryCount: overview.categories.length,
-    assetSubCategoryCount: overview.assetSubCategories.length
   });
 };
 

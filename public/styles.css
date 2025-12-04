@@ -74,33 +74,31 @@ main {
   text-decoration: none;
 }
 
-.asset-pool-app,
-.asset-structure-app {
+.asset-pool-app {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: calc(100vh - 76px);
 }
 
+.asset-structure-app {
+  min-height: calc(100vh - 76px);
+}
+
 @media (max-width: 960px) {
-  .asset-pool-app,
-  .asset-structure-app {
+  .asset-pool-app {
     grid-template-columns: 1fr;
     height: auto;
     min-height: 0;
   }
 
-  .asset-pool-sidebar,
-  .asset-structure-sidebar {
+  .asset-pool-sidebar {
     position: sticky;
     top: 0;
     z-index: 10;
     border-right: none;
     box-shadow: none;
   }
-}
-
-.asset-pool-sidebar,
-.asset-structure-sidebar {
+.asset-pool-sidebar {
   background: #0f172a;
   color: #fff;
   padding: 2rem 1.5rem;
