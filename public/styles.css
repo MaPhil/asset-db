@@ -84,21 +84,23 @@ main {
   min-height: calc(100vh - 76px);
 }
 
-@media (max-width: 960px) {
-  .asset-pool-app {
-    grid-template-columns: 1fr;
-    height: auto;
-    min-height: 0;
+  @media (max-width: 960px) {
+    .asset-pool-app {
+      grid-template-columns: 1fr;
+      height: auto;
+      min-height: 0;
+    }
+
+    .asset-pool-sidebar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-right: none;
+      box-shadow: none;
+    }
   }
 
   .asset-pool-sidebar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    border-right: none;
-    box-shadow: none;
-  }
-.asset-pool-sidebar {
   background: #0f172a;
   color: #fff;
   padding: 2rem 1.5rem;
