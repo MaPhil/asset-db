@@ -29,52 +29,6 @@
     </nav>
 
     <div class="structure-body">
-      <section class="card structure-card" aria-labelledby="sub-topic-details-title">
-        <div class="section-header">
-          <h2 class="section-title" id="sub-topic-details-title">Sub-Themengebiet-Details</h2>
-          <button class="button" type="button">Änderungen speichern</button>
-        </div>
-        <form class="form-grid">
-          <div class="form-field">
-            <label for="sub-topic-title">Titel</label>
-            <input
-              id="sub-topic-title"
-              type="text"
-              value="{{subTopic.displayTitle}}"
-              disabled
-              aria-disabled="true"
-            />
-          </div>
-          <div class="form-field form-field--full">
-            <label for="sub-topic-notes">Notizen</label>
-            <textarea
-              id="sub-topic-notes"
-              name="notes"
-              rows="4"
-              placeholder="Relevante Informationen oder Aufgaben dokumentieren"
-            >{{notes}}</textarea>
-          </div>
-        </form>
-        <dl class="meta-grid">
-          <div class="meta-item">
-            <dt>Maßnahmen-Themengebiet</dt>
-            <dd>{{#if topic.measure.title}}{{topic.measure.title}}{{else}}—{{/if}}</dd>
-          </div>
-          <div class="meta-item">
-            <dt>Maßnahmen-Themengebiet ID</dt>
-            <dd>{{#if topic.measure.id}}{{topic.measure.id}}{{else}}—{{/if}}</dd>
-          </div>
-          <div class="meta-item">
-            <dt>Maßnahmen-Sub-Themengebiet</dt>
-            <dd>{{#if subTopic.measure.title}}{{subTopic.measure.title}}{{else}}—{{/if}}</dd>
-          </div>
-          <div class="meta-item">
-            <dt>Maßnahmen-Sub-Themengebiet ID</dt>
-            <dd>{{#if subTopic.measure.id}}{{subTopic.measure.id}}{{else}}—{{/if}}</dd>
-          </div>
-        </dl>
-      </section>
-
       <section class="structure-section" aria-labelledby="asset-sub-categories-title">
         <div class="section-header">
           <h2 class="section-title" id="asset-sub-categories-title">AssetUnterKategorien</h2>
