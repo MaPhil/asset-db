@@ -242,60 +242,36 @@ Asset sub-categories remain sourced from measure imports, but each entry now gro
     "name": "string",
     "description": "string",
     "owner": "string",
-    "integrety": {
-      "high": false,
-      "middle": false,
-      "low": false,
-      "very_high": false
-    },
-    "availability": {
-      "high": false,
-      "middle": false,
-      "low": false,
-      "very_high": false
-    },
-    "confidentiality": {
-      "high": false,
-      "middle": false,
-      "low": false,
-      "very_high": false
-    }
+    "integrety": "low/mediu/high/very_high",
+    "availability": "low/mediu/high/very_high",
+    "confidentiality": "low/mediu/high/very_high"
   }
 }
 ```
 
 * **Creation flow:** Asset sub-categories are still populated via measures import (using the Excel sub-topic column); asset groups are now created within the sub-category view and must reference the owning sub-category ID.
 
-### E. `storage/asset_groups.json`
+### E. `storage/groups.json`
 Asset groups keep their creation flow but now live within a sub-category and inherit the richer metadata structure with implementation measures and CIA/risk flags.
 
 ```json
 {
-  "groupId": {
-    "assets": ["ids"],
-    "selector": [ { "...": "selector_data" } ],
-    "asset_sub_category": "string_from_the_measure_column_asset_sub_category",
-    "implementation_measures": {"measure_id": "implementation_measure_id"},
-    "name": "string",
-    "description": "string",
-    "owner": "string",
-    "integrety": {
-      "high": false,
-      "middle": false,
-      "low": false,
-      "very_high": false
-    },
-    "availability": {
-      "high": false,
-      "middle": false,
-      "low": false,
-      "very_high": false
-    },
-    "confidentiality": {
-      "high": false,
-      "middle": false,
-      "low": false,
-      "very_high": false
+  "meta": {
+    "seq": 3,
+    "updatedAt": "2025-12-12T11:08:14.224Z"
+  },
+  "data": {
+    "groupSlug": {
+      "assets": ["ids"],
+      "selector": [ "selectorIds" ],
+      "asset_sub_category": "string_from_the_measure_column_asset_sub_category",
+      "implementation_measures": {"measure_id": "implementation_measure_id"},
+      "name": "string",
+      "description": "string",
+      "owner": "string",
+      "integrety": "low/mediu/high/very_high",
+      "availability": "low/mediu/high/very_high",
+      "confidentiality": "low/mediu/high/very_high"
     }
   }
 }
@@ -310,13 +286,16 @@ Implementation measures represent concrete work items against assets, groups, or
 {
   "implementation_measure_id": {
     "measure_id": "id of overal measure",
-    "measure_hash": {
-      "current": "hash_of_current_measure",
-      "previous": "hash_of_previous_measure"
-    },
-    "reviewed": false,
+    "current_hash": "hash_of_current_measure",
+    "reviewedAt": "Date",
+    "interval":"every number of days",
     "reviewer": "string",
-    "source": "either group or asset or asset sub category id"
+    "source": "either group or asset or asset sub category id",
+    "understanding":"problems in understanding the measure",
+    "status":"status of the implemnetation of the measure",
+    "implementation_effort":"days required for the implementation",
+    "provider_service":"is the services done by a provider, true/false",
+    ""
   }
 }
 ```

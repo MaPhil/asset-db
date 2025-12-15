@@ -24,11 +24,11 @@ router.get('/asset-pool', renderAssetPool);
 router.get('/asset-pool/raw/:id', renderRawTable);
 router.get('/asset-structure', renderAssetStructure);
 router.get(
-  '/asset-structure/:topicId/:subTopicId/:assetSubCategoryId/groups/:groupId',
+  '/asset-structure/:topicId/:subTopicId/:assetSubCategorySlug/groups/:groupSlug',
   renderAssetStructureGroup
 );
 router.get(
-  '/asset-structure/:topicId/:subTopicId/:assetSubCategoryId',
+  '/asset-structure/:topicId/:subTopicId/:assetSubCategorySlug',
   renderAssetStructureAssetSubCategory
 );
 router.get('/asset-structure/:topicId/:subTopicId', renderAssetStructureSubTopic);

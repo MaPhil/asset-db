@@ -50,15 +50,15 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {{#*inline "assetSubCategoryCell"}}
-                    <td>
-                      {{#if isIgnored}}
-                        <span class="table-link table-link--muted">{{value}}</span>
-                      {{else}}
-                        <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{id}}">{{value}}</a>
-                      {{/if}}
-                    </td>
-                  {{/inline}}
+                    {{#*inline "assetSubCategoryCell"}}
+                      <td>
+                        {{#if isIgnored}}
+                          <span class="table-link table-link--muted">{{value}}</span>
+                        {{else}}
+                          <a class="table-link" href="/asset-structure/{{../topic.id}}/{{../subTopic.id}}/{{slug}}">{{value}}</a>
+                        {{/if}}
+                      </td>
+                    {{/inline}}
                   {{#each assetSubCategories}}
                     <tr {{#if isIgnored}}data-asset-sub-category-ignored="true"{{/if}}>
                       {{> assetSubCategoryCell value=title}}

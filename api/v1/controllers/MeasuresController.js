@@ -11,6 +11,7 @@ import {
   readJsonFile,
   writeJsonFile
 } from '../../../lib/storage.js';
+import { slugify, ensureUniqueSlug } from '../../../lib/assetStructure.js';
 import { logger } from '../../../lib/logger.js';
 
 const normaliseText = (value) => {
@@ -94,6 +95,36 @@ const writeAssetSubCategories = (uploadId, payload) => {
   const existing = readJsonFile(ASSET_SUB_CATEGORIES_FILE, { data: {} });
   const assetSubCategoryMap = new Map();
 
+  const buildLinkKey = (topicTitle, subTopicTitle) => {
+    const topicKey = normaliseText(topicTitle) || '__fallback__';
+    const subTopicKey = normaliseText(subTopicTitle) || '__fallback__';
+    return `${topicKey}||${subTopicKey}`;
+  };
+
+  const convertLinksToSet = (links) => {
+    const linkSet = new Set();
+    (Array.isArray(links) ? links : []).forEach((link) => {
+      linkSet.add(buildLinkKey(link?.topicTitle, link?.subTopicTitle));
+    });
+    return linkSet;
+  };
+
+  const existingRecordsById = new Map();
+  Object.entries(existing.data || {}).forEach(([key, row]) => {
+    const normalizedRow = row && typeof row === 'object' ? row : {};
+    const idFromRow = Number(normalizedRow.id);
+    const idFromKey = Number(key);
+    const id = Number.isInteger(idFromRow) && idFromRow > 0 ? idFromRow : idFromKey;
+    if (!Number.isInteger(id) || id <= 0) {
+      return;
+    }
+    const storedSlug = normalizedRow.slug ? normaliseText(normalizedRow.slug) : '';
+    existingRecordsById.set(id, {
+      ...normalizedRow,
+      slug: storedSlug
+    });
+  });
+
   payload.rows.forEach((row) => {
     const topicTitles = parseSemicolonList(row?.Themengebiet);
     const subTopicTitles = parseSemicolonList(row?.['Sub-Themengebiet']);
@@ -114,11 +145,8 @@ const writeAssetSubCategories = (uploadId, payload) => {
         return;
       }
 
-      const previous = existing?.data?.[id] ?? {};
-      const existingLinks = Array.isArray(previous.links)
-        ? previous.links
-            .map((link) => `${normaliseText(link.topicTitle) || '__fallback__'}||${normaliseText(link.subTopicTitle) || '__fallback__'}`)
-        : [];
+      const previous = existingRecordsById.get(id) ?? {};
+      const existingLinks = convertLinksToSet(previous.links);
       const record = assetSubCategoryMap.get(id) ?? {
         id,
         title: previous.title || '',
@@ -132,7 +160,9 @@ const writeAssetSubCategories = (uploadId, payload) => {
         groups: Array.isArray(previous.groups) ? previous.groups : [],
         implementation_measures: previous.implementation_measures || {},
         measure_hashes: previous.measure_hashes || {},
-        links: new Set(existingLinks)
+        links: existingLinks,
+        slugHint: previous.slug || '',
+        sub_topic: normaliseText(previous.sub_topic) || ''
       };
 
       const resolvedTitle = normaliseText(category.title) || record.title || `AssetUnterKategorie ${id}`;
@@ -171,28 +201,67 @@ const writeAssetSubCategories = (uploadId, payload) => {
     });
   });
 
-  const data = { ...(existing.data || {}) };
+  existingRecordsById.forEach((previous, id) => {
+    if (assetSubCategoryMap.has(id)) {
+      return;
+    }
+
+    const record = {
+      id,
+      title: previous.title || '',
+      name: previous.name || '',
+      owner: previous.owner || '',
+      group_owner: previous.group_owner || '',
+      integrity: previous.integrity || {},
+      availability: previous.availability || {},
+      confidentiality: previous.confidentiality || {},
+      description: previous.description || '',
+      groups: Array.isArray(previous.groups) ? previous.groups : [],
+      implementation_measures: previous.implementation_measures || {},
+      measure_hashes: previous.measure_hashes || {},
+      links: convertLinksToSet(previous.links),
+      slugHint: previous.slug || '',
+      sub_topic: normaliseText(previous.sub_topic) || ''
+    };
+
+    assetSubCategoryMap.set(id, record);
+  });
+
+  const data = {};
+  const usedSlugs = new Set();
+
   assetSubCategoryMap.forEach((record, id) => {
-    const links = Array.from(record.links).map((key) => {
-      const [topic, subTopic] = key.split('||');
+    const slugBase =
+      normaliseText(record.slugHint) ||
+      normaliseText(record.name) ||
+      normaliseText(record.title) ||
+      `AssetUnterKategorie ${id}`;
+    const slugCandidate = slugify(slugBase || `assetunterkategorie-${id}`);
+    const slug = ensureUniqueSlug(usedSlugs, slugCandidate, `assetunterkategorie-${id}`);
+
+    const links = Array.from(record.links ?? []).map((key) => {
+      const [topicKey = '__fallback__', subTopicKey = '__fallback__'] = key.split('||');
       return {
-        topicTitle: topic === '__fallback__' ? null : topic,
-        subTopicTitle: subTopic === '__fallback__' ? null : subTopic
+        topicTitle: topicKey === '__fallback__' ? null : topicKey,
+        subTopicTitle: subTopicKey === '__fallback__' ? null : subTopicKey
       };
     });
 
-    data[id] = {
+    data[slug] = {
+      id,
+      slug,
       groups: Array.isArray(record.groups) ? record.groups : [],
       sub_topic: normaliseText(record.sub_topic) || '',
       implementation_measures: record.implementation_measures || {},
-      name: record.name || record.title || '',
-      description: record.description || '',
-      owner: record.owner || '',
+      measure_hashes: record.measure_hashes || {},
+      name: normaliseText(record.name) || record.title || '',
+      description: normaliseText(record.description) || '',
+      owner: normaliseText(record.owner) || '',
+      group_owner: normaliseText(record.group_owner) || '',
       integrety: record.integrity || {},
       availability: record.availability || {},
       confidentiality: record.confidentiality || {},
-      links,
-      measure_hashes: record.measure_hashes || {}
+      links
     };
   });
 

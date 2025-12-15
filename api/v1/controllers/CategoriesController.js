@@ -2,11 +2,6 @@ import { store } from '../../../lib/storage.js';
 import { logger } from '../../../lib/logger.js';
 
 export const CategoriesController = {
-  list: (req, res) => {
-    logger.debug('Kategorien werden aufgelistet');
-    res.json(store.get('categories').rows);
-  },
-
   create: (req, res) => {
     const {
       title,
@@ -44,38 +39,5 @@ export const CategoriesController = {
     const id = store.insert('categories', sanitized);
     logger.info('Kategorie erstellt', { categoryId: id });
     res.json({ ok: true, id });
-  },
-
-  get: (req, res) => {
-    const id = Number(req.params.id);
-    const category = store.get('categories').rows.find((row) => row.id === id);
-    if (!category) {
-      logger.warn('Kategorie nicht gefunden', { categoryId: id });
-      return res.status(404).json({ error: 'Nicht gefunden.' });
-    }
-
-    const groupsTable = store.get('groups');
-    const groups = (Array.isArray(groupsTable?.rows) ? groupsTable.rows : []).filter((group) => {
-      const ids = Array.isArray(group?.category_ids)
-        ? group.category_ids
-        : group?.category_id
-          ? [group.category_id]
-          : [];
-      return ids.some((value) => Number(value) === id);
-    });
-
-    logger.debug('Kategorie abgerufen', { categoryId: id, groupCount: groups.length });
-    res.json({ category, groups });
-  },
-
-  update: (req, res) => {
-    const id = Number(req.params.id);
-    const ok = store.update('categories', id, req.body);
-    if (!ok) {
-      logger.warn('Versuch, fehlende Kategorie zu aktualisieren', { categoryId: id });
-      return res.status(404).json({ error: 'Nicht gefunden.' });
-    }
-    logger.info('Kategorie aktualisiert', { categoryId: id });
-    res.json({ ok: true });
   }
 };

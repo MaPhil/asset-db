@@ -1,14 +1,16 @@
 <div
   class="asset-structure-app"
   data-app="asset-structure"
-  data-group-id="{{group.id}}"
+  data-group-slug="{{group.slug}}"
   data-group-name="{{group.displayTitle}}"
   data-topic-id="{{topic.id}}"
   data-sub-topic-id="{{subTopic.id}}"
   data-asset-sub-category-id="{{assetSubCategory.id}}"
+  data-asset-sub-category-slug="{{assetSubCategory.slug}}"
   data-group-selector-count="{{groupSelectorCount}}"
 >
   <section class="asset-structure-content">
+    <div class="toast-container" role="status" aria-live="polite"></div>
     <header class="page-header">
       <div>
         <h1 class="page-title">{{#if group.displayTitle}}{{group.displayTitle}}{{else}}Unbenannte Gruppe{{/if}}</h1>
@@ -18,7 +20,7 @@
         {{#if assetSubCategory.measuresUrl}}
           <a class="button button--ghost" href="{{assetSubCategory.measuresUrl}}">Maßnahmen anzeigen</a>
         {{/if}}
-        <a class="button button--ghost" href="/asset-structure/{{topic.id}}/{{subTopic.id}}/{{assetSubCategory.id}}">Zur AssetUnterKategorie zurück</a>
+        <a class="button button--ghost" href="/asset-structure/{{topic.id}}/{{subTopic.id}}/{{assetSubCategory.slug}}">Zur AssetUnterKategorie zurück</a>
         <button
           class="button button--danger"
           type="button"
@@ -43,7 +45,7 @@
       <span aria-hidden="true">›</span>
       <a href="/asset-structure/{{topic.id}}/{{subTopic.id}}">{{subTopic.displayTitle}}</a>
       <span aria-hidden="true">›</span>
-      <a href="/asset-structure/{{topic.id}}/{{subTopic.id}}/{{assetSubCategory.id}}">{{assetSubCategory.title}}</a>
+      <a href="/asset-structure/{{topic.id}}/{{subTopic.id}}/{{assetSubCategory.slug}}">{{assetSubCategory.title}}</a>
       <span aria-hidden="true">›</span>
       <span aria-current="page">{{group.displayTitle}}</span>
     </nav>
@@ -52,10 +54,10 @@
       <section class="card structure-card" aria-labelledby="group-details-title">
         <div class="section-header">
           <h2 class="section-title" id="group-details-title">Gruppeninformationen</h2>
-          <button class="button" type="button">Änderungen speichern</button>
+          <button class="button" type="button" data-save-group-details>Änderungen speichern</button>
         </div>
-        <form class="form-grid form-grid--two">
-          <div class="form-field">
+        <form class="form-grid form-grid--two" data-group-details-form>
+          <div class="form-field form-field--full">
             <label for="group-name">Titel</label>
             <input
               id="group-name"
@@ -65,26 +67,58 @@
               placeholder="Gruppentitel eingeben"
             />
           </div>
-          <div class="form-field">
-            <label for="group-parent-category">Übergeordnete AssetUnterKategorie</label>
-            <select id="group-parent-category" name="category_id">
-              {{#if assetSubCategoryOptions.length}}
-                {{#each assetSubCategoryOptions}}
-                  <option value="{{id}}" {{#if (eq ../assetSubCategory.id id)}}selected{{/if}}>{{title}}</option>
-                {{/each}}
-              {{else}}
-                <option value="" disabled>Keine AssetUnterKategorien verfügbar</option>
-              {{/if}}
-            </select>
+          <div class="form-row form-row--triple">
+            <div class="form-field">
+              <label for="group-integrity">Integrität</label>
+              <select id="group-integrity" name="integrity">
+                <option value="" {{#unless group.integrity}}selected{{/unless}}>Integrität auswählen</option>
+                <option value="low" {{#if (eq group.integrity 'low')}}selected{{/if}}>Niedrig</option>
+                <option value="medium" {{#if (eq group.integrity 'medium')}}selected{{/if}}>Mittel</option>
+                <option value="high" {{#if (eq group.integrity 'high')}}selected{{/if}}>Hoch</option>
+                <option value="very_high" {{#if (eq group.integrity 'very_high')}}selected{{/if}}>Sehr hoch</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="group-confidentiality">Vertraulichkeit</label>
+              <select id="group-confidentiality" name="confidentiality">
+                <option value="" {{#unless group.confidentiality}}selected{{/unless}}>Vertraulichkeit auswählen</option>
+                <option value="low" {{#if (eq group.confidentiality 'low')}}selected{{/if}}>Niedrig</option>
+                <option value="medium" {{#if (eq group.confidentiality 'medium')}}selected{{/if}}>Mittel</option>
+                <option value="high" {{#if (eq group.confidentiality 'high')}}selected{{/if}}>Hoch</option>
+                <option value="very_high" {{#if (eq group.confidentiality 'very_high')}}selected{{/if}}>Sehr hoch</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="group-availability">Verfügbarkeit</label>
+              <select id="group-availability" name="availability">
+                <option value="" {{#unless group.availability}}selected{{/unless}}>Verfügbarkeit auswählen</option>
+                <option value="low" {{#if (eq group.availability 'low')}}selected{{/if}}>Niedrig</option>
+                <option value="medium" {{#if (eq group.availability 'medium')}}selected{{/if}}>Mittel</option>
+                <option value="high" {{#if (eq group.availability 'high')}}selected{{/if}}>Hoch</option>
+                <option value="very_high" {{#if (eq group.availability 'very_high')}}selected{{/if}}>Sehr hoch</option>
+              </select>
+            </div>
           </div>
-          <div class="form-field">
-            <label for="group-status">Status</label>
-            <select id="group-status" name="status">
-              <option value="" {{#unless group.status}}selected{{/unless}}>Status auswählen</option>
-              <option {{#if (eq group.status 'Active')}}selected{{/if}}>Aktiv</option>
-              <option {{#if (eq group.status 'Planned')}}selected{{/if}}>Geplant</option>
-              <option {{#if (eq group.status 'Retired')}}selected{{/if}}>Außer Betrieb</option>
-            </select>
+          <div class="form-field form-field--full">
+            <label for="group-parent-category-input">Übergeordnete AssetUnterKategorie</label>
+            <div class="tag-input" data-group-parent-category>
+              <div class="tag-input__tags" data-group-category-tags></div>
+              <input
+                id="group-parent-category-input"
+                type="text"
+                class="tag-input__input"
+                placeholder="AssetUnterKategorie suchen"
+                autocomplete="off"
+                data-group-category-input
+                aria-describedby="group-category-helper"
+              />
+              <div class="tag-input__dropdown" data-group-category-dropdown hidden>
+                <ul class="tag-input__dropdown-list" data-group-category-option-list></ul>
+              </div>
+            </div>
+            <p class="helper-text" id="group-category-helper">
+              Wählen Sie AssetUnterKategorien anhand der Maßnahmenliste aus.
+            </p>
           </div>
           <div class="form-field form-field--full">
             <label for="group-description">Beschreibung</label>
@@ -95,17 +129,8 @@
               placeholder="Kurze Beschreibung hinzufügen"
             >{{group.description}}</textarea>
           </div>
-          <div class="form-field">
-            <label for="group-asset-type">Asset-Typ</label>
-            <input
-              id="group-asset-type"
-              type="text"
-              name="asset_type"
-              value="{{group.assetType}}"
-              placeholder="z. B. Anwendung"
-            />
-          </div>
         </form>
+        <p class="form-error" data-group-details-feedback hidden></p>
         <dl class="meta-grid">
           <div class="meta-item">
             <dt>Erstellt</dt>
@@ -140,6 +165,8 @@
 </div>
 
 <script type="application/json" data-group-selector-state>{{{json groupSelectorState}}}</script>
+<script type="application/json" data-asset-sub-category-options>{{{json assetSubCategoryOptions}}}</script>
+<script type="application/json" data-group-selected-category-slugs>{{{json group.categorySlugs}}}</script>
 
 <div class="modal" data-group-selector-modal hidden aria-hidden="true">
   <div

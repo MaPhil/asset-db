@@ -6,15 +6,18 @@ const API = {
     `/api/v1/asset-pool/fields/${encodeURIComponent(field)}/editable`,
   assetPoolFieldValue: (rowId, field) =>
     `/api/v1/asset-pool/rows/${encodeURIComponent(rowId)}/fields/${encodeURIComponent(field)}`,
+  assetSubCategories: '/api/v1/asset-sub-categories',
+  assetSubCategory: (slug) => `/api/v1/asset-sub-categories/${encodeURIComponent(slug)}`,
   manipulators: '/api/v1/manipulators',
   manipulator: (id) => `/api/v1/manipulators/${encodeURIComponent(id)}`,
   categories: '/api/v1/categories',
   groups: '/api/v1/groups',
-  groupAssetSelectors: (groupId) => `/api/v1/groups/${groupId}/asset-selectors`,
-  groupAssetSelector: (groupId, selectorId) =>
-    `/api/v1/groups/${groupId}/asset-selectors/${selectorId}`,
-  groupAssetSelectorAssets: (groupId, selectorId) =>
-    `/api/v1/groups/${groupId}/asset-selectors/${selectorId}/assets`,
+  groupAssetSelectors: (groupSlug) =>
+    `/api/v1/groups/${encodeURIComponent(groupSlug)}/asset-selectors`,
+  groupAssetSelector: (groupSlug, selectorId) =>
+    `/api/v1/groups/${encodeURIComponent(groupSlug)}/asset-selectors/${selectorId}`,
+  groupAssetSelectorAssets: (groupSlug, selectorId) =>
+    `/api/v1/groups/${encodeURIComponent(groupSlug)}/asset-selectors/${selectorId}/assets`,
   measures: '/api/v1/measures',
   measuresUpload: '/api/v1/measures/upload'
 };
@@ -248,11 +251,14 @@ async function fetchJson(url, options = {}) {
   return payload;
 }
 
-function showToast(message) {
+function showToast(message, { type } = {}) {
   const container = document.querySelector('.toast-container');
   if (!container) return;
   const toast = document.createElement('div');
   toast.className = 'toast';
+  if (type === 'error') {
+    toast.classList.add('toast--error');
+  }
   toast.textContent = message;
   container.appendChild(toast);
   setTimeout(() => {
@@ -2532,8 +2538,10 @@ function setupArchiveRaw(root) {
 }
 
 function setupCreateGroupForm(root) {
-  const assetSubCategoryId = Number(root?.dataset.assetSubCategoryId || '');
-  if (!Number.isFinite(assetSubCategoryId) || assetSubCategoryId <= 0) {
+  const assetSubCategorySlug = typeof root?.dataset?.assetSubCategorySlug === 'string'
+    ? root.dataset.assetSubCategorySlug.trim()
+    : '';
+  if (!assetSubCategorySlug) {
     return;
   }
 
@@ -2572,27 +2580,19 @@ function setupCreateGroupForm(root) {
     }
 
     payload.title = title;
+    payload.asset_sub_category_slug = assetSubCategorySlug;
+    payload.category_slugs = [assetSubCategorySlug];
 
     isSubmitting = true;
     saveButton.disabled = true;
     saveButton.dataset.loading = 'true';
 
     try {
-      const response = await fetchJson(API.groups, {
+      await fetchJson(API.groups, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
-      const groupId = Number(response?.id);
-      if (Number.isFinite(groupId) && groupId > 0) {
-        await fetchJson(`${API.groups}/${groupId}/link-category`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ category_id: assetSubCategoryId })
-        });
-      }
-
       window.location.reload();
     } catch (error) {
       console.error('Fehler beim Erstellen der Gruppe', error);
@@ -2611,13 +2611,6 @@ function setupDeleteGroupButton(root) {
     return;
   }
 
-  const groupId = Number(root?.dataset?.groupId || '');
-  if (!Number.isInteger(groupId) || groupId <= 0) {
-    button.disabled = true;
-    button.setAttribute('aria-disabled', 'true');
-    return;
-  }
-
   syncDeleteGroupButtonState(root);
 
   button.addEventListener('click', async () => {
@@ -2632,12 +2625,19 @@ function setupDeleteGroupButton(root) {
       return;
     }
 
+    const groupSlug = typeof root?.dataset?.groupSlug === 'string' ? root.dataset.groupSlug.trim() : '';
+    if (!groupSlug) {
+      showToast('Gruppe konnte nicht gelöscht werden.', { type: 'error' });
+      return;
+    }
+
     button.disabled = true;
     button.dataset.loading = 'true';
 
     try {
-      await fetchJson(`${API.groups}/${groupId}`, { method: 'DELETE' });
+      await fetchJson(`${API.groups}/${encodeURIComponent(groupSlug)}`, { method: 'DELETE' });
       const assetSubCategoryId = Number(root?.dataset?.assetSubCategoryId || '');
+      const assetSubCategorySlug = root?.dataset?.assetSubCategorySlug || '';
       const topicId = root?.dataset?.topicId || '';
       const subTopicId = root?.dataset?.subTopicId || '';
 
@@ -2649,7 +2649,10 @@ function setupDeleteGroupButton(root) {
         typeof subTopicId === 'string' &&
         subTopicId
       ) {
-        window.location.assign(`/asset-structure/${topicId}/${subTopicId}/${assetSubCategoryId}`);
+        const slugSegment =
+          (typeof assetSubCategorySlug === 'string' && assetSubCategorySlug.trim()) ||
+          String(assetSubCategoryId);
+        window.location.assign(`/asset-structure/${topicId}/${subTopicId}/${slugSegment}`);
       } else if (typeof topicId === 'string' && topicId) {
         window.location.assign(`/asset-structure/${topicId}`);
       } else {
@@ -2658,7 +2661,7 @@ function setupDeleteGroupButton(root) {
     } catch (error) {
       const message =
         error?.payload?.error || error?.message || 'Gruppe konnte nicht gelöscht werden.';
-      showToast(message);
+      showToast(message, { type: 'error' });
       syncDeleteGroupButtonState(root);
     } finally {
       delete button.dataset.loading;
@@ -2666,6 +2669,496 @@ function setupDeleteGroupButton(root) {
   });
 }
 
+function setupAssetSubCategoryDetails(root) {
+  if (!root) {
+    return;
+  }
+
+  const slug = typeof root.dataset?.assetSubCategorySlug === 'string'
+    ? root.dataset.assetSubCategorySlug.trim()
+    : '';
+  if (!slug) {
+    return;
+  }
+
+  const form = select(root, '[data-asset-sub-category-form]');
+  const saveButton = select(root, '[data-save-asset-sub-category]');
+  if (!form || !saveButton) {
+    return;
+  }
+
+  const readFieldValue = (name, { trim = true } = {}) => {
+    const field = form.querySelector(`[name="${name}"]`);
+    if (!field) {
+      return '';
+    }
+    const value = field.value ?? '';
+    if (typeof value !== 'string') {
+      return '';
+    }
+    return trim ? value.trim() : value;
+  };
+
+  let isSubmitting = false;
+
+  saveButton.addEventListener('click', async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    const ownerValue = readFieldValue('owner');
+    const payload = {
+      owner: ownerValue,
+      group_owner: ownerValue,
+      integrity: readFieldValue('integrity'),
+      availability: readFieldValue('availability'),
+      confidentiality: readFieldValue('confidentiality'),
+      description: readFieldValue('description', { trim: false })
+    };
+
+    isSubmitting = true;
+    saveButton.disabled = true;
+    saveButton.dataset.loading = 'true';
+
+    try {
+      await fetchJson(API.assetSubCategory(slug), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      alert('AssetUnterKategorie wurde gespeichert.');
+    } catch (error) {
+      const message =
+        error?.payload?.error || error?.message || 'AssetUnterKategorie konnte nicht gespeichert werden.';
+      alert(message);
+    } finally {
+      isSubmitting = false;
+      saveButton.disabled = false;
+      delete saveButton.dataset.loading;
+    }
+  });
+}
+
+function readJsonScriptData(selector) {
+  const script = document.querySelector(selector);
+  if (!script) {
+    return null;
+  }
+  const payload = script.textContent || '';
+  if (!payload.trim()) {
+    return null;
+  }
+  try {
+    return JSON.parse(payload);
+  } catch (error) {
+    console.error('JSON-Daten konnten nicht geparst werden', { selector, error });
+    return null;
+  }
+}
+
+function normalizeCategoryLabel(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.trim().toLowerCase();
+}
+
+function normalizeCategorySlug(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.trim().toLowerCase();
+}
+
+async function loadAssetSubCategoryOptionsFromApi() {
+  try {
+    const response = await fetchJson(API.assetSubCategories);
+    const entries = Array.isArray(response?.entries) ? response.entries : [];
+    return entries
+      .map((entry) => {
+        const slug = typeof entry?.slug === 'string' ? entry.slug.trim() : '';
+        if (!slug) {
+          return null;
+        }
+        const title =
+          (typeof entry?.title === 'string' && entry.title.trim()) ||
+          (typeof entry?.name === 'string' && entry.name.trim()) ||
+          slug;
+        return { slug, title };
+      })
+      .filter(Boolean)
+      .sort((a, b) =>
+        (a.title || '').localeCompare(b.title || '', 'de', { sensitivity: 'base', numeric: true })
+      );
+  } catch (error) {
+    console.error('AssetUnterkategorien konnten nicht geladen werden', error);
+    return [];
+  }
+}
+
+async function setupGroupDetails(root) {
+  if (!root) {
+    return;
+  }
+
+  try {
+    const form = select(root, '[data-group-details-form]');
+    const saveButton = select(root, '[data-save-group-details]');
+    if (!form || !saveButton) {
+      return;
+    }
+
+    const tagsContainer = select(form, '[data-group-category-tags]');
+    const tagsInput = select(form, '[data-group-category-input]');
+    const dropdown = select(form, '[data-group-category-dropdown]');
+    const dropdownList = select(form, '[data-group-category-option-list]');
+    if (!tagsContainer || !tagsInput) {
+      return;
+    }
+
+    const feedbackEl = select(root, '[data-group-details-feedback]');
+    const titleInput = select(form, '#group-name');
+    const descriptionInput = select(form, '#group-description');
+    const confidentialitySelect = select(form, '#group-confidentiality');
+    const integritySelect = select(form, '#group-integrity');
+    const availabilitySelect = select(form, '#group-availability');
+
+    const groupSlug =
+      typeof root?.dataset?.groupSlug === 'string' ? root.dataset.groupSlug.trim() : '';
+    if (!groupSlug) {
+      return;
+    }
+
+    const optionsPayload = readJsonScriptData('[data-asset-sub-category-options]');
+    let assetSubCategoryOptions = Array.isArray(optionsPayload) ? optionsPayload : [];
+    if (!assetSubCategoryOptions.length) {
+      assetSubCategoryOptions = await loadAssetSubCategoryOptionsFromApi();
+    }
+
+    const normalizedOptions = assetSubCategoryOptions
+      .map((entry) => {
+        const slug = typeof entry?.slug === 'string' ? entry.slug.trim() : '';
+        if (!slug) {
+          return null;
+        }
+        const rawTitle =
+          (typeof entry?.title === 'string' && entry.title.trim()) ||
+          (typeof entry?.name === 'string' && entry.name.trim()) ||
+          (typeof entry?.label === 'string' && entry.label.trim()) ||
+          '';
+        const title = rawTitle || slug;
+        return { slug, title };
+      })
+      .filter(Boolean);
+
+    const optionsBySlug = new Map();
+    const optionsByLabel = new Map();
+    const optionsByNormalizedSlug = new Map();
+
+    normalizedOptions.forEach((entry) => {
+      const slug = entry.slug;
+      if (!slug || optionsBySlug.has(slug)) {
+        return;
+      }
+      const title = entry.title || slug;
+      const normalizedTitle = normalizeCategoryLabel(title);
+      const normalizedSlug = normalizeCategorySlug(slug);
+      const payload = { slug, title };
+      optionsBySlug.set(slug, payload);
+      if (normalizedTitle && !optionsByLabel.has(normalizedTitle)) {
+        optionsByLabel.set(normalizedTitle, payload);
+      }
+      if (normalizedSlug && !optionsByNormalizedSlug.has(normalizedSlug)) {
+        optionsByNormalizedSlug.set(normalizedSlug, payload);
+      }
+    });
+
+    const sortedOptions = Array.from(optionsBySlug.values()).sort((a, b) =>
+      (a.title || '').localeCompare(b.title || '', 'de', { sensitivity: 'base', numeric: true })
+    );
+
+    const selectedPayload = readJsonScriptData('[data-group-selected-category-slugs]');
+    const initialCategorySlugs = Array.isArray(selectedPayload) ? selectedPayload : [];
+
+    const selectedCategories = new Map();
+    initialCategorySlugs.forEach((value) => {
+      const slug = typeof value === 'string' ? value.trim() : '';
+      if (!slug) {
+        return;
+      }
+      const normalizedSlug = normalizeCategorySlug(slug);
+      const entry =
+        optionsBySlug.get(slug) ||
+        optionsByNormalizedSlug.get(normalizedSlug) ||
+        { slug, title: slug };
+      selectedCategories.set(entry.slug, entry);
+    });
+
+    renderGroupCategoryTags();
+
+    function setFeedback(message) {
+      if (!feedbackEl) {
+        return;
+      }
+      if (message) {
+        feedbackEl.hidden = false;
+        feedbackEl.textContent = message;
+      } else {
+        feedbackEl.hidden = true;
+        feedbackEl.textContent = '';
+      }
+    }
+
+    function clearFeedback() {
+      setFeedback('');
+    }
+
+    function renderGroupCategoryTags() {
+      tagsContainer.innerHTML = '';
+      if (!selectedCategories.size) {
+        const placeholder = document.createElement('p');
+        placeholder.className = 'helper-text tag-input__placeholder';
+        placeholder.textContent = 'Noch keine AssetUnterKategorien ausgewählt.';
+        tagsContainer.appendChild(placeholder);
+        return;
+      }
+      selectedCategories.forEach((entry) => {
+        const tag = document.createElement('span');
+        tag.className = 'tag-input__tag';
+        tag.dataset.categorySlug = entry.slug;
+
+        const label = document.createElement('span');
+        label.className = 'tag-input__tag-text';
+        label.textContent = entry.title;
+        tag.appendChild(label);
+
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'tag-input__tag-remove';
+        removeButton.innerHTML = '&times;';
+        removeButton.setAttribute(
+          'aria-label',
+          `AssetUnterKategorie entfernen${entry.title ? `: ${entry.title}` : ''}`
+        );
+        removeButton.addEventListener('click', () => {
+          selectedCategories.delete(entry.slug);
+          renderGroupCategoryTags();
+          clearFeedback();
+        });
+        tag.appendChild(removeButton);
+        tagsContainer.appendChild(tag);
+      });
+    }
+
+    function findCategoryOption(value) {
+      const trimmed = typeof value === 'string' ? value.trim() : '';
+      if (!trimmed) {
+        return null;
+      }
+      if (optionsBySlug.has(trimmed)) {
+        return optionsBySlug.get(trimmed);
+      }
+      const normalizedSlug = normalizeCategorySlug(trimmed);
+      if (normalizedSlug && optionsByNormalizedSlug.has(normalizedSlug)) {
+        return optionsByNormalizedSlug.get(normalizedSlug);
+      }
+      const normalizedLabel = normalizeCategoryLabel(trimmed);
+      if (normalizedLabel && optionsByLabel.has(normalizedLabel)) {
+        return optionsByLabel.get(normalizedLabel);
+      }
+      return null;
+    }
+
+    function filterCategoryOptions(query) {
+      const normalizedLabelQuery = normalizeCategoryLabel(query);
+      const normalizedSlugQuery = normalizeCategorySlug(query);
+      return sortedOptions.filter((entry) => {
+        const matchesTitle =
+          normalizedLabelQuery && entry.title
+            ? entry.title.toLowerCase().includes(normalizedLabelQuery)
+            : false;
+        const matchesSlug =
+          normalizedSlugQuery && entry.slug
+            ? entry.slug.toLowerCase().includes(normalizedSlugQuery)
+            : false;
+        const matchesQuery =
+          (!normalizedLabelQuery && !normalizedSlugQuery) || matchesTitle || matchesSlug;
+        const isSelected = selectedCategories.has(entry.slug);
+        return matchesQuery && !isSelected;
+      });
+    }
+
+    function closeDropdown() {
+      if (!dropdown) {
+        return;
+      }
+      dropdown.hidden = true;
+    }
+
+    function openDropdown() {
+      if (!dropdown) {
+        return;
+      }
+      dropdown.hidden = false;
+    }
+
+    function addCategory(entry) {
+      if (!entry?.slug) {
+        return false;
+      }
+      const slug = entry.slug;
+      if (selectedCategories.has(slug)) {
+        setFeedback('AssetUnterKategorie wurde bereits hinzugefügt.');
+        return false;
+      }
+      selectedCategories.set(slug, {
+        slug,
+        title: entry.title || slug
+      });
+      renderGroupCategoryTags();
+      clearFeedback();
+      return true;
+    }
+
+    function renderDropdown(filter = '') {
+      if (!dropdown || !dropdownList) {
+        return;
+      }
+      const matches = filterCategoryOptions(filter).slice(0, 20);
+      dropdownList.innerHTML = '';
+      if (!matches.length) {
+        const empty = document.createElement('li');
+        empty.className = 'tag-input__dropdown-empty';
+        empty.textContent = 'Keine AssetUnterKategorien gefunden.';
+        dropdownList.appendChild(empty);
+      } else {
+        matches.forEach((entry) => {
+          const item = document.createElement('li');
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'tag-input__dropdown-option';
+          button.dataset.categoryOptionSlug = entry.slug;
+          button.textContent = entry.title;
+          item.appendChild(button);
+          dropdownList.appendChild(item);
+        });
+      }
+      openDropdown();
+    }
+
+    function commitCategoryInput() {
+      const rawValue = tagsInput.value ?? '';
+      const trimmed = rawValue.trim();
+      if (!trimmed) {
+        tagsInput.value = '';
+        closeDropdown();
+        return;
+      }
+      const match = findCategoryOption(trimmed);
+      if (!match) {
+        setFeedback('AssetUnterKategorie konnte nicht gefunden werden.');
+        tagsInput.value = '';
+        renderDropdown('');
+        return;
+      }
+      const added = addCategory(match);
+      tagsInput.value = '';
+      if (added) {
+        closeDropdown();
+      }
+    }
+
+    tagsInput.addEventListener('input', () => {
+      renderDropdown(tagsInput.value);
+    });
+    tagsInput.addEventListener('focus', () => renderDropdown(tagsInput.value));
+    tagsInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ',') {
+        event.preventDefault();
+        commitCategoryInput();
+      }
+    });
+    tagsInput.addEventListener('blur', () => {
+      window.setTimeout(() => {
+        if (dropdown && dropdown.contains(document.activeElement)) {
+          return;
+        }
+        commitCategoryInput();
+      }, 150);
+    });
+
+    if (dropdownList) {
+      dropdownList.addEventListener('click', (event) => {
+        const target = event.target.closest('[data-category-option-slug]');
+        if (!target) {
+          return;
+        }
+        const option = optionsBySlug.get(target.dataset.categoryOptionSlug);
+        if (!option) {
+          return;
+        }
+        addCategory(option);
+        tagsInput.value = '';
+        closeDropdown();
+        tagsInput.focus();
+      });
+    }
+
+    if (dropdown) {
+      document.addEventListener('click', (event) => {
+        if (!dropdown) {
+          return;
+        }
+        if (dropdown.contains(event.target) || tagsInput === event.target) {
+          return;
+        }
+        closeDropdown();
+      });
+    }
+
+    let isSaving = false;
+    saveButton.addEventListener('click', async () => {
+      if (isSaving) {
+        return;
+      }
+      isSaving = true;
+      saveButton.disabled = true;
+      saveButton.dataset.loading = 'true';
+      clearFeedback();
+
+      const categorySlugs = Array.from(selectedCategories.values()).map((entry) => entry.slug);
+
+      const payload = {
+        title: titleInput?.value?.trim() ?? '',
+        description: descriptionInput?.value?.trim() ?? '',
+        confidentiality: confidentialitySelect?.value ?? '',
+        integrity: integritySelect?.value ?? '',
+        availability: availabilitySelect?.value ?? '',
+        category_slugs: categorySlugs
+      };
+
+      try {
+        await fetchJson(`${API.groups}/${encodeURIComponent(groupSlug)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        showToast('Gruppendetails gespeichert.');
+      } catch (error) {
+        const message =
+          error?.payload?.error || error?.message || 'Gruppendetails konnten nicht gespeichert werden.';
+        setFeedback(message);
+        showToast(message, { type: 'error' });
+      } finally {
+        isSaving = false;
+        saveButton.disabled = false;
+        delete saveButton.dataset.loading;
+      }
+    });
+  } catch (error) {
+    console.error('Fehler beim Einrichten der Gruppendetails', error);
+  }
+}
 let selectorNodeSequence = 0;
 
 function nextSelectorNodeId(prefix) {
@@ -3221,8 +3714,9 @@ function closeGroupSelectorEditor(root, { focusTrigger = true } = {}) {
   }
 }
 
-function getGroupId(root) {
-  return root?.dataset?.groupId;
+function getGroupSlug(root) {
+  const slug = typeof root?.dataset?.groupSlug === 'string' ? root.dataset.groupSlug.trim() : '';
+  return slug;
 }
 
 async function handleSelectorFormSubmit(root, event) {
@@ -3274,15 +3768,15 @@ async function handleSelectorFormSubmit(root, event) {
     saveButton.dataset.loading = 'true';
   }
 
-  const groupId = getGroupId(root);
-  if (!groupId) {
+  const groupSlug = getGroupSlug(root);
+  if (!groupSlug) {
     return;
   }
 
   const method = state.groupSelector.editor.mode === 'edit' ? 'PUT' : 'POST';
   const url = state.groupSelector.editor.mode === 'edit'
-    ? API.groupAssetSelector(groupId, state.groupSelector.editor.selectorId)
-    : API.groupAssetSelectors(groupId);
+    ? API.groupAssetSelector(groupSlug, state.groupSelector.editor.selectorId)
+    : API.groupAssetSelectors(groupSlug);
 
   try {
     const response = await fetchJson(url, {
@@ -3463,8 +3957,8 @@ async function openGroupSelectorAssetsModal(root, entry, trigger) {
   structureModalOpenCount += 1;
   lockBodyScroll();
 
-  const groupId = getGroupId(root);
-  if (!groupId || !entry?.id) {
+  const groupSlug = getGroupSlug(root);
+  if (!groupSlug || !entry?.id) {
     state.groupSelector.viewer.isLoading = false;
     state.groupSelector.viewer.error = 'Asset selector could not be loaded.';
     renderSelectorAssetsContent();
@@ -3472,7 +3966,7 @@ async function openGroupSelectorAssetsModal(root, entry, trigger) {
   }
 
   try {
-    const response = await fetchJson(API.groupAssetSelectorAssets(groupId, entry.id));
+    const response = await fetchJson(API.groupAssetSelectorAssets(groupSlug, entry.id));
     state.groupSelector.viewer.columns = Array.isArray(response?.columns) ? response.columns : [];
     state.groupSelector.viewer.rows = Array.isArray(response?.rows) ? response.rows : [];
   } catch (error) {
@@ -4027,6 +4521,8 @@ function initAssetStructureApp() {
   setupCreateGroupForm(root);
   setupDeleteGroupButton(root);
   setupGroupSelectorInterface(root);
+  setupAssetSubCategoryDetails(root);
+  setupGroupDetails(root);
 }
 
 async function initAssetPoolApp() {

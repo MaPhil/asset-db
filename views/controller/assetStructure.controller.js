@@ -6,6 +6,7 @@ import {
   buildAssetStructure,
   getSubTopicKey,
   normaliseText,
+  slugify,
   SUB_TOPIC_FALLBACK_TITLE,
   TOPIC_FALLBACK_TITLE
 } from '../../lib/assetStructure.js';
@@ -38,19 +39,101 @@ const getGroupCategoryIds = (group) => {
     .filter((value, index, array) => Number.isInteger(value) && value > 0 && array.indexOf(value) === index);
 };
 
+const getGroupCategorySlugs = (group) => {
+  const entries = [];
+
+  if (Array.isArray(group?.category_slug)) {
+    entries.push(...group.category_slug);
+  } else if (group?.category_slug) {
+    entries.push(group.category_slug);
+  }
+
+  if (Array.isArray(group?.category_slugs)) {
+    entries.push(...group.category_slugs);
+  } else if (group?.category_slugs) {
+    entries.push(group.category_slugs);
+  }
+
+  return entries
+    .map((value) => normaliseText(value))
+    .filter((value, index, array) => value && array.indexOf(value) === index);
+};
+
+const loadAssetSubCategorySlugMap = () => {
+  const payload = readJsonFile(ASSET_SUB_CATEGORIES_FILE, null);
+  const data = payload?.data;
+  if (!data || typeof data !== 'object') {
+    return new Map();
+  }
+
+  return Object.entries(data).reduce((map, [key, row]) => {
+    const slug = normaliseText(row?.slug) || normaliseText(row?.name) || normaliseText(key);
+    const id = Number(row?.id);
+    if (slug && Number.isInteger(id) && id > 0) {
+      map.set(slug, id);
+    }
+    return map;
+  }, new Map());
+};
+
+const loadAssetSubCategoryOptions = () => {
+  const payload = readJsonFile(ASSET_SUB_CATEGORIES_FILE, { data: {} });
+  const data = payload?.data ?? {};
+  const entries = Object.entries(data);
+  if (!entries.length) {
+    return [];
+  }
+  return entries
+    .map(([key, entry]) => {
+      const slug = normaliseText(entry?.slug) || normaliseText(entry?.name) || normaliseText(key);
+      if (!slug) {
+        return null;
+      }
+      const fallbackId = Number(entry?.id);
+      const fallbackTitle = Number.isFinite(fallbackId) && fallbackId > 0
+        ? `AssetUnterKategorie ${fallbackId}`
+        : `AssetUnterKategorie ${key}`;
+      const title =
+        normaliseText(entry?.title) ||
+        normaliseText(entry?.name) ||
+        slug ||
+        fallbackTitle;
+      return { slug, title };
+    })
+    .filter(Boolean)
+    .sort((a, b) =>
+      (a.title || '').localeCompare(b.title || '', 'de', { sensitivity: 'base', numeric: true })
+    );
+};
+
 const getGroupsByCategoryId = (categoryId) => {
   const groups = store.get('groups');
   const rows = Array.isArray(groups?.rows) ? groups.rows : [];
+  const slugMap = loadAssetSubCategorySlugMap();
 
-  return rows.filter((group) => getGroupCategoryIds(group).includes(categoryId));
+  return rows.filter((group) => {
+    if (getGroupCategoryIds(group).includes(categoryId)) {
+      return true;
+    }
+    return getGroupCategorySlugs(group).some((slug) => slugMap.get(slug) === categoryId);
+  });
 };
 
 const buildGroupCounts = () => {
   const groups = store.get('groups');
   const rows = Array.isArray(groups?.rows) ? groups.rows : [];
+  const slugMap = loadAssetSubCategorySlugMap();
 
   return rows.reduce((map, group) => {
-    getGroupCategoryIds(group).forEach((categoryId) => {
+    const categoryIds = new Set(getGroupCategoryIds(group));
+    getGroupCategorySlugs(group).forEach((slug) => {
+      const mappedId = slugMap.get(slug);
+      if (mappedId) {
+        categoryIds.add(mappedId);
+      }
+    });
+
+    categoryIds.forEach((categoryId) => {
       const current = map.get(categoryId) ?? 0;
       map.set(categoryId, current + 1);
     });
@@ -122,9 +205,22 @@ const loadAssetSubCategoriesBySubTopicTitle = (subTopicTitle) => {
       const idFromRow = Number(row?.id);
       const idFromKey = Number(key);
       const id = Number.isInteger(idFromRow) && idFromRow > 0 ? idFromRow : idFromKey;
+      if (!Number.isInteger(id) || id <= 0) {
+        return null;
+      }
 
-      return { id, ...(row || {}) };
+      const normalizedRow = row && typeof row === 'object' ? row : {};
+      const title = normaliseText(normalizedRow.title || normalizedRow.name) || `AssetUnterKategorie ${id}`;
+      const slugSource = normaliseText(normalizedRow.slug) || title;
+      const slug = slugify(slugSource || `AssetUnterKategorie ${id}`);
+
+      return {
+        id,
+        ...normalizedRow,
+        slug
+      };
     })
+    .filter(Boolean)
     .filter((row) => {
       if (!Number.isInteger(row.id) || row.id <= 0) {
         return false;
@@ -143,6 +239,7 @@ const loadAssetSubCategoriesBySubTopicTitle = (subTopicTitle) => {
 
       return {
         id: row.id,
+        slug: row.slug,
         title: normaliseText(row?.title || row?.name) || `AssetUnterKategorie ${row.id}`,
         owner: normaliseText(row?.owner) || normaliseText(row?.group_owner) || '—',
         integrity: normaliseText(row?.integrity) || '—',
@@ -318,6 +415,7 @@ export const renderAssetStructureSubTopic = (req, res) => {
       const isIgnored = ignoredAssetSubCategoryIds.has(assetSubCategory.id);
 
       return {
+        slug: assetSubCategory.slug,
         id: assetSubCategory.id,
         title:
           assetSubCategory.title || assetSubCategory.name || `AssetUnterKategorie ${assetSubCategory.id}`,
@@ -367,12 +465,11 @@ export const renderAssetStructureSubTopic = (req, res) => {
 };
 
 export const renderAssetStructureAssetSubCategory = (req, res) => {
-  const { topicId, subTopicId } = req.params;
-  const assetSubCategoryId = Number(req.params.assetSubCategoryId);
+  const { topicId, subTopicId, assetSubCategorySlug } = req.params;
 
-  if (!Number.isInteger(assetSubCategoryId) || assetSubCategoryId <= 0) {
-    logger.warn('Ungültige AssetUnterKategorie-ID angefordert', {
-      assetSubCategoryId,
+  if (!assetSubCategorySlug) {
+    logger.warn('Ungültige AssetUnterKategorie für die UI-Route angefordert', {
+      assetSubCategorySlug,
       topicId,
       subTopicId
     });
@@ -385,7 +482,7 @@ export const renderAssetStructureAssetSubCategory = (req, res) => {
   if (!topic) {
     logger.warn('Themengebiet für AssetUnterKategorie nicht gefunden', {
       topicId,
-      assetSubCategoryId
+      assetSubCategorySlug
     });
     return res.status(404).send('Themengebiet nicht gefunden');
   }
@@ -397,26 +494,40 @@ export const renderAssetStructureAssetSubCategory = (req, res) => {
     logger.warn('Sub-Themengebiet für AssetUnterKategorie nicht gefunden', {
       topicId,
       subTopicId,
-      assetSubCategoryId
+      assetSubCategorySlug
     });
     return res.status(404).send('Sub-Themengebiet nicht gefunden');
   }
 
-  const assetSubCategory = subTopic.assetSubCategories.find((entry) => entry.id === assetSubCategoryId);
+  const assetSubCategory = subTopic.assetSubCategories.find(
+    (entry) => entry.slug === assetSubCategorySlug
+  );
 
   if (!assetSubCategory) {
     logger.warn('AssetUnterKategorie für UI-Route nicht gefunden', {
-      assetSubCategoryId,
+      assetSubCategorySlug,
       topicId,
       subTopicId
     });
     return res.status(404).send('AssetUnterKategorie nicht gefunden');
   }
 
-  const groups = getGroupsByCategoryId(assetSubCategoryId);
+  const assetSubCategoryId = assetSubCategory.id;
+
+  const groupsTable = store.get('groups');
+  const slugSourceGroups = Array.isArray(assetSubCategory.groups) ? assetSubCategory.groups : [];
+  const availableGroups = Array.isArray(groupsTable?.rows) ? groupsTable.rows : [];
+  const referencedGroups =
+    slugSourceGroups.length > 0
+      ? slugSourceGroups
+          .map((slug) => availableGroups.find((row) => row.slug === slug))
+          .filter(Boolean)
+      : [];
+  const groups = referencedGroups.length ? referencedGroups : getGroupsByCategoryId(assetSubCategoryId);
 
   const viewModel = {
-    id: assetSubCategory.id,
+    id: assetSubCategoryId,
+    slug: assetSubCategory.slug,
     title: assetSubCategory.title || assetSubCategory.name || '',
     displayTitle: assetSubCategory.title || assetSubCategory.name || 'Unbenannte AssetUnterKategorie',
     description: assetSubCategory.description || '',
@@ -433,6 +544,7 @@ export const renderAssetStructureAssetSubCategory = (req, res) => {
 
   const groupRows = groups.map((group) => ({
     id: group.id,
+    slug: group.slug || slugify(group.title || `Gruppe ${group.id}`),
     title: group.title || `Gruppe ${group.id}`,
     status: group.status || '—',
     assetType: group.asset_type || '—',
@@ -463,14 +575,14 @@ export const renderAssetStructureAssetSubCategory = (req, res) => {
 };
 
 export const renderAssetStructureGroup = (req, res) => {
-  const assetSubCategoryId = Number(req.params.assetSubCategoryId);
-  const groupId = Number(req.params.groupId);
+  const assetSubCategorySlug = req.params.assetSubCategorySlug;
+  const groupSlug = typeof req.params.groupSlug === 'string' ? req.params.groupSlug.trim() : '';
   const { topicId, subTopicId } = req.params;
 
-  if (!Number.isInteger(assetSubCategoryId) || assetSubCategoryId <= 0) {
-    logger.warn('Ungültige AssetUnterKategorie-ID für Gruppen-UI-Route', {
-      assetSubCategoryId,
-      groupId,
+  if (!assetSubCategorySlug) {
+    logger.warn('Ungültige AssetUnterKategorie für Gruppen-UI-Route', {
+      assetSubCategorySlug,
+      groupSlug,
       topicId,
       subTopicId
     });
@@ -483,8 +595,8 @@ export const renderAssetStructureGroup = (req, res) => {
   if (!topic) {
     logger.warn('Themengebiet für Gruppen-UI-Route nicht gefunden', {
       topicId,
-      assetSubCategoryId,
-      groupId
+      assetSubCategorySlug,
+      groupSlug
     });
     return res.status(404).send('Themengebiet nicht gefunden');
   }
@@ -496,38 +608,37 @@ export const renderAssetStructureGroup = (req, res) => {
     logger.warn('Sub-Themengebiet für Gruppen-UI-Route nicht gefunden', {
       topicId,
       subTopicId,
-      assetSubCategoryId,
-      groupId
+      assetSubCategorySlug,
+      groupSlug
     });
     return res.status(404).send('Sub-Themengebiet nicht gefunden');
   }
 
-  const assetSubCategory = subTopic.assetSubCategories.find((entry) => entry.id === assetSubCategoryId);
+  const assetSubCategory = subTopic.assetSubCategories.find(
+    (entry) => entry.slug === assetSubCategorySlug
+  );
 
   if (!assetSubCategory) {
     logger.warn('AssetUnterKategorie für Gruppen-UI-Route nicht gefunden', {
       topicId,
       subTopicId,
-      assetSubCategoryId,
-      groupId
+      assetSubCategorySlug,
+      groupSlug
     });
     return res.status(404).send('AssetUnterKategorie nicht gefunden');
   }
 
-  const assetSubCategoryOptions = store
-    .get('categories')
-    .rows.map((row) => ({
-      id: row.id,
-      title: row.title || row.name || `AssetUnterKategorie ${row.id}`
-    }))
-    .sort((a, b) => a.title.localeCompare(b.title, 'de', { sensitivity: 'base' }));
+  const assetSubCategoryOptions = loadAssetSubCategoryOptions();
 
-  const group = store
-    .get('groups')
-    .rows.find((row) => row.id === groupId);
+  const groupsTable = store.get('groups');
+  const group = groupsTable.rows.find((row) => row.slug === groupSlug);
 
   if (!group) {
-    logger.warn('Gruppe für UI-Route nicht gefunden', { assetSubCategoryId, groupId });
+    logger.warn('Gruppe für UI-Route nicht gefunden', {
+      assetSubCategoryId: assetSubCategory.id,
+      assetSubCategorySlug,
+      groupSlug
+    });
     return res.status(404).send('Gruppe nicht gefunden');
   }
 
@@ -536,8 +647,11 @@ export const renderAssetStructureGroup = (req, res) => {
     title: group.title || '',
     displayTitle: group.title || 'Unbenannte Gruppe',
     description: group.description || '',
-    status: group.status || '',
-    assetType: group.asset_type || '',
+    slug: group.slug || slugify(group.title || `gruppe-${group.id}`),
+    categorySlugs: getGroupCategorySlugs(group),
+    confidentiality: group.confidentiality || '',
+    integrity: group.integrity || '',
+    availability: group.availability || '',
     createdAt: formatDateTime(group.created_at) || '—',
     updatedAt: formatDateTime(group.updated_at) || '—'
   };

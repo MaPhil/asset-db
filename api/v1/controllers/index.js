@@ -1,11 +1,8 @@
-export { AssetsController } from './AssetsController.js';
-export { SourcesController } from './SourcesController.js';
-export { MappingsController } from './MappingsController.js';
+export { AssetSubCategoriesController } from './AssetSubCategoriesController.js';
 export { CategoriesController } from './CategoriesController.js';
 export { GroupsController } from './GroupsController.js';
 export { RawTablesController } from './RawTablesController.js';
 export { AssetPoolController } from './AssetPoolController.js';
 export { GroupAssetSelectorsController } from './GroupAssetSelectorsController.js';
 export { MeasuresController } from './MeasuresController.js';
-export { AssetCategoriesController } from './AssetCategoriesController.js';
 export { ManipulatorsController } from './ManipulatorsController.js';

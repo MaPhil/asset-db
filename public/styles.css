@@ -1003,6 +1003,130 @@ button.sidebar-link {
   min-height: 7rem;
 }
 
+.form-row {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-row--triple {
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+}
+
+.tag-input {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: var(--color-surface);
+  min-height: 3.25rem;
+  position: relative;
+}
+
+.tag-input:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.tag-input__tags {
+  min-height: 1.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.tag-input__placeholder {
+  margin: 0;
+}
+
+.tag-input__input {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  width: 100%;
+  min-height: 1.75rem;
+}
+
+.tag-input__input:focus {
+  outline: none;
+}
+
+.tag-input__dropdown {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-elevated);
+  max-height: 16rem;
+  overflow-y: auto;
+  z-index: 5;
+}
+
+.tag-input__dropdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+.tag-input__dropdown-option {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+
+.tag-input__dropdown-option:hover,
+.tag-input__dropdown-option:focus {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.tag-input__dropdown-empty {
+  padding: 0.45rem 0.75rem;
+  color: var(--color-muted);
+}
+
+.tag-input__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #0f172a;
+  font-size: 0.85rem;
+}
+
+.tag-input__tag-text {
+  font-weight: 500;
+}
+
+.tag-input__tag-remove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: inherit;
+}
+
+.tag-input__tag-remove:hover,
+.tag-input__tag-remove:focus {
+  color: var(--color-danger);
+}
+
 .helper-text {
   color: var(--color-muted);
   font-size: 0.85rem;
@@ -1149,6 +1273,10 @@ button.sidebar-link {
   min-width: 220px;
   opacity: 1;
   transition: opacity var(--transition);
+}
+
+.toast--error {
+  background: #b91c1c;
 }
 
 .asset-category-create-form {
