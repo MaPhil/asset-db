@@ -184,64 +184,67 @@ export const GroupsController = {
     if (categorySlugs.length) {
       record.category_slug = categorySlugs;
     }
-    const id = store.insert('groups', record);
+    const createdSlug = store.insert('groups', record);
     if (categorySlugs.length) {
-      linkGroupToAssetSubCategories(categorySlugs, slug);
+      linkGroupToAssetSubCategories(categorySlugs, createdSlug);
     }
-    logger.info('Gruppe erstellt', { groupId: id });
-    res.json({ ok: true, id, slug });
+    logger.info('Gruppe erstellt', { slug: createdSlug });
+    res.json({ ok: true, slug: createdSlug });
   },
 
   update: (req, res) => {
-    const id = Number(req.params.id);
-    const { category_slugs, category_slug, ...rest } = req.body || {};
+    const slug = req.groupSlug || (req.group?.slug || '');
+    if (!slug) {
+      logger.warn('Ungültiger Gruppenbezeichner für Aktualisierung', { params: req.params });
+      return res.status(400).json({ error: 'Ungültiger Gruppenbezeichner.' });
+    }
+    const { category_slugs, category_slug, slug: _ignoredSlug, ...rest } = req.body || {};
     const slugPatch = buildCategorySlugPatch({ category_slugs, category_slug });
     const patch = {
       ...rest,
       ...slugPatch,
       updated_at: new Date().toISOString()
     };
-    const ok = store.update('groups', id, patch);
+    const ok = store.update('groups', slug, patch);
     if (!ok) {
-      logger.warn('Versuch, fehlende Gruppe zu aktualisieren', { groupId: id });
+      logger.warn('Versuch, fehlende Gruppe zu aktualisieren', { slug });
       return res.status(404).json({ error: 'Nicht gefunden.' });
     }
 
     const categorySlugs = Array.isArray(slugPatch.category_slug) ? slugPatch.category_slug : [];
-    if (categorySlugs.length && req.group) {
-      const groupSlug = req.group.slug || slugify(req.group.title || `gruppe-${id}`);
-      linkGroupToAssetSubCategories(categorySlugs, groupSlug);
+    if (categorySlugs.length) {
+      linkGroupToAssetSubCategories(categorySlugs, slug);
     }
 
-    logger.info('Gruppe aktualisiert', { groupId: id });
+    logger.info('Gruppe aktualisiert', { slug });
     res.json({ ok: true });
   },
 
   destroy: (req, res) => {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      logger.warn('Ungültiger Gruppenbezeichner für Löschvorgang', { groupId: req.params.id });
+    const slug = req.groupSlug || (req.group?.slug || '');
+    if (!slug) {
+      logger.warn('Ungültiger Gruppenbezeichner für Löschvorgang', { params: req.params });
       return res.status(400).json({ error: 'Ungültiger Gruppenbezeichner.' });
     }
 
     const groupsTable = store.get('groups');
-    const group = groupsTable.rows.find((row) => row.id === id);
+    const group = groupsTable.rows.find((row) => row.slug === slug);
     if (!group) {
-      logger.warn('Versuch, fehlende Gruppe zu löschen', { groupId: id });
+      logger.warn('Versuch, fehlende Gruppe zu löschen', { slug });
       return res.status(404).json({ error: 'Nicht gefunden.' });
     }
 
     const assignmentsTable = store.get('group_asset_types');
     const assignedAssetTypes = assignmentsTable.rows.filter(
-      (row) => Number(row?.group_id) === id
+      (row) => typeof row?.group_slug === 'string' && row.group_slug === slug
     );
     const selectorTable = store.get('group_asset_selectors');
-    const selectorCount = selectorTable.rows.filter((row) => Number(row?.group_id) === id).length;
+    const selectorCount = selectorTable.rows.filter((row) => row?.group_slug === slug).length;
     const hasLegacyAssetType = Boolean(group?.asset_type && String(group.asset_type).trim());
 
     if (assignedAssetTypes.length > 0 || hasLegacyAssetType || selectorCount > 0) {
       logger.warn('Gruppe mit zugewiesenen Asset-Typen oder Asset-Selectoren kann nicht gelöscht werden', {
-        groupId: id,
+        slug,
         assignmentCount: assignedAssetTypes.length,
         selectorCount,
         hasLegacyAssetType
@@ -254,34 +257,32 @@ export const GroupsController = {
         });
     }
 
-    store.remove('groups', id);
-    logger.info('Gruppe gelöscht', { groupId: id });
+    store.remove('groups', slug);
+    logger.info('Gruppe gelöscht', { slug });
     res.json({ ok: true });
   },
 
   linkCategory: (req, res) => {
-    const groupId = Number(req.params.id);
+    const slug = req.groupSlug || (req.group?.slug || '');
     const categoryId = Number(req.body.category_id);
     const categorySlug = normalizeSlug(req.body.category_slug);
-    logger.debug('Kategorie wird mit Gruppe verknüpft', { groupId, categoryId, categorySlug });
+    logger.debug('Kategorie wird mit Gruppe verknüpft', { slug, categoryId, categorySlug });
     const groupsTable = store.get('groups');
     const groups = Array.isArray(groupsTable?.rows) ? groupsTable.rows : [];
-    const group = groups.find((row) => row.id === groupId);
+    const group = groups.find((row) => row.slug === slug);
 
     if (!group) {
-      logger.warn('Versuch, fehlende Gruppe zu verknüpfen', { groupId, categoryId });
+      logger.warn('Versuch, fehlende Gruppe zu verknüpfen', { slug, categoryId });
       return res.status(404).json({ error: 'Gruppe nicht gefunden.' });
     }
 
     if (!categorySlug && (!Number.isInteger(categoryId) || categoryId <= 0)) {
-      logger.warn('Keine gültige Kategorie angegeben', { groupId, payload: req.body });
+      logger.warn('Keine gültige Kategorie angegeben', { slug, payload: req.body });
       return res.status(400).json({ error: 'Ungültige Kategorie.' });
     }
 
     const categoryIds = getGroupCategoryIds(group);
-
     const existingSlugs = getGroupCategorySlugs(group);
-
     const updatedCategories = [...categoryIds];
     const updatedSlugs = [...existingSlugs];
 
@@ -303,12 +304,12 @@ export const GroupsController = {
       updates.category_slug = updatedSlugs;
     }
 
-    store.update('groups', groupId, updates);
-    const groupSlug = group.slug || slugify(group.title || `gruppe-${groupId}`);
+    store.update('groups', slug, updates);
+    const groupSlug = group.slug || slug;
     if (updatedSlugs.length) {
       linkGroupToAssetSubCategories(updatedSlugs, groupSlug);
     }
-    logger.info('Kategorie mit Gruppe verknüpft', { groupId, categoryId });
+    logger.info('Kategorie mit Gruppe verknüpft', { slug, categoryId });
 
     res.json({ ok: true });
   }

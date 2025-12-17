@@ -76,36 +76,6 @@ const loadAssetSubCategorySlugMap = () => {
   }, new Map());
 };
 
-const loadAssetSubCategoryOptions = () => {
-  const payload = readJsonFile(ASSET_SUB_CATEGORIES_FILE, { data: {} });
-  const data = payload?.data ?? {};
-  const entries = Object.entries(data);
-  if (!entries.length) {
-    return [];
-  }
-  return entries
-    .map(([key, entry]) => {
-      const slug = normaliseText(entry?.slug) || normaliseText(entry?.name) || normaliseText(key);
-      if (!slug) {
-        return null;
-      }
-      const fallbackId = Number(entry?.id);
-      const fallbackTitle = Number.isFinite(fallbackId) && fallbackId > 0
-        ? `AssetUnterKategorie ${fallbackId}`
-        : `AssetUnterKategorie ${key}`;
-      const title =
-        normaliseText(entry?.title) ||
-        normaliseText(entry?.name) ||
-        slug ||
-        fallbackTitle;
-      return { slug, title };
-    })
-    .filter(Boolean)
-    .sort((a, b) =>
-      (a.title || '').localeCompare(b.title || '', 'de', { sensitivity: 'base', numeric: true })
-    );
-};
-
 const getGroupsByCategoryId = (categoryId) => {
   const groups = store.get('groups');
   const rows = Array.isArray(groups?.rows) ? groups.rows : [];
@@ -542,14 +512,17 @@ export const renderAssetStructureAssetSubCategory = (req, res) => {
     })
   };
 
-  const groupRows = groups.map((group) => ({
-    id: group.id,
-    slug: group.slug || slugify(group.title || `Gruppe ${group.id}`),
-    title: group.title || `Gruppe ${group.id}`,
-    status: group.status || '—',
-    assetType: group.asset_type || '—',
-    updatedAt: formatDateTime(group.updated_at) || '—'
-  }));
+  const groupRows = groups.map((group) => {
+    const slug = group.slug || slugify(group.title || 'gruppe');
+    const title = group.title || group.name || `Gruppe ${slug}`;
+    return {
+      slug,
+      title,
+      status: group.status || '—',
+      assetType: group.asset_type || '—',
+      updatedAt: formatDateTime(group.updated_at) || '—'
+    };
+  });
 
   res.render('asset-structure-asset-sub-category', {
     nav: 'assetStructure',
@@ -628,8 +601,6 @@ export const renderAssetStructureGroup = (req, res) => {
     return res.status(404).send('AssetUnterKategorie nicht gefunden');
   }
 
-  const assetSubCategoryOptions = loadAssetSubCategoryOptions();
-
   const groupsTable = store.get('groups');
   const group = groupsTable.rows.find((row) => row.slug === groupSlug);
 
@@ -643,12 +614,10 @@ export const renderAssetStructureGroup = (req, res) => {
   }
 
   const detail = {
-    id: group.id,
     title: group.title || '',
     displayTitle: group.title || 'Unbenannte Gruppe',
     description: group.description || '',
-    slug: group.slug || slugify(group.title || `gruppe-${group.id}`),
-    categorySlugs: getGroupCategorySlugs(group),
+    slug: group.slug || slugify(group.title || 'gruppe'),
     confidentiality: group.confidentiality || '',
     integrity: group.integrity || '',
     availability: group.availability || '',
@@ -656,7 +625,7 @@ export const renderAssetStructureGroup = (req, res) => {
     updatedAt: formatDateTime(group.updated_at) || '—'
   };
 
-  const selectorOverview = getGroupAssetSelectorOverview(group.id);
+  const selectorOverview = getGroupAssetSelectorOverview(detail.slug);
 
   res.render('asset-structure-group', {
     nav: 'assetStructure',
@@ -685,7 +654,6 @@ export const renderAssetStructureGroup = (req, res) => {
       })
     },
     group: detail,
-    assetSubCategoryOptions,
     groupSelectorState: selectorOverview,
     groupSelectorCount: selectorOverview?.selectors?.length ?? 0
   });

@@ -6,3 +6,4 @@ export { AssetPoolController } from './AssetPoolController.js';
 export { GroupAssetSelectorsController } from './GroupAssetSelectorsController.js';
 export { MeasuresController } from './MeasuresController.js';
 export { ManipulatorsController } from './ManipulatorsController.js';
+export { ReportsController } from './ReportsController.js';

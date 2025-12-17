@@ -101,23 +101,15 @@
           </div>
           <div class="form-field form-field--full">
             <label for="group-parent-category-input">Übergeordnete AssetUnterKategorie</label>
-            <div class="tag-input" data-group-parent-category>
-              <div class="tag-input__tags" data-group-category-tags></div>
-              <input
-                id="group-parent-category-input"
-                type="text"
-                class="tag-input__input"
-                placeholder="AssetUnterKategorie suchen"
-                autocomplete="off"
-                data-group-category-input
-                aria-describedby="group-category-helper"
-              />
-              <div class="tag-input__dropdown" data-group-category-dropdown hidden>
-                <ul class="tag-input__dropdown-list" data-group-category-option-list></ul>
-              </div>
-            </div>
+            <input
+              id="group-parent-category-input"
+              type="text"
+              value="{{assetSubCategory.title}}"
+              disabled
+              aria-describedby="group-category-helper"
+            />
             <p class="helper-text" id="group-category-helper">
-              Wählen Sie AssetUnterKategorien anhand der Maßnahmenliste aus.
+              Die übergeordnete AssetUnterKategorie ist festgelegt und kann nicht geändert werden.
             </p>
           </div>
           <div class="form-field form-field--full">
@@ -165,8 +157,6 @@
 </div>
 
 <script type="application/json" data-group-selector-state>{{{json groupSelectorState}}}</script>
-<script type="application/json" data-asset-sub-category-options>{{{json assetSubCategoryOptions}}}</script>
-<script type="application/json" data-group-selected-category-slugs>{{{json group.categorySlugs}}}</script>
 
 <div class="modal" data-group-selector-modal hidden aria-hidden="true">
   <div

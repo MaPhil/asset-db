@@ -15,10 +15,16 @@ import {
 import { renderImplementation } from '../controller/implementation.controller.js';
 import { renderMeasures } from '../controller/measures.controller.js';
 import { renderSource } from '../controller/sources.controller.js';
+import {
+  redirectToAbdeckungReport,
+  renderAbdeckungReport
+} from '../controller/reports.controller.js';
 
 const router = Router();
 
 router.get('/', redirectToAssetPool);
+router.get('/reports', redirectToAbdeckungReport);
+router.get('/reports/abdeckung', renderAbdeckungReport);
 router.get('/assets', redirectAssets);
 router.get('/asset-pool', renderAssetPool);
 router.get('/asset-pool/raw/:id', renderRawTable);

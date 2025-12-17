@@ -1,0 +1,86 @@
+<div class="reports-app" data-app="reports">
+  <section class="reports-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Reports</h1>
+        <p class="page-subtitle">
+          Analysieren Sie die Asset-Abdeckung nach Gruppen und sehen Sie direkt, wie viele Assets noch keiner Gruppe
+          zugeordnet sind.
+        </p>
+      </div>
+    </div>
+
+    <div class="reports-actions">
+      <button class="button button--primary" type="button" data-report-calc>
+        Report berechnen
+      </button>
+      <p class="helper-text" data-report-generated {{#unless reportState.generatedAt}}hidden{{/unless}}>
+        Letzte Berechnung: {{reportState.generatedAt}}
+      </p>
+    </div>
+
+    <div class="tab-group">
+      <div class="tab-list" role="tablist">
+        <button
+          class="tab-button is-active"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          data-tab="abdeckung"
+        >
+          Abdeckungsreport
+        </button>
+      </div>
+      <div class="tab-panels">
+        <section class="tab-panel" data-panel="abdeckung" role="tabpanel">
+          <p class="helper-text">
+            Für jede definierte Gruppe finden Sie die Anzahl der Assets, die über Asset-Selektoren zugeordnet werden.
+            Am Ende folgt die Menge der Assets ohne Gruppenzuordnung.
+          </p>
+
+          <div class="table-container" data-report-table {{#unless reportState.groups.length}}hidden{{/unless}}>
+            <div class="table-wrapper">
+              <div class="table-scroller">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Gruppe</th>
+                      <th>Assets</th>
+                    </tr>
+                  </thead>
+                  <tbody data-report-groups>
+                    {{#each reportState.groups}}
+                      <tr>
+                        <td>
+                          <div class="reports-table-group">
+                            <strong>{{title}}</strong>
+                            <p class="helper-text">{{slug}}</p>
+                          </div>
+                        </td>
+                        <td>{{assetCount}}</td>
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card--empty" data-report-empty {{#if reportState.groups.length}}hidden{{/if}}>
+            <p>Aktuell sind keine Gruppen mit Asset-Selektoren angelegt.</p>
+          </div>
+
+          <div class="reports-unmatched">
+            <span>Assets ohne Gruppenzuordnung:</span>
+            <strong data-report-unmatched>{{reportState.unmatchedCount}}</strong>
+            <span aria-hidden="true">•</span>
+            <span>Insgesamt im Asset-Pool: <strong data-report-total>{{reportState.totalAssets}}</strong></span>
+          </div>
+
+          <p class="error-text" data-report-error hidden></p>
+        </section>
+      </div>
+    </div>
+  </section>
+  <script type="application/json" data-report-state>{{{json reportState}}}</script>
+</div>

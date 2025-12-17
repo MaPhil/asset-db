@@ -8,32 +8,38 @@ import { logger } from '../../../lib/logger.js';
 
 export const GroupAssetSelectorsController = {
   async list(req, res) {
-    const groupId = req.params?.id;
+    const groupSlug = req.groupSlug || (req.group?.slug || '');
+    if (!groupSlug) {
+      return res.status(400).json({ error: 'Ungültiger Gruppenbezeichner.' });
+    }
     try {
-      const overview = listGroupAssetSelectors(groupId);
+      const overview = listGroupAssetSelectors(groupSlug);
       res.json(overview);
     } catch (error) {
       const status = error?.statusCode || 500;
       if (status >= 500) {
-        logger.error('Unable to load asset selector overview', error, { groupId });
+        logger.error('Unable to load asset selector overview', error, { groupSlug });
       } else {
-        logger.warn('Unable to load asset selector overview', { groupId, error: error.message });
+        logger.warn('Unable to load asset selector overview', { groupSlug, error: error.message });
       }
       res.status(status).json({ error: error.message || 'Asset selectors could not be loaded.' });
     }
   },
   async create(req, res) {
-    const groupId = req.params?.id;
+    const groupSlug = req.groupSlug || (req.group?.slug || '');
+    if (!groupSlug) {
+      return res.status(400).json({ error: 'Ungültiger Gruppenbezeichner.' });
+    }
     try {
-      const entry = createGroupAssetSelector(groupId, req.body);
+      const entry = createGroupAssetSelector(groupSlug, req.body);
       res.status(201).json(entry);
     } catch (error) {
       const status = error?.statusCode || 500;
       if (status >= 500) {
-        logger.error('Asset selector could not be created', error, { groupId });
+        logger.error('Asset selector could not be created', error, { groupSlug });
       } else {
         logger.warn('Asset selector could not be created', {
-          groupId,
+          groupSlug,
           error: error.message,
           payload: req.body
         });
@@ -42,18 +48,21 @@ export const GroupAssetSelectorsController = {
     }
   },
   async update(req, res) {
-    const groupId = req.params?.id;
+    const groupSlug = req.groupSlug || (req.group?.slug || '');
     const selectorId = req.params?.selectorId;
+    if (!groupSlug) {
+      return res.status(400).json({ error: 'Ungültiger Gruppenbezeichner.' });
+    }
     try {
-      const entry = updateGroupAssetSelector(groupId, selectorId, req.body);
+      const entry = updateGroupAssetSelector(groupSlug, selectorId, req.body);
       res.json(entry);
     } catch (error) {
       const status = error?.statusCode || 500;
       if (status >= 500) {
-        logger.error('Asset selector could not be updated', error, { groupId, selectorId });
+        logger.error('Asset selector could not be updated', error, { groupSlug, selectorId });
       } else {
         logger.warn('Asset selector could not be updated', {
-          groupId,
+          groupSlug,
           selectorId,
           error: error.message,
           payload: req.body
@@ -63,21 +72,24 @@ export const GroupAssetSelectorsController = {
     }
   },
   async assets(req, res) {
-    const groupId = req.params?.id;
+    const groupSlug = req.groupSlug || (req.group?.slug || '');
     const selectorId = req.params?.selectorId;
+    if (!groupSlug) {
+      return res.status(400).json({ error: 'Ungültiger Gruppenbezeichner.' });
+    }
     try {
-      const result = getGroupAssetSelectorAssets(groupId, selectorId);
+      const result = getGroupAssetSelectorAssets(groupSlug, selectorId);
       res.json(result);
     } catch (error) {
       const status = error?.statusCode || 500;
       if (status >= 500) {
         logger.error('Assets for asset selector could not be loaded', error, {
-          groupId,
+          groupSlug,
           selectorId
         });
       } else {
         logger.warn('Assets for asset selector could not be loaded', {
-          groupId,
+          groupSlug,
           selectorId,
           error: error.message
         });

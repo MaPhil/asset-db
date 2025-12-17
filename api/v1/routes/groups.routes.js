@@ -16,51 +16,48 @@ const resolveGroupBySlug = (req, res, next) => {
   const groupsTable = store.get('groups');
   const groups = Array.isArray(groupsTable?.rows) ? groupsTable.rows : [];
   const group = groups.find((row) => {
-    const candidate = row?.slug || slugify(row?.title || `gruppe-${row?.id}`);
+    const candidate =
+      (typeof row?.slug === 'string' && row.slug.trim()) ||
+      slugify(row?.title || '');
     return candidate === slug;
   });
   if (!group) {
     logger.warn('Gruppe mit Slug nicht gefunden', { slug });
     return res.status(404).json({ error: 'Gruppe nicht gefunden.' });
   }
-  req.params.id = group.id;
   req.group = group;
+  req.groupSlug = (typeof group.slug === 'string' ? group.slug.trim() : slug) || slug;
   next();
 };
 
 router.get('/', asyncHandler(GroupsController.list));
 router.post('/', asyncHandler(GroupsController.create));
-router.put('/:groupSlug', resolveGroupBySlug, validateId(), asyncHandler(GroupsController.update));
-router.delete('/:groupSlug', resolveGroupBySlug, validateId(), asyncHandler(GroupsController.destroy));
+router.put('/:groupSlug', resolveGroupBySlug, asyncHandler(GroupsController.update));
+router.delete('/:groupSlug', resolveGroupBySlug, asyncHandler(GroupsController.destroy));
 router.post(
   '/:groupSlug/link-category',
   resolveGroupBySlug,
-  validateId(),
   asyncHandler(GroupsController.linkCategory)
 );
 router.get(
   '/:groupSlug/asset-selectors',
   resolveGroupBySlug,
-  validateId(),
   asyncHandler(GroupAssetSelectorsController.list)
 );
 router.post(
   '/:groupSlug/asset-selectors',
   resolveGroupBySlug,
-  validateId(),
   asyncHandler(GroupAssetSelectorsController.create)
 );
 router.put(
   '/:groupSlug/asset-selectors/:selectorId',
   resolveGroupBySlug,
-  validateId(),
   validateId('selectorId'),
   asyncHandler(GroupAssetSelectorsController.update)
 );
 router.get(
   '/:groupSlug/asset-selectors/:selectorId/assets',
   resolveGroupBySlug,
-  validateId(),
   validateId('selectorId'),
   asyncHandler(GroupAssetSelectorsController.assets)
 );

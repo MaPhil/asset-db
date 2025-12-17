@@ -19,7 +19,8 @@ const API = {
   groupAssetSelectorAssets: (groupSlug, selectorId) =>
     `/api/v1/groups/${encodeURIComponent(groupSlug)}/asset-selectors/${selectorId}/assets`,
   measures: '/api/v1/measures',
-  measuresUpload: '/api/v1/measures/upload'
+  measuresUpload: '/api/v1/measures/upload',
+  reportsCoverage: '/api/v1/reports/abdeckung'
 };
 
 const PAGE_SIZE = 25;
@@ -100,6 +101,11 @@ const state = {
   },
   measures: {
     isUploadOpen: false
+  },
+  reports: {
+    report: null,
+    isCalculating: false,
+    error: null
   }
 };
 
@@ -2739,63 +2745,6 @@ function setupAssetSubCategoryDetails(root) {
   });
 }
 
-function readJsonScriptData(selector) {
-  const script = document.querySelector(selector);
-  if (!script) {
-    return null;
-  }
-  const payload = script.textContent || '';
-  if (!payload.trim()) {
-    return null;
-  }
-  try {
-    return JSON.parse(payload);
-  } catch (error) {
-    console.error('JSON-Daten konnten nicht geparst werden', { selector, error });
-    return null;
-  }
-}
-
-function normalizeCategoryLabel(value) {
-  if (typeof value !== 'string') {
-    return '';
-  }
-  return value.trim().toLowerCase();
-}
-
-function normalizeCategorySlug(value) {
-  if (typeof value !== 'string') {
-    return '';
-  }
-  return value.trim().toLowerCase();
-}
-
-async function loadAssetSubCategoryOptionsFromApi() {
-  try {
-    const response = await fetchJson(API.assetSubCategories);
-    const entries = Array.isArray(response?.entries) ? response.entries : [];
-    return entries
-      .map((entry) => {
-        const slug = typeof entry?.slug === 'string' ? entry.slug.trim() : '';
-        if (!slug) {
-          return null;
-        }
-        const title =
-          (typeof entry?.title === 'string' && entry.title.trim()) ||
-          (typeof entry?.name === 'string' && entry.name.trim()) ||
-          slug;
-        return { slug, title };
-      })
-      .filter(Boolean)
-      .sort((a, b) =>
-        (a.title || '').localeCompare(b.title || '', 'de', { sensitivity: 'base', numeric: true })
-      );
-  } catch (error) {
-    console.error('AssetUnterkategorien konnten nicht geladen werden', error);
-    return [];
-  }
-}
-
 async function setupGroupDetails(root) {
   if (!root) {
     return;
@@ -2805,14 +2754,6 @@ async function setupGroupDetails(root) {
     const form = select(root, '[data-group-details-form]');
     const saveButton = select(root, '[data-save-group-details]');
     if (!form || !saveButton) {
-      return;
-    }
-
-    const tagsContainer = select(form, '[data-group-category-tags]');
-    const tagsInput = select(form, '[data-group-category-input]');
-    const dropdown = select(form, '[data-group-category-dropdown]');
-    const dropdownList = select(form, '[data-group-category-option-list]');
-    if (!tagsContainer || !tagsInput) {
       return;
     }
 
@@ -2828,73 +2769,6 @@ async function setupGroupDetails(root) {
     if (!groupSlug) {
       return;
     }
-
-    const optionsPayload = readJsonScriptData('[data-asset-sub-category-options]');
-    let assetSubCategoryOptions = Array.isArray(optionsPayload) ? optionsPayload : [];
-    if (!assetSubCategoryOptions.length) {
-      assetSubCategoryOptions = await loadAssetSubCategoryOptionsFromApi();
-    }
-
-    const normalizedOptions = assetSubCategoryOptions
-      .map((entry) => {
-        const slug = typeof entry?.slug === 'string' ? entry.slug.trim() : '';
-        if (!slug) {
-          return null;
-        }
-        const rawTitle =
-          (typeof entry?.title === 'string' && entry.title.trim()) ||
-          (typeof entry?.name === 'string' && entry.name.trim()) ||
-          (typeof entry?.label === 'string' && entry.label.trim()) ||
-          '';
-        const title = rawTitle || slug;
-        return { slug, title };
-      })
-      .filter(Boolean);
-
-    const optionsBySlug = new Map();
-    const optionsByLabel = new Map();
-    const optionsByNormalizedSlug = new Map();
-
-    normalizedOptions.forEach((entry) => {
-      const slug = entry.slug;
-      if (!slug || optionsBySlug.has(slug)) {
-        return;
-      }
-      const title = entry.title || slug;
-      const normalizedTitle = normalizeCategoryLabel(title);
-      const normalizedSlug = normalizeCategorySlug(slug);
-      const payload = { slug, title };
-      optionsBySlug.set(slug, payload);
-      if (normalizedTitle && !optionsByLabel.has(normalizedTitle)) {
-        optionsByLabel.set(normalizedTitle, payload);
-      }
-      if (normalizedSlug && !optionsByNormalizedSlug.has(normalizedSlug)) {
-        optionsByNormalizedSlug.set(normalizedSlug, payload);
-      }
-    });
-
-    const sortedOptions = Array.from(optionsBySlug.values()).sort((a, b) =>
-      (a.title || '').localeCompare(b.title || '', 'de', { sensitivity: 'base', numeric: true })
-    );
-
-    const selectedPayload = readJsonScriptData('[data-group-selected-category-slugs]');
-    const initialCategorySlugs = Array.isArray(selectedPayload) ? selectedPayload : [];
-
-    const selectedCategories = new Map();
-    initialCategorySlugs.forEach((value) => {
-      const slug = typeof value === 'string' ? value.trim() : '';
-      if (!slug) {
-        return;
-      }
-      const normalizedSlug = normalizeCategorySlug(slug);
-      const entry =
-        optionsBySlug.get(slug) ||
-        optionsByNormalizedSlug.get(normalizedSlug) ||
-        { slug, title: slug };
-      selectedCategories.set(entry.slug, entry);
-    });
-
-    renderGroupCategoryTags();
 
     function setFeedback(message) {
       if (!feedbackEl) {
@@ -2913,209 +2787,6 @@ async function setupGroupDetails(root) {
       setFeedback('');
     }
 
-    function renderGroupCategoryTags() {
-      tagsContainer.innerHTML = '';
-      if (!selectedCategories.size) {
-        const placeholder = document.createElement('p');
-        placeholder.className = 'helper-text tag-input__placeholder';
-        placeholder.textContent = 'Noch keine AssetUnterKategorien ausgewählt.';
-        tagsContainer.appendChild(placeholder);
-        return;
-      }
-      selectedCategories.forEach((entry) => {
-        const tag = document.createElement('span');
-        tag.className = 'tag-input__tag';
-        tag.dataset.categorySlug = entry.slug;
-
-        const label = document.createElement('span');
-        label.className = 'tag-input__tag-text';
-        label.textContent = entry.title;
-        tag.appendChild(label);
-
-        const removeButton = document.createElement('button');
-        removeButton.type = 'button';
-        removeButton.className = 'tag-input__tag-remove';
-        removeButton.innerHTML = '&times;';
-        removeButton.setAttribute(
-          'aria-label',
-          `AssetUnterKategorie entfernen${entry.title ? `: ${entry.title}` : ''}`
-        );
-        removeButton.addEventListener('click', () => {
-          selectedCategories.delete(entry.slug);
-          renderGroupCategoryTags();
-          clearFeedback();
-        });
-        tag.appendChild(removeButton);
-        tagsContainer.appendChild(tag);
-      });
-    }
-
-    function findCategoryOption(value) {
-      const trimmed = typeof value === 'string' ? value.trim() : '';
-      if (!trimmed) {
-        return null;
-      }
-      if (optionsBySlug.has(trimmed)) {
-        return optionsBySlug.get(trimmed);
-      }
-      const normalizedSlug = normalizeCategorySlug(trimmed);
-      if (normalizedSlug && optionsByNormalizedSlug.has(normalizedSlug)) {
-        return optionsByNormalizedSlug.get(normalizedSlug);
-      }
-      const normalizedLabel = normalizeCategoryLabel(trimmed);
-      if (normalizedLabel && optionsByLabel.has(normalizedLabel)) {
-        return optionsByLabel.get(normalizedLabel);
-      }
-      return null;
-    }
-
-    function filterCategoryOptions(query) {
-      const normalizedLabelQuery = normalizeCategoryLabel(query);
-      const normalizedSlugQuery = normalizeCategorySlug(query);
-      return sortedOptions.filter((entry) => {
-        const matchesTitle =
-          normalizedLabelQuery && entry.title
-            ? entry.title.toLowerCase().includes(normalizedLabelQuery)
-            : false;
-        const matchesSlug =
-          normalizedSlugQuery && entry.slug
-            ? entry.slug.toLowerCase().includes(normalizedSlugQuery)
-            : false;
-        const matchesQuery =
-          (!normalizedLabelQuery && !normalizedSlugQuery) || matchesTitle || matchesSlug;
-        const isSelected = selectedCategories.has(entry.slug);
-        return matchesQuery && !isSelected;
-      });
-    }
-
-    function closeDropdown() {
-      if (!dropdown) {
-        return;
-      }
-      dropdown.hidden = true;
-    }
-
-    function openDropdown() {
-      if (!dropdown) {
-        return;
-      }
-      dropdown.hidden = false;
-    }
-
-    function addCategory(entry) {
-      if (!entry?.slug) {
-        return false;
-      }
-      const slug = entry.slug;
-      if (selectedCategories.has(slug)) {
-        setFeedback('AssetUnterKategorie wurde bereits hinzugefügt.');
-        return false;
-      }
-      selectedCategories.set(slug, {
-        slug,
-        title: entry.title || slug
-      });
-      renderGroupCategoryTags();
-      clearFeedback();
-      return true;
-    }
-
-    function renderDropdown(filter = '') {
-      if (!dropdown || !dropdownList) {
-        return;
-      }
-      const matches = filterCategoryOptions(filter).slice(0, 20);
-      dropdownList.innerHTML = '';
-      if (!matches.length) {
-        const empty = document.createElement('li');
-        empty.className = 'tag-input__dropdown-empty';
-        empty.textContent = 'Keine AssetUnterKategorien gefunden.';
-        dropdownList.appendChild(empty);
-      } else {
-        matches.forEach((entry) => {
-          const item = document.createElement('li');
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'tag-input__dropdown-option';
-          button.dataset.categoryOptionSlug = entry.slug;
-          button.textContent = entry.title;
-          item.appendChild(button);
-          dropdownList.appendChild(item);
-        });
-      }
-      openDropdown();
-    }
-
-    function commitCategoryInput() {
-      const rawValue = tagsInput.value ?? '';
-      const trimmed = rawValue.trim();
-      if (!trimmed) {
-        tagsInput.value = '';
-        closeDropdown();
-        return;
-      }
-      const match = findCategoryOption(trimmed);
-      if (!match) {
-        setFeedback('AssetUnterKategorie konnte nicht gefunden werden.');
-        tagsInput.value = '';
-        renderDropdown('');
-        return;
-      }
-      const added = addCategory(match);
-      tagsInput.value = '';
-      if (added) {
-        closeDropdown();
-      }
-    }
-
-    tagsInput.addEventListener('input', () => {
-      renderDropdown(tagsInput.value);
-    });
-    tagsInput.addEventListener('focus', () => renderDropdown(tagsInput.value));
-    tagsInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ',') {
-        event.preventDefault();
-        commitCategoryInput();
-      }
-    });
-    tagsInput.addEventListener('blur', () => {
-      window.setTimeout(() => {
-        if (dropdown && dropdown.contains(document.activeElement)) {
-          return;
-        }
-        commitCategoryInput();
-      }, 150);
-    });
-
-    if (dropdownList) {
-      dropdownList.addEventListener('click', (event) => {
-        const target = event.target.closest('[data-category-option-slug]');
-        if (!target) {
-          return;
-        }
-        const option = optionsBySlug.get(target.dataset.categoryOptionSlug);
-        if (!option) {
-          return;
-        }
-        addCategory(option);
-        tagsInput.value = '';
-        closeDropdown();
-        tagsInput.focus();
-      });
-    }
-
-    if (dropdown) {
-      document.addEventListener('click', (event) => {
-        if (!dropdown) {
-          return;
-        }
-        if (dropdown.contains(event.target) || tagsInput === event.target) {
-          return;
-        }
-        closeDropdown();
-      });
-    }
-
     let isSaving = false;
     saveButton.addEventListener('click', async () => {
       if (isSaving) {
@@ -3126,20 +2797,17 @@ async function setupGroupDetails(root) {
       saveButton.dataset.loading = 'true';
       clearFeedback();
 
-      const categorySlugs = Array.from(selectedCategories.values()).map((entry) => entry.slug);
-
       const payload = {
         title: titleInput?.value?.trim() ?? '',
         description: descriptionInput?.value?.trim() ?? '',
         confidentiality: confidentialitySelect?.value ?? '',
         integrity: integritySelect?.value ?? '',
-        availability: availabilitySelect?.value ?? '',
-        category_slugs: categorySlugs
+        availability: availabilitySelect?.value ?? ''
       };
 
       try {
         await fetchJson(`${API.groups}/${encodeURIComponent(groupSlug)}`, {
-          method: 'PATCH',
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
@@ -3916,7 +3584,8 @@ function renderSelectorAssetsContent() {
       } else if (col.key === '__source') {
         value = row?.rawTableTitle || '';
       } else {
-        value = row?.values?.[col.key];
+        const assetValue = row?.values?.[col.key];
+        value = assetValue !== undefined ? assetValue : row?.[col.key];
       }
       td.textContent = formatSelectorCellValue(value);
       tr.appendChild(td);
@@ -4559,8 +4228,180 @@ async function initAssetPoolApp() {
   }
 }
 
+const REPORT_DEFAULT_DATA = {
+  groups: [],
+  totalAssets: 0,
+  unmatchedCount: 0,
+  generatedAt: null
+};
+
+function normalizeReportData(payload) {
+  const base = payload && typeof payload === 'object' ? payload : {};
+  const groups = Array.isArray(base.groups) ? base.groups : [];
+  const normalizedGroups = groups
+    .map((group) => {
+      const slug = typeof group?.slug === 'string' ? group.slug : '';
+      const title =
+        typeof group?.title === 'string'
+          ? group.title
+          : typeof group?.name === 'string'
+            ? group.name
+            : slug || 'Unbekannte Gruppe';
+      const assetCount = Number.isInteger(group?.assetCount) ? group.assetCount : 0;
+      return { slug, title, assetCount };
+    })
+    .sort((a, b) => {
+      const left = (a.title || '').toLowerCase();
+      const right = (b.title || '').toLowerCase();
+      return left.localeCompare(right, 'de', { sensitivity: 'base', numeric: true });
+    });
+
+  return {
+    groups: normalizedGroups,
+    totalAssets: Number.isInteger(base.totalAssets) ? base.totalAssets : 0,
+    unmatchedCount: Number.isInteger(base.unmatchedCount) ? base.unmatchedCount : 0,
+    generatedAt: typeof base.generatedAt === 'string' ? base.generatedAt : null
+  };
+}
+
+function getInitialReportData(root) {
+  const script = select(root, '[data-report-state]');
+  if (!script) {
+    return null;
+  }
+  try {
+    return JSON.parse(script.textContent || '');
+  } catch (err) {
+    return null;
+  }
+}
+
+function formatReportDate(value) {
+  if (!value) {
+    return '';
+  }
+  try {
+    return new Intl.DateTimeFormat('de-DE', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(new Date(value));
+  } catch (err) {
+    return value;
+  }
+}
+
+function renderReportsView(root) {
+  const report = state.reports.report ? state.reports.report : REPORT_DEFAULT_DATA;
+  const hasGroups = Array.isArray(report.groups) && report.groups.length > 0;
+  const tableBody = select(root, '[data-report-groups]');
+  if (tableBody) {
+    tableBody.innerHTML = hasGroups
+      ? report.groups
+          .map(
+            (group) => `
+              <tr>
+                <td>
+                  <div class="reports-table-group">
+                    <strong>${escapeHtml(group.title)}</strong>
+                    <p class="helper-text">${escapeHtml(group.slug)}</p>
+                  </div>
+                </td>
+                <td>${escapeHtml(String(group.assetCount ?? 0))}</td>
+              </tr>
+            `
+          )
+          .join('')
+      : '';
+  }
+
+  const tableContainer = select(root, '[data-report-table]');
+  if (tableContainer) {
+    tableContainer.hidden = !hasGroups;
+  }
+
+  const emptyCard = select(root, '[data-report-empty]');
+  if (emptyCard) {
+    emptyCard.hidden = hasGroups;
+  }
+
+  const unmatchedEl = select(root, '[data-report-unmatched]');
+  if (unmatchedEl) {
+    unmatchedEl.textContent = String(report.unmatchedCount ?? 0);
+  }
+
+  const totalEl = select(root, '[data-report-total]');
+  if (totalEl) {
+    totalEl.textContent = String(report.totalAssets ?? 0);
+  }
+
+  const generatedEl = select(root, '[data-report-generated]');
+  if (generatedEl) {
+    if (report.generatedAt) {
+      generatedEl.hidden = false;
+      generatedEl.textContent = `Letzte Berechnung: ${formatReportDate(report.generatedAt)}`;
+    } else {
+      generatedEl.hidden = true;
+    }
+  }
+
+  const errorEl = select(root, '[data-report-error]');
+  if (errorEl) {
+    if (state.reports.error) {
+      errorEl.hidden = false;
+      errorEl.textContent = state.reports.error;
+    } else {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+  }
+
+  const button = select(root, '[data-report-calc]');
+  if (button) {
+    if (state.reports.isCalculating) {
+      button.disabled = true;
+      button.textContent = 'Berechnen…';
+    } else {
+      button.disabled = false;
+      button.textContent = 'Report berechnen';
+    }
+  }
+}
+
+async function handleCalculateReport(root) {
+  if (state.reports.isCalculating) {
+    return;
+  }
+  state.reports.isCalculating = true;
+  state.reports.error = null;
+  renderReportsView(root);
+  try {
+    const payload = await fetchJson(API.reportsCoverage, { method: 'POST' });
+    state.reports.report = normalizeReportData(payload);
+  } catch (error) {
+    state.reports.error = error?.payload?.error || error.message;
+  } finally {
+    state.reports.isCalculating = false;
+    renderReportsView(root);
+  }
+}
+
+function initReportsApp() {
+  const root = document.querySelector('[data-app="reports"]');
+  if (!root) {
+    return;
+  }
+
+  const initialData = getInitialReportData(root);
+  state.reports.report = normalizeReportData(initialData);
+  renderReportsView(root);
+
+  const button = select(root, '[data-report-calc]');
+  button?.addEventListener('click', () => handleCalculateReport(root));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initAssetPoolApp();
   initAssetStructureApp();
   initMeasuresApp();
+  initReportsApp();
 });
