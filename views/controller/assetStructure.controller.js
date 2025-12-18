@@ -1,6 +1,6 @@
 import { ASSET_SUB_CATEGORIES_FILE, readJsonFile, store } from '../../lib/storage.js';
 import { logger } from '../../lib/logger.js';
-import { getIgnoredAssetSubCategoryIds } from '../../lib/assetCategories.js';
+import { getIgnoredAssetSubCategorySlugs } from '../../lib/assetCategories.js';
 import { getGroupAssetSelectorOverview } from '../../lib/groupAssetSelectors.js';
 import {
   buildAssetStructure,
@@ -27,20 +27,12 @@ const formatDateTime = (value) => {
   }
 };
 
-const getGroupCategoryIds = (group) => {
-  const raw = Array.isArray(group?.category_ids)
-    ? group.category_ids
-    : group?.category_id
-      ? [group.category_id]
-      : [];
-
-  return raw
-    .map((value) => Number(value))
-    .filter((value, index, array) => Number.isInteger(value) && value > 0 && array.indexOf(value) === index);
-};
-
 const getGroupCategorySlugs = (group) => {
   const entries = [];
+
+  if (group?.asset_sub_category) {
+    entries.push(group.asset_sub_category);
+  }
 
   if (Array.isArray(group?.category_slug)) {
     entries.push(...group.category_slug);
@@ -59,53 +51,24 @@ const getGroupCategorySlugs = (group) => {
     .filter((value, index, array) => value && array.indexOf(value) === index);
 };
 
-const loadAssetSubCategorySlugMap = () => {
-  const payload = readJsonFile(ASSET_SUB_CATEGORIES_FILE, null);
-  const data = payload?.data;
-  if (!data || typeof data !== 'object') {
-    return new Map();
-  }
-
-  return Object.entries(data).reduce((map, [key, row]) => {
-    const slug = normaliseText(row?.slug) || normaliseText(row?.name) || normaliseText(key);
-    const id = Number(row?.id);
-    if (slug && Number.isInteger(id) && id > 0) {
-      map.set(slug, id);
-    }
-    return map;
-  }, new Map());
-};
-
-const getGroupsByCategoryId = (categoryId) => {
+const getGroupsByCategorySlug = (categorySlug) => {
   const groups = store.get('groups');
   const rows = Array.isArray(groups?.rows) ? groups.rows : [];
-  const slugMap = loadAssetSubCategorySlugMap();
+  if (!categorySlug) {
+    return rows.filter((group) => getGroupCategorySlugs(group).length === 0);
+  }
 
-  return rows.filter((group) => {
-    if (getGroupCategoryIds(group).includes(categoryId)) {
-      return true;
-    }
-    return getGroupCategorySlugs(group).some((slug) => slugMap.get(slug) === categoryId);
-  });
+  return rows.filter((group) => getGroupCategorySlugs(group).includes(categorySlug));
 };
 
 const buildGroupCounts = () => {
   const groups = store.get('groups');
   const rows = Array.isArray(groups?.rows) ? groups.rows : [];
-  const slugMap = loadAssetSubCategorySlugMap();
 
   return rows.reduce((map, group) => {
-    const categoryIds = new Set(getGroupCategoryIds(group));
     getGroupCategorySlugs(group).forEach((slug) => {
-      const mappedId = slugMap.get(slug);
-      if (mappedId) {
-        categoryIds.add(mappedId);
-      }
-    });
-
-    categoryIds.forEach((categoryId) => {
-      const current = map.get(categoryId) ?? 0;
-      map.set(categoryId, current + 1);
+      const current = map.get(slug) ?? 0;
+      map.set(slug, current + 1);
     });
     return map;
   }, new Map());
@@ -172,45 +135,36 @@ const loadAssetSubCategoriesBySubTopicTitle = (subTopicTitle) => {
 
   return Object.entries(data)
     .map(([key, row]) => {
-      const idFromRow = Number(row?.id);
-      const idFromKey = Number(key);
-      const id = Number.isInteger(idFromRow) && idFromRow > 0 ? idFromRow : idFromKey;
-      if (!Number.isInteger(id) || id <= 0) {
+      const normalizedRow = row && typeof row === 'object' ? row : {};
+      const slugCandidate = normaliseText(normalizedRow.slug) || normaliseText(key);
+      if (!slugCandidate) {
         return null;
       }
-
-      const normalizedRow = row && typeof row === 'object' ? row : {};
-      const title = normaliseText(normalizedRow.title || normalizedRow.name) || `AssetUnterKategorie ${id}`;
-      const slugSource = normaliseText(normalizedRow.slug) || title;
-      const slug = slugify(slugSource || `AssetUnterKategorie ${id}`);
-
+      const slug = slugify(slugCandidate) || slugCandidate;
+      const title =
+        normaliseText(normalizedRow.title || normalizedRow.name) || slug || 'AssetUnterKategorie';
       return {
-        id,
         ...normalizedRow,
-        slug
+        slug,
+        title
       };
     })
     .filter(Boolean)
     .filter((row) => {
-      if (!Number.isInteger(row.id) || row.id <= 0) {
-        return false;
-      }
-
       const links = Array.isArray(row.links) ? row.links : [];
       if (!links.length) {
         return false;
       }
-
       return links.some((link) => normaliseText(link?.subTopicTitle) === normalisedTargetTitle);
     })
     .map((row) => {
       const measureId = Number(row?.measure?.id);
       const measureTitle = normaliseText(row?.measure?.title);
-
+      const displayTitle =
+        normaliseText(row?.title) || normaliseText(row?.name) || row?.slug || 'AssetUnterKategorie';
       return {
-        id: row.id,
         slug: row.slug,
-        title: normaliseText(row?.title || row?.name) || `AssetUnterKategorie ${row.id}`,
+        title: displayTitle,
         owner: normaliseText(row?.owner) || normaliseText(row?.group_owner) || '—',
         integrity: normaliseText(row?.integrity) || '—',
         availability: normaliseText(row?.availability) || '—',
@@ -224,11 +178,11 @@ const loadAssetSubCategoriesBySubTopicTitle = (subTopicTitle) => {
     .sort((a, b) => a.title.localeCompare(b.title, 'de', { sensitivity: 'base', numeric: true }));
 };
 
-const buildMeasuresUrl = ({ topicId, subTopicId, assetSubCategoryId }) => {
+const buildMeasuresUrl = ({ topicId, subTopicId, assetSubCategorySlug }) => {
   const params = new URLSearchParams();
   const topicValue = normaliseMeasureFilterValue(topicId);
   const subTopicValue = normaliseMeasureFilterValue(subTopicId);
-  const assetSubCategoryValue = normaliseMeasureFilterValue(assetSubCategoryId);
+  const assetSubCategoryValue = normaliseMeasureFilterValue(assetSubCategorySlug);
 
   if (topicValue) {
     params.set('topic', topicValue);
@@ -249,7 +203,7 @@ const buildMeasuresUrl = ({ topicId, subTopicId, assetSubCategoryId }) => {
 
 export const renderAssetStructure = (req, res) => {
   const { topics } = buildAssetStructure();
-  const ignoredAssetSubCategoryIds = getIgnoredAssetSubCategoryIds();
+  const ignoredAssetSubCategorySlugs = getIgnoredAssetSubCategorySlugs();
   const groupCounts = buildGroupCounts();
 
   const topicRows = topics.map((topic) => {
@@ -257,7 +211,7 @@ export const renderAssetStructure = (req, res) => {
     const measuresUrl = buildMeasuresUrl({ topicId: topicMeasureId });
     const assetSubCategoryCount = topic.subTopics.reduce((sum, subTopic) => {
       const visibleSubCategories = subTopic.assetSubCategories.filter(
-        (assetSubCategory) => !ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+        (assetSubCategory) => !ignoredAssetSubCategorySlugs.has(assetSubCategory.slug)
       );
       return sum + visibleSubCategories.length;
     }, 0);
@@ -267,9 +221,9 @@ export const renderAssetStructure = (req, res) => {
         sum +
         subTopic.assetSubCategories.reduce(
           (categorySum, assetSubCategory) =>
-            ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+            ignoredAssetSubCategorySlugs.has(assetSubCategory.slug)
               ? categorySum
-              : categorySum + (groupCounts.get(assetSubCategory.id) ?? 0),
+              : categorySum + (groupCounts.get(assetSubCategory.slug) ?? 0),
           0
         )
       );
@@ -283,7 +237,7 @@ export const renderAssetStructure = (req, res) => {
       groupCount,
       owner: collectOwners(
         topic.assetSubCategories.filter(
-          (assetSubCategory) => !ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+          (assetSubCategory) => !ignoredAssetSubCategorySlugs.has(assetSubCategory.slug)
         )
       ),
       measuresUrl
@@ -308,17 +262,17 @@ export const renderAssetStructureTopic = (req, res) => {
   }
 
   const groupCounts = buildGroupCounts();
-  const ignoredAssetSubCategoryIds = getIgnoredAssetSubCategoryIds();
+  const ignoredAssetSubCategorySlugs = getIgnoredAssetSubCategorySlugs();
 
   const subTopics = topic.subTopics.map((subTopic) => {
     const assetSubCategoryCount = subTopic.assetSubCategories.filter(
-      (assetSubCategory) => !ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+      (assetSubCategory) => !ignoredAssetSubCategorySlugs.has(assetSubCategory.slug)
     ).length;
     const groupCount = subTopic.assetSubCategories.reduce(
       (sum, assetSubCategory) =>
-        ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+        ignoredAssetSubCategorySlugs.has(assetSubCategory.slug)
           ? sum
-          : sum + (groupCounts.get(assetSubCategory.id) ?? 0),
+          : sum + (groupCounts.get(assetSubCategory.slug) ?? 0),
       0
     );
     const measuresUrl = buildMeasuresUrl({
@@ -334,7 +288,7 @@ export const renderAssetStructureTopic = (req, res) => {
       groupCount,
       owner: collectOwners(
         subTopic.assetSubCategories.filter(
-          (assetSubCategory) => !ignoredAssetSubCategoryIds.has(assetSubCategory.id)
+          (assetSubCategory) => !ignoredAssetSubCategorySlugs.has(assetSubCategory.slug)
         )
       ),
       measuresUrl,
@@ -376,19 +330,18 @@ export const renderAssetStructureSubTopic = (req, res) => {
   }
 
   const groupCounts = buildGroupCounts();
-  const ignoredAssetSubCategoryIds = getIgnoredAssetSubCategoryIds();
+  const ignoredAssetSubCategorySlugs = getIgnoredAssetSubCategorySlugs();
 
   const targetSubTopicTitle = subTopic.displayTitle || subTopic.title || SUB_TOPIC_FALLBACK_TITLE;
 
   const assetSubCategories = loadAssetSubCategoriesBySubTopicTitle(targetSubTopicTitle).map(
     (assetSubCategory) => {
-      const isIgnored = ignoredAssetSubCategoryIds.has(assetSubCategory.id);
+      const isIgnored = ignoredAssetSubCategorySlugs.has(assetSubCategory.slug);
 
       return {
         slug: assetSubCategory.slug,
-        id: assetSubCategory.id,
         title:
-          assetSubCategory.title || assetSubCategory.name || `AssetUnterKategorie ${assetSubCategory.id}`,
+          assetSubCategory.title || assetSubCategory.name || `AssetUnterKategorie ${assetSubCategory.slug}`,
         owner:
           normaliseText(assetSubCategory.owner) ||
           normaliseText(assetSubCategory.group_owner) ||
@@ -396,11 +349,11 @@ export const renderAssetStructureSubTopic = (req, res) => {
         integrity: normaliseText(assetSubCategory.integrity) || '—',
         availability: normaliseText(assetSubCategory.availability) || '—',
         confidentiality: normaliseText(assetSubCategory.confidentiality) || '—',
-        groupCount: groupCounts.get(assetSubCategory.id) ?? 0,
+        groupCount: groupCounts.get(assetSubCategory.slug) ?? 0,
         measuresUrl: buildMeasuresUrl({
           topicId: topic?.measure?.id,
           subTopicId: subTopic?.measure?.id,
-          assetSubCategoryId: assetSubCategory?.measure?.id
+          assetSubCategorySlug: assetSubCategory.slug
         }),
         isIgnored
       };
@@ -482,7 +435,7 @@ export const renderAssetStructureAssetSubCategory = (req, res) => {
     return res.status(404).send('AssetUnterKategorie nicht gefunden');
   }
 
-  const assetSubCategoryId = assetSubCategory.id;
+  const assetSubCategorySlugValue = assetSubCategory.slug;
 
   const groupsTable = store.get('groups');
   const slugSourceGroups = Array.isArray(assetSubCategory.groups) ? assetSubCategory.groups : [];
@@ -493,10 +446,9 @@ export const renderAssetStructureAssetSubCategory = (req, res) => {
           .map((slug) => availableGroups.find((row) => row.slug === slug))
           .filter(Boolean)
       : [];
-  const groups = referencedGroups.length ? referencedGroups : getGroupsByCategoryId(assetSubCategoryId);
+  const groups = referencedGroups.length ? referencedGroups : getGroupsByCategorySlug(assetSubCategorySlugValue);
 
   const viewModel = {
-    id: assetSubCategoryId,
     slug: assetSubCategory.slug,
     title: assetSubCategory.title || assetSubCategory.name || '',
     displayTitle: assetSubCategory.title || assetSubCategory.name || 'Unbenannte AssetUnterKategorie',
@@ -508,7 +460,7 @@ export const renderAssetStructureAssetSubCategory = (req, res) => {
     measuresUrl: buildMeasuresUrl({
       topicId: topic?.measure?.id,
       subTopicId: subTopic?.measure?.id,
-      assetSubCategoryId: assetSubCategory?.measure?.id
+      assetSubCategorySlug: assetSubCategorySlugValue
     })
   };
 
@@ -606,7 +558,6 @@ export const renderAssetStructureGroup = (req, res) => {
 
   if (!group) {
     logger.warn('Gruppe für UI-Route nicht gefunden', {
-      assetSubCategoryId: assetSubCategory.id,
       assetSubCategorySlug,
       groupSlug
     });
@@ -645,12 +596,12 @@ export const renderAssetStructureGroup = (req, res) => {
       })
     },
     assetSubCategory: {
-      id: assetSubCategory.id,
+      slug: assetSubCategory.slug,
       title: assetSubCategory.title || assetSubCategory.name || 'Unbenannte AssetUnterKategorie',
       measuresUrl: buildMeasuresUrl({
         topicId: topic?.measure?.id,
         subTopicId: subTopic?.measure?.id,
-        assetSubCategoryId: assetSubCategory?.measure?.id
+        assetSubCategorySlug: assetSubCategory.slug
       })
     },
     group: detail,

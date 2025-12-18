@@ -15,22 +15,29 @@ const loadAssetSubCategories = () => {
 };
 
 const formatEntries = (payload) => {
-  const entries = [];
   const data = payload?.data ?? {};
-  Object.entries(data).forEach(([slug, entry]) => {
-    const id = Number(entry?.id);
-    if (!Number.isFinite(id) || id <= 0) {
-      return;
-    }
-    entries.push({
-      id,
-      slug,
-      title: entry?.title || entry?.name || `AssetUnterKategorie ${id}`
-    });
-  });
-  return entries.sort((a, b) =>
-    (a.title || '').localeCompare(b.title || '', 'de', { sensitivity: 'base', numeric: true })
-  );
+  return Object.entries(data)
+    .map(([key, entry]) => {
+      const normalizedEntry = entry && typeof entry === 'object' ? entry : {};
+      const candidateSlug = normalizeText(normalizedEntry.slug) || normalizeText(key);
+      if (!candidateSlug) {
+        return null;
+      }
+      const slug = candidateSlug;
+      const title =
+        normalizeText(normalizedEntry.title) ||
+        normalizeText(normalizedEntry.name) ||
+        slug ||
+        'AssetUnterKategorie';
+      return {
+        slug,
+        title
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) =>
+      (a.title || '').localeCompare(b.title || '', 'de', { sensitivity: 'base', numeric: true })
+    );
 };
 
 export const AssetSubCategoriesController = {
@@ -85,7 +92,7 @@ export const AssetSubCategoriesController = {
     };
 
     writeJsonFile(ASSET_SUB_CATEGORIES_FILE, updatedPayload);
-    logger.info('AssetUnterKategorie aktualisiert', { slug, entryId: entry?.id });
+    logger.info('AssetUnterKategorie aktualisiert', { slug });
 
     res.json({ ok: true });
   },

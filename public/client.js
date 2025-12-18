@@ -2642,23 +2642,18 @@ function setupDeleteGroupButton(root) {
 
     try {
       await fetchJson(`${API.groups}/${encodeURIComponent(groupSlug)}`, { method: 'DELETE' });
-      const assetSubCategoryId = Number(root?.dataset?.assetSubCategoryId || '');
       const assetSubCategorySlug = root?.dataset?.assetSubCategorySlug || '';
       const topicId = root?.dataset?.topicId || '';
       const subTopicId = root?.dataset?.subTopicId || '';
 
       if (
-        Number.isInteger(assetSubCategoryId) &&
-        assetSubCategoryId > 0 &&
         typeof topicId === 'string' &&
         topicId &&
         typeof subTopicId === 'string' &&
-        subTopicId
+        subTopicId &&
+        assetSubCategorySlug
       ) {
-        const slugSegment =
-          (typeof assetSubCategorySlug === 'string' && assetSubCategorySlug.trim()) ||
-          String(assetSubCategoryId);
-        window.location.assign(`/asset-structure/${topicId}/${subTopicId}/${slugSegment}`);
+        window.location.assign(`/asset-structure/${topicId}/${subTopicId}/${assetSubCategorySlug}`);
       } else if (typeof topicId === 'string' && topicId) {
         window.location.assign(`/asset-structure/${topicId}`);
       } else {
