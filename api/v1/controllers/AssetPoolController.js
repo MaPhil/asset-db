@@ -20,12 +20,24 @@ const hasMeaningfulValue = (value) => {
   return true;
 };
 
+const parsePositiveInteger = (value) => {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number <= 0) {
+    return null;
+  }
+  return number;
+};
+
 export const AssetPoolController = {
   view: (req, res) => {
     logger.debug('Asset-Pool-Ansicht wird abgerufen');
-    const page = Number(req.query?.page) || 1;
-    const pageSize = Number(req.query?.pageSize) || 50;
-    const view = getAssetPoolView({ page, pageSize });
+    const requestedPage = parsePositiveInteger(req.query?.page) ?? 1;
+    const requestedPageSize = parsePositiveInteger(req.query?.pageSize);
+    const options = { page: requestedPage };
+    if (requestedPageSize) {
+      options.pageSize = requestedPageSize;
+    }
+    const view = getAssetPoolView(options);
     res.json({ ...view, suggestions: getAssetFieldSuggestions() });
   },
   addField: (req, res) => {

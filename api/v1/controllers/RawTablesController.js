@@ -82,6 +82,16 @@ function validateHeaders(headers) {
   return { ok: true };
 }
 
+const DEFAULT_RAW_PAGE_SIZE = 50;
+
+const parsePositiveInteger = (value) => {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number <= 0) {
+    return null;
+  }
+  return number;
+};
+
 function processRows({ records, idColumn, duplicatePolicy }) {
   const processed = [];
   const seenKeys = new Set();
@@ -233,13 +243,26 @@ export const RawTablesController = {
       assetField
     }));
 
-    const rows = Array.isArray(doc.data)
-      ? doc.data.map((row, index) => ({
-          rowKey: row.__assetId || index,
-          rowIndex: index,
-          data: row
-        }))
-      : [];
+    const requestedPage = parsePositiveInteger(req.query?.page) ?? 1;
+    const requestedPageSize = parsePositiveInteger(req.query?.pageSize) ?? DEFAULT_RAW_PAGE_SIZE;
+
+    const rawRows = Array.isArray(doc.data) ? doc.data : [];
+    const totalRows = rawRows.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / requestedPageSize) || 1);
+    const page = Math.min(Math.max(1, requestedPage), totalPages);
+    const startIndex = (page - 1) * requestedPageSize;
+    const pageRows = rawRows.slice(startIndex, startIndex + requestedPageSize);
+    const rows = pageRows.map((row, index) => ({
+      rowKey: row.__assetId || startIndex + index,
+      rowIndex: startIndex + index,
+      data: row
+    }));
+    const pagination = {
+      page,
+      pageSize: requestedPageSize,
+      totalRows,
+      totalPages
+    };
 
     res.json({
       table: {
@@ -253,7 +276,8 @@ export const RawTablesController = {
       },
       rows,
       mapping: mappingPairs,
-      assetPool: getAssetPoolView({ includeArchived: true })
+      assetPool: getAssetPoolView({ includeArchived: true }),
+      pagination
     });
   },
 

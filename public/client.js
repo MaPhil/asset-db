@@ -24,6 +24,7 @@ const API = {
 };
 
 const PAGE_SIZE = 25;
+const RAW_TABLE_DEFAULT_PAGE_SIZE = 50;
 const TOAST_STORAGE_KEY = 'assetPoolToast';
 
 const state = {
@@ -34,6 +35,9 @@ const state = {
   assetPoolView: 'overview',
   assetFieldSuggestions: [],
   currentRawDetail: null,
+  rawTablePage: 1,
+  rawTablePageSize: RAW_TABLE_DEFAULT_PAGE_SIZE,
+  currentRawTableId: null,
   modal: {
     isOpen: false,
     mode: 'import',
@@ -1587,10 +1591,95 @@ async function handleEditableCellSave(rowId, field, input, button) {
   }
 }
 
+function setElementHidden(element, hidden) {
+  if (!element) {
+    return;
+  }
+  element.hidden = hidden;
+  element.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+}
+
+function renderRawTablePagination(root, pagination) {
+  const container = select(root, '[data-raw-pagination]');
+  if (!container) {
+    return;
+  }
+  if (
+    !pagination ||
+    !Number.isInteger(pagination.page) ||
+    !Number.isInteger(pagination.pageSize) ||
+    !Number.isInteger(pagination.totalRows) ||
+    !Number.isInteger(pagination.totalPages) ||
+    pagination.totalRows <= 0
+  ) {
+    setElementHidden(container, true);
+    container.innerHTML = '';
+    return;
+  }
+
+  const page = pagination.page;
+  const pageSize = pagination.pageSize;
+  const totalRows = pagination.totalRows;
+  const totalPages = pagination.totalPages;
+  const startIndex = Math.max(0, (page - 1) * pageSize);
+  const displayStart = totalRows ? startIndex + 1 : 0;
+  const displayEnd = totalRows ? Math.min(totalRows, startIndex + pageSize) : 0;
+
+  container.innerHTML = '';
+  setElementHidden(container, false);
+
+  const info = document.createElement('span');
+  info.className = 'pagination-info';
+  info.textContent = `Angezeigt: ${displayStart}-${displayEnd} von ${totalRows}`;
+
+  const controls = document.createElement('div');
+  controls.className = 'pagination-controls';
+
+  const prev = document.createElement('button');
+  prev.type = 'button';
+  prev.textContent = 'Zurück';
+  prev.disabled = page <= 1;
+  prev.addEventListener('click', () => {
+    if (page <= 1) {
+      return;
+    }
+    state.rawTablePage = Math.max(1, page - 1);
+    renderRawTable(root);
+  });
+
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.textContent = 'Weiter';
+  next.disabled = page >= totalPages;
+  next.addEventListener('click', () => {
+    if (page >= totalPages) {
+      return;
+    }
+    state.rawTablePage = Math.min(totalPages, page + 1);
+    renderRawTable(root);
+  });
+
+  controls.appendChild(prev);
+  controls.appendChild(next);
+
+  container.appendChild(info);
+  container.appendChild(controls);
+}
+
 function renderRawTable(root) {
-  const rawTableId = root.dataset.rawTableId || '';
+  if (!root) {
+    return;
+  }
+
+  const rawTableId = (root.dataset.rawTableId || '').trim();
   if (!rawTableId) {
     return;
+  }
+
+  if (state.currentRawTableId !== rawTableId) {
+    state.currentRawTableId = rawTableId;
+    state.rawTablePage = 1;
+    state.rawTablePageSize = RAW_TABLE_DEFAULT_PAGE_SIZE;
   }
 
   const metaBadge = select(root, '[data-raw-meta]');
@@ -1603,38 +1692,31 @@ function renderRawTable(root) {
   const notFoundCard = select(root, '[data-raw-not-found]');
   const contentWrapper = select(root, '[data-raw-content]');
   const actionBar = select(root, '[data-raw-actions]');
-
-  const setHidden = (el, hidden) => {
-    if (!el) return;
-    el.hidden = hidden;
-    el.setAttribute('aria-hidden', hidden ? 'true' : 'false');
-  };
+  const paginationContainer = select(root, '[data-raw-pagination]');
 
   const showPresentState = () => {
-    setHidden(heading, false);
-    setHidden(actionBar, false);
-    setHidden(contentWrapper, false);
-    setHidden(missingBlock, true);
-    setHidden(notFoundCard, true);
+    setElementHidden(heading, false);
+    setElementHidden(actionBar, false);
+    setElementHidden(contentWrapper, false);
+    setElementHidden(missingBlock, true);
+    setElementHidden(notFoundCard, true);
   };
 
   const showMissingState = (message) => {
-    setHidden(heading, true);
-    setHidden(actionBar, true);
-    setHidden(contentWrapper, true);
-    setHidden(missingBlock, false);
-    setHidden(notFoundCard, false);
+    setElementHidden(heading, true);
+    setElementHidden(actionBar, true);
+    setElementHidden(contentWrapper, true);
+    setElementHidden(missingBlock, false);
+    setElementHidden(notFoundCard, false);
+    setElementHidden(paginationContainer, true);
     if (metaBadge) {
       metaBadge.textContent = '';
     }
     if (tableContainer) {
-      tableContainer.hidden = true;
-      tableContainer.setAttribute('aria-hidden', 'true');
       tableContainer.innerHTML = '';
     }
     if (emptyCard) {
-      emptyCard.hidden = true;
-      emptyCard.setAttribute('aria-hidden', 'true');
+      setElementHidden(emptyCard, true);
     }
     if (titleEl && message) {
       titleEl.textContent = message;
@@ -1643,10 +1725,17 @@ function renderRawTable(root) {
 
   showPresentState();
 
-  fetchJson(`${API.rawTables}/${rawTableId}`)
+  const params = new URLSearchParams();
+  params.set('page', state.rawTablePage);
+  params.set('pageSize', state.rawTablePageSize);
+
+  fetchJson(`${API.rawTables}/${encodeURIComponent(rawTableId)}?${params.toString()}`)
     .then((data) => {
       showPresentState();
       state.currentRawDetail = data;
+      state.rawTablePage = data.pagination?.page ?? state.rawTablePage;
+      state.rawTablePageSize = data.pagination?.pageSize ?? state.rawTablePageSize;
+
       const fieldStats = Array.isArray(data.assetPool?.fieldStats) ? data.assetPool.fieldStats : [];
       const statNames = fieldStats.map((stat) => stat.field);
       state.assetFieldSuggestions = Array.from(new Set([...statNames, ...state.assetFieldSuggestions]));
@@ -1664,22 +1753,22 @@ function renderRawTable(root) {
         archiveButton.disabled = archived;
         archiveButton.setAttribute('aria-hidden', archived ? 'true' : 'false');
       }
-      const hasRows = data.rows.length > 0;
+
+      const hasRows = Array.isArray(data.rows) && data.rows.length > 0;
 
       if (tableContainer) {
-        tableContainer.hidden = !hasRows;
-        tableContainer.setAttribute('aria-hidden', !hasRows ? 'true' : 'false');
+        setElementHidden(tableContainer, !hasRows);
         if (!hasRows) {
           tableContainer.innerHTML = '';
         }
       }
 
       if (emptyCard) {
-        emptyCard.hidden = hasRows;
-        emptyCard.setAttribute('aria-hidden', hasRows ? 'true' : 'false');
+        setElementHidden(emptyCard, hasRows);
       }
 
       if (!hasRows) {
+        renderRawTablePagination(root, data.pagination);
         return;
       }
 
@@ -1714,12 +1803,14 @@ function renderRawTable(root) {
         table.appendChild(tbody);
         scroller.appendChild(table);
         wrapper.appendChild(scroller);
-        tableContainer.innerHTML = '';
         tableContainer.appendChild(wrapper);
       }
+
+      renderRawTablePagination(root, data.pagination);
     })
     .catch((err) => {
       state.currentRawDetail = null;
+      renderRawTablePagination(root, null);
       showMissingState('Rohdatentabelle nicht gefunden');
       const message = err?.payload?.error || err?.message;
       showToast(message || 'Rohdatentabelle konnte nicht geladen werden.');
