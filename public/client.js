@@ -10,6 +10,8 @@ const API = {
   assetSubCategory: (slug) => `/api/v1/asset-sub-categories/${encodeURIComponent(slug)}`,
   manipulators: '/api/v1/manipulators',
   manipulator: (id) => `/api/v1/manipulators/${encodeURIComponent(id)}`,
+  manipulatorExecute: (id) =>
+    `/api/v1/manipulators/${encodeURIComponent(id)}/execute`,
   categories: '/api/v1/categories',
   groups: '/api/v1/groups',
   groupAssetSelectors: (groupSlug) =>
@@ -18,9 +20,13 @@ const API = {
     `/api/v1/groups/${encodeURIComponent(groupSlug)}/asset-selectors/${selectorId}`,
   groupAssetSelectorAssets: (groupSlug, selectorId) =>
     `/api/v1/groups/${encodeURIComponent(groupSlug)}/asset-selectors/${selectorId}/assets`,
+  groupAssetSelectorExecute: (groupSlug, selectorId) =>
+    `/api/v1/groups/${encodeURIComponent(groupSlug)}/asset-selectors/${selectorId}/execute`,
   measures: '/api/v1/measures',
   measuresUpload: '/api/v1/measures/upload',
-  reportsCoverage: '/api/v1/reports/abdeckung'
+  reportsCoverage: '/api/v1/reports/abdeckung',
+  reportsCoverageUnmatched: '/api/v1/reports/abdeckung/unmatched',
+  backup: '/api/v1/backups/download'
 };
 
 const PAGE_SIZE = 25;
@@ -109,7 +115,16 @@ const state = {
   reports: {
     report: null,
     isCalculating: false,
-    error: null
+    error: null,
+    unmatchedModal: {
+      isOpen: false,
+      modal: null,
+      trigger: null,
+      isLoading: false,
+      error: null,
+      assets: [],
+      columns: []
+    }
   }
 };
 
@@ -186,6 +201,90 @@ function select(root, selector) {
 
 function selectAll(root, selector) {
   return root ? Array.from(root.querySelectorAll(selector)) : [];
+}
+
+function makeTableDragScrollable(container) {
+  if (!container || container.dataset.tableDragInit === 'true') {
+    return;
+  }
+  container.dataset.tableDragInit = 'true';
+  let isDragging = false;
+  let startX = 0;
+  let scrollLeft = 0;
+
+  const beginDrag = (clientX) => {
+    isDragging = true;
+    startX = clientX;
+    scrollLeft = container.scrollLeft;
+    container.classList.add('is-dragging');
+  };
+
+  const stopDrag = () => {
+    if (!isDragging) {
+      return;
+    }
+    isDragging = false;
+    container.classList.remove('is-dragging');
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+    window.removeEventListener('touchmove', onTouchMove);
+    window.removeEventListener('touchend', onTouchEnd);
+    window.removeEventListener('touchcancel', onTouchEnd);
+  };
+
+  const onMouseMove = (event) => {
+    if (!isDragging) {
+      return;
+    }
+    const delta = event.clientX - startX;
+    container.scrollLeft = scrollLeft - delta;
+    event.preventDefault();
+  };
+
+  const onMouseUp = () => {
+    stopDrag();
+  };
+
+  const onTouchMove = (event) => {
+    if (!isDragging || !event.touches.length) {
+      return;
+    }
+    const delta = event.touches[0].clientX - startX;
+    container.scrollLeft = scrollLeft - delta;
+    event.preventDefault();
+  };
+
+  const onTouchEnd = () => {
+    stopDrag();
+  };
+
+  const onMouseDown = (event) => {
+    beginDrag(event.clientX);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    event.preventDefault();
+  };
+
+  const onTouchStart = (event) => {
+    if (!event.touches.length) {
+      return;
+    }
+    beginDrag(event.touches[0].clientX);
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchcancel', onTouchEnd);
+  };
+
+  container.addEventListener('mousedown', onMouseDown);
+  container.addEventListener('touchstart', onTouchStart, { passive: false });
+}
+
+function enableHorizontalTableDrag(root = document) {
+  if (!root) {
+    return;
+  }
+  const containers = selectAll(root, '.table-scroller, .table-container');
+  containers.forEach((container) => makeTableDragScrollable(container));
 }
 
 function readNonNegativeInteger(value) {
@@ -275,6 +374,54 @@ function showToast(message, { type } = {}) {
     toast.classList.add('toast--hide');
     setTimeout(() => toast.remove(), 300);
   }, 3500);
+}
+
+function getFilenameFromContentDisposition(headerValue) {
+  if (!headerValue || typeof headerValue !== 'string') {
+    return null;
+  }
+  const match = headerValue.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i);
+  if (!match?.[1]) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(match[1]);
+  } catch (err) {
+    return match[1];
+  }
+}
+
+async function handleBackupDownload(button) {
+  if (!button) {
+    return;
+  }
+  button.disabled = true;
+  button.dataset.loading = 'true';
+  try {
+    const response = await fetch(API.backup);
+    if (!response.ok) {
+      throw new Error(response.statusText || 'Backup konnte nicht erstellt werden.');
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get('content-disposition');
+    const fallbackName = `storage-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+    const filename = getFilenameFromContentDisposition(disposition) || fallbackName;
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast('Backup wird heruntergeladen.');
+  } catch (error) {
+    showToast(error?.message || 'Backup konnte nicht erstellt werden.', { type: 'error' });
+  } finally {
+    button.disabled = false;
+    delete button.dataset.loading;
+  }
 }
 
 function consumePendingToast() {
@@ -408,7 +555,7 @@ function renderManipulatorTable(entries, root) {
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  const headers = ['Titel', 'Beschreibung', 'Feldname', 'Wert', 'Assets', 'Aktualisiert'];
+  const headers = ['Titel', 'Beschreibung', 'Feldname', 'Wert', 'Assets', 'Aktualisiert', 'Aktion'];
   headers.forEach((label) => {
     const th = document.createElement('th');
     th.textContent = label;
@@ -452,6 +599,18 @@ function renderManipulatorTable(entries, root) {
     updatedCell.textContent = formatDate(entry?.updatedAt || entry?.createdAt);
     row.appendChild(updatedCell);
 
+    const actionCell = document.createElement('td');
+    const executeButton = document.createElement('button');
+    executeButton.type = 'button';
+    executeButton.className = 'button button--ghost';
+    executeButton.textContent = 'Anwenden';
+    executeButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      handleExecuteManipulator(root, entry?.id, executeButton);
+    });
+    actionCell.appendChild(executeButton);
+    row.appendChild(actionCell);
+
     const handleOpen = () => {
       openManipulatorModal(root, row, entry);
     };
@@ -471,6 +630,32 @@ function renderManipulatorTable(entries, root) {
   scroller.appendChild(table);
   wrapper.appendChild(scroller);
   return wrapper;
+}
+
+async function handleExecuteManipulator(root, manipulatorId, button) {
+  if (!manipulatorId) {
+    return;
+  }
+  if (button) {
+    button.disabled = true;
+    button.dataset.loading = 'true';
+  }
+  try {
+    await fetchJson(API.manipulatorExecute(manipulatorId), { method: 'POST' });
+    await refreshAssetPool();
+    await refreshManipulators(root);
+    showToast('Manipulator angewendet.');
+  } catch (error) {
+    showToast(
+      error?.payload?.error || error?.message || 'Manipulator konnte nicht angewendet werden.',
+      { type: 'error' }
+    );
+  } finally {
+    if (button) {
+      button.disabled = false;
+      delete button.dataset.loading;
+    }
+  }
 }
 
 function renderManipulatorView(root) {
@@ -523,6 +708,7 @@ function renderManipulatorView(root) {
     const table = renderManipulatorTable(entries, root);
     tableContainer.appendChild(table);
     tableContainer.hidden = false;
+    enableHorizontalTableDrag(tableContainer);
   }
 }
 
@@ -1549,6 +1735,7 @@ function renderAssetPool(root) {
   container.appendChild(pagination);
 
   renderFieldManager(root);
+  enableHorizontalTableDrag(tableWrapper);
 
   selectAll(table, '.sort-button').forEach((button) => {
     button.addEventListener('click', () => {
@@ -3126,6 +3313,16 @@ function createSelectorListItem(root, entry) {
   const actions = document.createElement('div');
   actions.className = 'asset-selector__actions';
 
+  const executeButton = document.createElement('button');
+  executeButton.type = 'button';
+  executeButton.className = 'button button--ghost';
+  executeButton.textContent = 'Anwenden';
+  executeButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    handleExecuteGroupSelector(root, entry, executeButton);
+  });
+  actions.appendChild(executeButton);
+
   const showButton = document.createElement('button');
   showButton.type = 'button';
   showButton.className = 'button button--ghost';
@@ -3147,6 +3344,57 @@ function createSelectorListItem(root, entry) {
   card.appendChild(header);
   item.appendChild(card);
   return item;
+}
+
+async function handleExecuteGroupSelector(root, entry, button) {
+  if (!entry?.id) {
+    return;
+  }
+  if (!root) {
+    return;
+  }
+  const groupSlug = getGroupSlug(root);
+  if (!groupSlug) {
+    return;
+  }
+  if (button) {
+    button.disabled = true;
+    button.dataset.loading = 'true';
+  }
+  try {
+    const response = await fetchJson(API.groupAssetSelectorExecute(groupSlug, entry.id), {
+      method: 'POST'
+    });
+    const selectors = Array.isArray(state.groupSelector.selectors)
+      ? state.groupSelector.selectors.slice()
+      : [];
+    const index = selectors.findIndex((item) => item?.id === entry.id);
+    const assetCount = response?.selector?.assetCount ?? selectors[index]?.assetCount ?? entry?.assetCount ?? 0;
+    if (index === -1) {
+      selectors.push({
+        ...entry,
+        assetCount: assetCount
+      });
+    } else {
+      selectors[index] = {
+        ...selectors[index],
+        assetCount
+      };
+    }
+    state.groupSelector.selectors = sortSelectorEntries(selectors);
+    renderGroupSelectorList(root);
+    showToast('Asset-Selektor angewendet.');
+  } catch (error) {
+    showToast(
+      error?.payload?.error || error?.message || 'Asset-Selektor konnte nicht angewendet werden.',
+      { type: 'error' }
+    );
+  } finally {
+    if (button) {
+      button.disabled = false;
+      delete button.dataset.loading;
+    }
+  }
 }
 
 function resetSelectorFormError(modal) {
@@ -3680,6 +3928,7 @@ function renderSelectorAssetsContent() {
   });
   table.appendChild(tbody);
   tableContainer.appendChild(table);
+  enableHorizontalTableDrag(tableContainer);
 }
 
 async function openGroupSelectorAssetsModal(root, entry, trigger) {
@@ -4251,6 +4500,16 @@ function setupMeasureUpload(root) {
   });
 }
 
+function setupBackupButton() {
+  const trigger = document.querySelector('[data-backup-trigger]');
+  if (!trigger) {
+    return;
+  }
+  trigger.addEventListener('click', () => {
+    handleBackupDownload(trigger);
+  });
+}
+
 function initMeasuresApp() {
   const root = document.querySelector('[data-app="measures"]');
   if (!root) {
@@ -4318,6 +4577,8 @@ const REPORT_DEFAULT_DATA = {
   groups: [],
   totalAssets: 0,
   unmatchedCount: 0,
+  unmatchedAssets: [],
+  unmatchedColumns: [],
   generatedAt: null
 };
 
@@ -4341,11 +4602,23 @@ function normalizeReportData(payload) {
       const right = (b.title || '').toLowerCase();
       return left.localeCompare(right, 'de', { sensitivity: 'base', numeric: true });
     });
+  const unmatchedColumns = Array.isArray(base.unmatchedColumns)
+    ? base.unmatchedColumns
+        .map((column) => (typeof column === 'string' ? column.trim() : ''))
+        .filter((column) => column)
+    : [];
+  const unmatchedAssets = Array.isArray(base.unmatchedAssets)
+    ? base.unmatchedAssets
+        .map((asset) => (asset && typeof asset === 'object' ? asset : null))
+        .filter((asset) => asset)
+    : [];
 
   return {
     groups: normalizedGroups,
     totalAssets: Number.isInteger(base.totalAssets) ? base.totalAssets : 0,
     unmatchedCount: Number.isInteger(base.unmatchedCount) ? base.unmatchedCount : 0,
+    unmatchedAssets,
+    unmatchedColumns,
     generatedAt: typeof base.generatedAt === 'string' ? base.generatedAt : null
   };
 }
@@ -4415,6 +4688,12 @@ function renderReportsView(root) {
     unmatchedEl.textContent = String(report.unmatchedCount ?? 0);
   }
 
+  const unmatchedAssets = Array.isArray(report.unmatchedAssets) ? report.unmatchedAssets : [];
+  const unmatchedButton = select(root, '[data-report-unmatched-trigger]');
+  if (unmatchedButton) {
+    unmatchedButton.disabled = unmatchedAssets.length === 0;
+  }
+
   const totalEl = select(root, '[data-report-total]');
   if (totalEl) {
     totalEl.textContent = String(report.totalAssets ?? 0);
@@ -4429,6 +4708,8 @@ function renderReportsView(root) {
       generatedEl.hidden = true;
     }
   }
+
+  renderReportUnmatchedContent(root);
 
   const errorEl = select(root, '[data-report-error]');
   if (errorEl) {
@@ -4451,6 +4732,194 @@ function renderReportsView(root) {
       button.textContent = 'Report berechnen';
     }
   }
+}
+
+function renderReportUnmatchedContent(root) {
+  const modal = state.reports.unmatchedModal.modal;
+  if (!modal) {
+    return;
+  }
+  const tableContainer = select(modal, '[data-report-unmatched-table]');
+  const tableHead = select(modal, '[data-report-unmatched-table-head]');
+  const tableBody = select(modal, '[data-report-unmatched-table-body]');
+  const emptyState = select(modal, '[data-report-unmatched-empty]');
+  const loadingEl = select(modal, '[data-report-unmatched-loading]');
+  const errorEl = select(modal, '[data-report-unmatched-error]');
+
+  const modalState = state.reports.unmatchedModal;
+  if (loadingEl) {
+    loadingEl.hidden = !modalState.isLoading;
+  }
+  if (errorEl) {
+    if (modalState.error) {
+      errorEl.hidden = false;
+      errorEl.textContent = modalState.error;
+    } else {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+  }
+
+  if (!tableContainer || !tableHead || !tableBody) {
+    return;
+  }
+
+  if (modalState.isLoading) {
+    tableContainer.hidden = true;
+    if (emptyState) {
+      emptyState.hidden = true;
+    }
+    return;
+  }
+
+  const fallbackAssets = Array.isArray(state.reports.report?.unmatchedAssets)
+    ? state.reports.report.unmatchedAssets
+    : [];
+  const fallbackColumns = Array.isArray(state.reports.report?.unmatchedColumns)
+    ? state.reports.report.unmatchedColumns.filter((column) => typeof column === 'string' && column.trim())
+    : [];
+
+  const assets =
+    Array.isArray(modalState.assets) && modalState.assets.length ? modalState.assets : fallbackAssets;
+  const columns =
+    Array.isArray(modalState.columns) && modalState.columns.length ? modalState.columns : fallbackColumns;
+
+  tableHead.innerHTML = '';
+  const columnLabels = ['Asset-ID', 'Quelle', 'Zeile', ...columns];
+  columnLabels.forEach((label) => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    tableHead.appendChild(th);
+  });
+
+  tableBody.innerHTML = '';
+  const columnKeys = ['__id', '__source', '__rowKey', ...columns];
+  assets.forEach((asset) => {
+    if (!asset || typeof asset !== 'object') {
+      return;
+    }
+    const tr = document.createElement('tr');
+    columnKeys.forEach((key) => {
+      const td = document.createElement('td');
+      let value = '';
+      if (key === '__id') {
+        value = asset?.id ?? '';
+      } else if (key === '__source') {
+        value = asset?.rawTableTitle ?? '';
+      } else if (key === '__rowKey') {
+        value = asset?.rowKey ?? '';
+      } else {
+        const assetValue =
+          asset?.values && typeof asset?.values === 'object' ? asset.values[key] : undefined;
+        value = formatSelectorCellValue(assetValue);
+      }
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+    tableBody.appendChild(tr);
+  });
+
+  const hasAssets = assets.length > 0;
+  tableContainer.hidden = !hasAssets;
+  if (hasAssets) {
+    enableHorizontalTableDrag(tableContainer);
+  }
+
+  const showEmpty = !hasAssets && !modalState.error;
+  if (emptyState) {
+    emptyState.hidden = !showEmpty;
+  }
+}
+
+async function loadReportUnmatchedAssets(root) {
+  const modal = state.reports.unmatchedModal.modal;
+  if (!modal) {
+    return;
+  }
+  state.reports.unmatchedModal.isLoading = true;
+  state.reports.unmatchedModal.error = null;
+  renderReportUnmatchedContent(root);
+  try {
+    const payload = await fetchJson(API.reportsCoverageUnmatched);
+    const assets = Array.isArray(payload.assets) ? payload.assets : [];
+    const columns = Array.isArray(payload.columns)
+      ? payload.columns.map((column) => (typeof column === 'string' ? column.trim() : '')).filter((column) => column)
+      : [];
+    state.reports.unmatchedModal.assets = assets;
+    state.reports.unmatchedModal.columns = columns;
+  } catch (error) {
+    state.reports.unmatchedModal.error =
+      error?.payload?.error || error?.message || 'Assets ohne Gruppenzuordnung konnten nicht geladen werden.';
+  } finally {
+    state.reports.unmatchedModal.isLoading = false;
+    renderReportUnmatchedContent(root);
+  }
+}
+
+function openReportUnmatchedModal(root, trigger) {
+  const modal = state.reports.unmatchedModal.modal;
+  if (!modal) {
+    return;
+  }
+  state.reports.unmatchedModal.isOpen = true;
+  state.reports.unmatchedModal.trigger = trigger || null;
+  renderReportUnmatchedContent(root);
+  modal.hidden = false;
+  modal.setAttribute('aria-hidden', 'false');
+  if (!modal.hasAttribute('tabindex')) {
+    modal.setAttribute('tabindex', '-1');
+  }
+  modal.focus?.();
+  structureModalOpenCount += 1;
+  lockBodyScroll();
+  loadReportUnmatchedAssets(root);
+}
+
+function closeReportUnmatchedModal({ restoreFocus = true } = {}) {
+  const modal = state.reports.unmatchedModal.modal;
+  if (!modal || !state.reports.unmatchedModal.isOpen) {
+    return;
+  }
+  modal.hidden = true;
+  modal.setAttribute('aria-hidden', 'true');
+  state.reports.unmatchedModal.isOpen = false;
+  structureModalOpenCount = Math.max(0, structureModalOpenCount - 1);
+  unlockBodyScrollIfIdle();
+  const trigger = state.reports.unmatchedModal.trigger;
+  state.reports.unmatchedModal.trigger = null;
+  if (restoreFocus && trigger && typeof trigger.focus === 'function') {
+    trigger.focus();
+  }
+}
+
+function setupReportUnmatchedModal(root) {
+  if (!root) {
+    return;
+  }
+  const modal = select(root, '[data-report-unmatched-modal]');
+  if (!modal) {
+    return;
+  }
+  state.reports.unmatchedModal.modal = modal;
+  const trigger = select(root, '[data-report-unmatched-trigger]');
+  if (trigger) {
+    trigger.addEventListener('click', () => openReportUnmatchedModal(root, trigger));
+  }
+  const closeButtons = selectAll(modal, '[data-report-unmatched-close]');
+  closeButtons.forEach((button) => {
+    button.addEventListener('click', () => closeReportUnmatchedModal());
+  });
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeReportUnmatchedModal();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.reports.unmatchedModal.isOpen) {
+      event.preventDefault();
+      closeReportUnmatchedModal();
+    }
+  });
 }
 
 async function handleCalculateReport(root) {
@@ -4480,6 +4949,7 @@ function initReportsApp() {
   const initialData = getInitialReportData(root);
   state.reports.report = normalizeReportData(initialData);
   renderReportsView(root);
+  setupReportUnmatchedModal(root);
 
   const button = select(root, '[data-report-calc]');
   button?.addEventListener('click', () => handleCalculateReport(root));
@@ -4490,4 +4960,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initAssetStructureApp();
   initMeasuresApp();
   initReportsApp();
+  setupBackupButton();
+  enableHorizontalTableDrag(document.body);
 });

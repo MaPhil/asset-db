@@ -73,6 +73,7 @@
           <div class="reports-unmatched">
             <span>Assets ohne Gruppenzuordnung:</span>
             <strong data-report-unmatched>{{reportState.unmatchedCount}}</strong>
+            <button class="button button--ghost" type="button" data-report-unmatched-trigger>Assets anzeigen</button>
             <span aria-hidden="true">•</span>
             <span>Insgesamt im Asset-Pool: <strong data-report-total>{{reportState.totalAssets}}</strong></span>
           </div>
@@ -82,5 +83,43 @@
       </div>
     </div>
   </section>
+  <div class="modal" data-report-unmatched-modal hidden aria-hidden="true">
+    <div class="modal-dialog modal-dialog--medium" role="dialog" aria-modal="true" aria-labelledby="report-unmatched-title">
+      <header class="modal-header">
+        <h2 id="report-unmatched-title">Assets ohne Gruppenzuordnung</h2>
+        <button
+          class="icon-button"
+          type="button"
+          aria-label="Asset-Liste schließen"
+          data-report-unmatched-close
+        >
+          &times;
+        </button>
+      </header>
+      <div class="modal-body">
+        <p class="helper-text">
+          Diese Assets werden aktuell von keinem Asset-Selektor einer Gruppe abgedeckt.
+        </p>
+        <div class="table-container reports-unmatched-table" data-report-unmatched-table>
+          <div class="table-wrapper">
+            <div class="table-scroller">
+              <table class="table reports-unmatched-table__inner">
+                <thead>
+                  <tr data-report-unmatched-table-head></tr>
+                </thead>
+                <tbody data-report-unmatched-table-body></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <p class="helper-text" data-report-unmatched-loading hidden>Assets werden geladen …</p>
+        <p class="helper-text" data-report-unmatched-error hidden></p>
+        <p class="helper-text" data-report-unmatched-empty hidden>Keine Assets ohne Gruppenzuordnung.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="button button--ghost" type="button" data-report-unmatched-close>Schließen</button>
+      </div>
+    </div>
+  </div>
   <script type="application/json" data-report-state>{{{json reportState}}}</script>
 </div>

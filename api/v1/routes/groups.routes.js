@@ -61,5 +61,11 @@ router.get(
   validateId('selectorId'),
   asyncHandler(GroupAssetSelectorsController.assets)
 );
+router.post(
+  '/:groupSlug/asset-selectors/:selectorId/execute',
+  resolveGroupBySlug,
+  validateId('selectorId'),
+  asyncHandler(GroupAssetSelectorsController.execute)
+);
 
 export default router;

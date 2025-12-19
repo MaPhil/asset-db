@@ -1,5 +1,6 @@
 import {
   createGroupAssetSelector,
+  executeGroupAssetSelector,
   getGroupAssetSelectorAssets,
   listGroupAssetSelectors,
   updateGroupAssetSelector
@@ -97,6 +98,29 @@ export const GroupAssetSelectorsController = {
       res
         .status(status)
         .json({ error: error.message || 'Assets for this asset selector could not be loaded.' });
+    }
+  },
+  async execute(req, res) {
+    const groupSlug = req.groupSlug || (req.group?.slug || '');
+    const selectorId = req.params?.selectorId;
+    if (!groupSlug) {
+      return res.status(400).json({ error: 'Ungültiger Gruppenbezeichner.' });
+    }
+    try {
+      const result = executeGroupAssetSelector(groupSlug, selectorId);
+      res.json(result);
+    } catch (error) {
+      const status = error?.statusCode || 500;
+      if (status >= 500) {
+        logger.error('Asset selector could not be executed', error, { groupSlug, selectorId });
+      } else {
+        logger.warn('Asset selector could not be executed', {
+          groupSlug,
+          selectorId,
+          error: error.message
+        });
+      }
+      res.status(status).json({ error: error.message || 'Asset selector could not be executed.' });
     }
   }
 };

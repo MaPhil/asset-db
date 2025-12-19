@@ -7,5 +7,6 @@ const router = Router();
 router.get('/', asyncHandler(ManipulatorsController.list));
 router.post('/', asyncHandler(ManipulatorsController.create));
 router.put('/:manipulatorId', asyncHandler(ManipulatorsController.update));
+router.post('/:manipulatorId/execute', asyncHandler(ManipulatorsController.execute));
 
 export default router;

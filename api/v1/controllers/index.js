@@ -7,3 +7,4 @@ export { GroupAssetSelectorsController } from './GroupAssetSelectorsController.j
 export { MeasuresController } from './MeasuresController.js';
 export { ManipulatorsController } from './ManipulatorsController.js';
 export { ReportsController } from './ReportsController.js';
+export { BackupController } from './BackupController.js';

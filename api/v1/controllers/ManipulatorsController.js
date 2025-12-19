@@ -1,4 +1,4 @@
-import { createManipulator, listManipulators, updateManipulator } from '../../../lib/manipulators.js';
+import { createManipulator, listManipulators, updateManipulator, executeManipulator } from '../../../lib/manipulators.js';
 import { logger } from '../../../lib/logger.js';
 
 export const ManipulatorsController = {
@@ -52,6 +52,25 @@ export const ManipulatorsController = {
         });
       }
       res.status(status).json({ error: error.message || 'Manipulator konnte nicht aktualisiert werden.' });
+    }
+  },
+  async execute(req, res) {
+    try {
+      const entry = executeManipulator(req.params.manipulatorId);
+      res.json(entry);
+    } catch (error) {
+      const status = error?.statusCode || 500;
+      if (status >= 500) {
+        logger.error('Manipulator could not be executed', error, {
+          manipulatorId: req.params.manipulatorId
+        });
+      } else {
+        logger.warn('Manipulator could not be executed', {
+          manipulatorId: req.params.manipulatorId,
+          error: error.message
+        });
+      }
+      res.status(status).json({ error: error.message || 'Manipulator konnte nicht ausgeführt werden.' });
     }
   }
 };

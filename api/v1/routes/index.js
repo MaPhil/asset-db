@@ -7,6 +7,7 @@ import assetSubCategoriesRouter from './assetSubCategories.routes.js';
 import measuresRouter from './measures.routes.js';
 import manipulatorsRouter from './manipulators.routes.js';
 import reportsRouter from './reports.routes.js';
+import backupsRouter from './backups.routes.js';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use('/asset-sub-categories', assetSubCategoriesRouter);
 router.use('/measures', measuresRouter);
 router.use('/manipulators', manipulatorsRouter);
 router.use('/reports', reportsRouter);
+router.use('/backups', backupsRouter);
 
 export default router;

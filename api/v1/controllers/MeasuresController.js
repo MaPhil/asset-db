@@ -283,14 +283,54 @@ function archiveExistingMeasures(uploadId) {
   return payload;
 }
 
+const buildFilterOptions = (values) => {
+  const normalized = Array.from(values).filter((value) => value);
+  normalized.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base', numeric: true }));
+  return normalized.map((value) => ({ id: value, title: value }));
+};
+
+const parseQueryValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.length ? normaliseText(value[0]) : '';
+  }
+  return normaliseText(value);
+};
+
 export const MeasuresController = {
-  list: (_req, res) => {
+  list: (req, res) => {
     try {
       const payload = readJsonFile(MEASURES_FILE, null);
       if (!payload) {
         return res.json({ measures: [], filters: { topics: [], subTopics: [], categories: [] }, version: null });
       }
-      const measures = Object.entries(payload.data || {}).map(([hash, row]) => ({ id: hash, ...row }));
+      const topicSet = new Set();
+      const subTopicSet = new Set();
+      const categorySet = new Set();
+      const topicFilter = parseQueryValue(req.query?.topic);
+      const subTopicFilter = parseQueryValue(req.query?.subTopic);
+      const categoryFilter = parseQueryValue(req.query?.category);
+      const measures = [];
+
+      Object.entries(payload.data || {}).forEach(([hash, row]) => {
+        const topicValue = normaliseText(row?.Themengebiet);
+        const subTopicValue = normaliseText(row?.['Sub-Themengebiet']);
+        const categories = parseAssetSubCategories(row?.AssetUnterKategorien);
+        if (topicValue) {
+          topicSet.add(topicValue);
+        }
+        if (subTopicValue) {
+          subTopicSet.add(subTopicValue);
+        }
+        categories.forEach((category) => categorySet.add(category));
+
+        const matchesTopic = topicFilter ? topicValue === topicFilter : true;
+        const matchesSubTopic = subTopicFilter ? subTopicValue === subTopicFilter : true;
+        const matchesCategory = categoryFilter ? categories.includes(categoryFilter) : true;
+
+        if (matchesTopic && matchesSubTopic && matchesCategory) {
+          measures.push({ id: hash, ...row });
+        }
+      });
       const version = {
         uploadedAt: payload.uploadedAt || null,
         uploadId: payload.uploadId || null,
@@ -300,7 +340,11 @@ export const MeasuresController = {
       res.json({
         measures,
         headers: Array.isArray(payload.headers) ? payload.headers : [],
-        filters: { topics: [], subTopics: [], categories: [] },
+        filters: {
+          topics: buildFilterOptions(topicSet),
+          subTopics: buildFilterOptions(subTopicSet),
+          categories: buildFilterOptions(categorySet)
+        },
         version
       });
     } catch (error) {
